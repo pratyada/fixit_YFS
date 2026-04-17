@@ -19,14 +19,15 @@ export default function Login() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100vh', minHeight: '100dvh',
       background: 'linear-gradient(135deg, #708E86 0%, #4E4E53 100%)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '24px',
+      padding: '20px',
+      paddingTop: 'env(safe-area-inset-top, 20px)',
     }}>
       <div style={{
         background: 'white', borderRadius: '24px',
-        padding: '36px 28px', maxWidth: '440px', width: '100%',
+        padding: '32px 22px', maxWidth: '400px', width: '100%',
         boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
       }}>
         {/* Logo / Header */}

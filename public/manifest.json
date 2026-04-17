@@ -1,0 +1,22 @@
+{
+  "name": "YFS Rehab — Your Form Sux",
+  "short_name": "YFS Rehab",
+  "description": "Physiotherapy exercise tracker with AI pose analysis",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F7F6",
+  "theme_color": "#708E86",
+  "icons": [
+    {
+      "src": "https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png",
+      "sizes": "150x150",
+      "type": "image/png"
+    },
+    {
+      "src": "https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-260x260.png",
+      "sizes": "260x260",
+      "type": "image/png"
+    }
+  ]
+}

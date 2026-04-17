@@ -15,9 +15,17 @@
     --color-success: #6BA368;
     --color-warning: #D4A853;
     --color-danger: #C06060;
+    /* Safe area for notched phones */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html {
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior: none;
+  }
 
   body {
     font-family: 'Public Sans', sans-serif;
@@ -28,6 +36,20 @@
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent text selection on buttons */
+    -webkit-user-select: none;
+    user-select: auto;
+    /* Smooth scroll on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Center the mobile shell on desktop */
+    margin: 0;
+    padding: 0;
+    background: #e8ecea;
+  }
+
+  #root {
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   h1, h2, h3, h4, h5 {
@@ -39,22 +61,15 @@
     margin: 0;
   }
 
-  h1 { font-size: 1.85rem; letter-spacing: -1px; }
-  h2 { font-size: 1.5rem; letter-spacing: -0.8px; }
-  h3 { font-size: 1.2rem; }
-  h4 { font-size: 1.05rem; }
-
-  @media (min-width: 768px) {
-    h1 { font-size: 2.5rem; }
-    h2 { font-size: 1.85rem; }
-    h3 { font-size: 1.4rem; }
-    h4 { font-size: 1.15rem; }
-    body { font-size: 16px; }
-  }
+  /* Mobile-first sizes */
+  h1 { font-size: 1.55rem; letter-spacing: -0.8px; }
+  h2 { font-size: 1.3rem; letter-spacing: -0.6px; }
+  h3 { font-size: 1.1rem; }
+  h4 { font-size: 0.95rem; }
 
   h6 {
     font-family: 'Public Sans', sans-serif;
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -67,20 +82,19 @@
   a {
     color: var(--color-accent);
     text-decoration: none;
-    transition: color 0.25s ease;
+    transition: color 0.2s ease;
   }
-  a:hover { color: var(--color-tertiary); }
 
   img { display: block; max-width: 100%; }
 
   input, textarea, select {
     font-family: 'Public Sans', sans-serif;
-    font-size: 0.875rem;
-    padding: 10px 14px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    padding: 12px 14px;
     border: 1.5px solid var(--color-border);
-    border-radius: 10px;
+    border-radius: 12px;
     outline: none;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
     width: 100%;
     color: var(--color-secondary);
     background: white;
@@ -90,102 +104,32 @@
     box-shadow: 0 0 0 3px rgba(112, 142, 134, 0.1);
   }
 
-  button { cursor: pointer; font-family: 'Public Sans', sans-serif; }
-}
-
-@layer components {
-  /* Card system */
-  .yfs-card {
-    background: white;
-    border-radius: 16px;
-    border: 1px solid var(--color-border);
-    padding: 20px;
-    transition: box-shadow 0.25s ease, transform 0.25s ease;
-  }
-  .yfs-card:hover {
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-  }
-  .yfs-card-elevated {
-    background: white;
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.03);
-    transition: box-shadow 0.25s ease, transform 0.25s ease;
-  }
-  .yfs-card-elevated:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 28px rgba(0, 0, 0, 0.06);
-    transform: translateY(-1px);
+  /* Touch-friendly buttons — minimum 44px tap target */
+  button {
+    cursor: pointer;
+    font-family: 'Public Sans', sans-serif;
+    min-height: 36px;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
-  /* Section spacing */
-  .yfs-section {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  /* Stat badge */
-  .yfs-stat {
-    background: rgba(255,255,255,0.15);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 14px;
-    padding: 14px 10px;
-    text-align: center;
-  }
-
-  /* Button styles */
-  .yfs-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    padding: 12px 24px;
-    border-radius: 50px;
-    border: none;
-    transition: all 0.25s ease;
-  }
-  .yfs-btn-primary {
-    background: var(--color-secondary);
-    color: white;
-  }
-  .yfs-btn-primary:hover {
-    background: var(--color-accent);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(78, 78, 83, 0.25);
-  }
-
-  /* Tag / pill */
-  .yfs-pill {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.6rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 3px 10px;
-    border-radius: 50px;
+  /* Allow text selection in content areas */
+  p, span, div, h1, h2, h3, h4, h5, h6, li, td, th, label {
+    user-select: auto;
   }
 }
 
 @layer utilities {
   .fade-in {
-    animation: fadeInUp 0.45s ease-out forwards;
+    animation: fadeInUp 0.35s ease-out forwards;
     opacity: 0;
   }
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--color-bg-alt); }
-::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 3px; }
+/* Hide scrollbar on mobile for cleaner look */
+::-webkit-scrollbar { width: 0; height: 0; }

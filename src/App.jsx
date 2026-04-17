@@ -1,6 +1,6 @@
-import { Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Home, Dumbbell, Heart, Camera, Menu, X, LogOut, Users, BookOpen, Eye, ArrowLeft } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, ChevronLeft, Eye, ArrowLeft, Users, BookOpen } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { seedDemoData } from './data/seed';
 
@@ -21,10 +21,7 @@ import PractitionerDashboard from './pages/PractitionerDashboard';
 import PatientDetail from './pages/PatientDetail';
 
 export default function App() {
-  useEffect(() => {
-    seedDemoData();
-  }, []);
-
+  useEffect(() => { seedDemoData(); }, []);
   return (
     <AuthProvider>
       <AppShell />
@@ -35,206 +32,123 @@ export default function App() {
 function AppShell() {
   const { session } = useAuth();
   if (!session) return <Login />;
-  return <Layout />;
+  return <MobileLayout />;
 }
 
-const PATIENT_NAV = [
-  { to: '/', icon: Home, label: 'My Plan' },
-  { to: '/exercises', icon: Dumbbell, label: 'Library' },
+// ─── Bottom tab items for patient ───
+const PATIENT_TABS = [
+  { to: '/', icon: Home, label: 'Home' },
+  { to: '/exercises', icon: Dumbbell, label: 'Exercises' },
   { to: '/pose', icon: Camera, label: 'Pose' },
   { to: '/pain', icon: Heart, label: 'Pain' },
 ];
 
-const PRACTITIONER_NAV = [
+// Practitioner still gets a simple top nav on desktop
+const PRACT_TABS = [
   { to: '/', icon: Users, label: 'Patients' },
   { to: '/exercises', icon: BookOpen, label: 'Library' },
 ];
 
-function Layout() {
-  const [mobileOpen, setMobileOpen] = useState(false);
+function MobileLayout() {
   const { session, logout, isPractitioner, stopViewingPatient } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // If practitioner is impersonating a patient, show patient-style nav
   const isImpersonating = isPractitioner && session.viewingPatientId;
-  const NAV = isPractitioner && !isImpersonating ? PRACTITIONER_NAV : PATIENT_NAV;
+  const isPatientMode = !isPractitioner || isImpersonating;
+  const TABS = isPatientMode ? PATIENT_TABS : PRACT_TABS;
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  const handleStopImpersonating = () => {
-    stopViewingPatient();
-    navigate('/');
-  };
+  // Check if current route is a detail/sub-page (hide tabs)
+  const isSubPage = /\/(exercises|programs|patients)\//.test(location.pathname)
+    || ['/pose', '/progress', '/measures', '/reports', '/builder'].includes(location.pathname);
+  // For pose page, show tabs but it's a main page
+  const showTabs = !(/\/(exercises|programs|patients)\//.test(location.pathname)
+    || ['/progress', '/measures', '/reports', '/builder'].includes(location.pathname));
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-alt)' }}>
-      {/* Impersonation banner */}
+    <div style={{
+      minHeight: '100vh',
+      minHeight: '100dvh',
+      display: 'flex',
+      flexDirection: 'column',
+      background: 'var(--color-bg-alt)',
+      maxWidth: '480px',
+      margin: '0 auto',
+      position: 'relative',
+      boxShadow: '0 0 40px rgba(0,0,0,0.06)',
+    }}>
+      {/* ── Impersonation banner ── */}
       {isImpersonating && (
         <div style={{
           background: '#FFF3E0', borderBottom: '1px solid #FFCC80',
-          padding: '8px 16px', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: '10px',
+          padding: '8px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          paddingTop: 'env(safe-area-inset-top, 8px)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#E65100' }}>
-            <Eye size={14} /> Viewing as <strong>{session.viewingPatientName}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: '#E65100' }}>
+            <Eye size={13} /> Viewing as <strong>{session.viewingPatientName}</strong>
           </div>
-          <button onClick={handleStopImpersonating} style={{
-            display: 'flex', alignItems: 'center', gap: '4px',
+          <button onClick={() => { stopViewingPatient(); navigate('/'); }} style={{
             background: '#E65100', color: 'white', border: 'none',
-            padding: '6px 12px', borderRadius: '50px',
-            fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
-            cursor: 'pointer',
+            padding: '5px 10px', borderRadius: '50px',
+            fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer',
           }}>
-            <ArrowLeft size={11} /> Back to Caseload
+            <ArrowLeft size={10} style={{ marginRight: '3px', verticalAlign: '-1px' }} /> Back
           </button>
         </div>
       )}
 
-      {/* Header */}
+      {/* ── Minimal top bar ── */}
       <header style={{
         background: 'white',
         borderBottom: '1px solid var(--color-border)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        backdropFilter: 'blur(12px)',
-        backgroundColor: 'rgba(255,255,255,0.92)',
+        padding: `${isImpersonating ? '0' : 'env(safe-area-inset-top, 0px)'} 16px 0`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        height: '52px',
+        flexShrink: 0,
       }}>
-        <div style={{
-          maxWidth: '1200px', margin: '0 auto', padding: '0 20px',
-          height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          {/* Logo */}
-          <NavLink to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <img
-              src="https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png"
-              alt="YFS"
-              style={{ width: '34px', height: '34px', borderRadius: '50%' }}
-            />
-            <div style={{ lineHeight: 1.15 }}>
-              <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1.05rem', color: 'var(--color-secondary)', letterSpacing: '-0.5px' }}>
-                Your Form Sux
-              </div>
-              <div style={{ fontSize: '0.55rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.8px', color: 'var(--color-accent)' }}>
-                {isPractitioner && !isImpersonating ? 'Practitioner Portal' : 'Rehab & Recovery'}
-              </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img
+            src="https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png"
+            alt="YFS"
+            style={{ width: '28px', height: '28px', borderRadius: '50%' }}
+          />
+          <div style={{ lineHeight: 1.1 }}>
+            <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '0.92rem', color: 'var(--color-secondary)', letterSpacing: '-0.3px' }}>
+              Your Form Sux
             </div>
-          </NavLink>
-
-          {/* Desktop Nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '4px' }} className="hidden md:flex">
-            {NAV.map(({ to, icon: Icon, label }) => (
-              <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none' }}>
-                {({ isActive }) => (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '8px 14px', borderRadius: '10px',
-                    fontSize: '0.72rem', fontWeight: 600,
-                    textTransform: 'uppercase', letterSpacing: '1px',
-                    color: isActive ? 'var(--color-accent)' : 'var(--color-text)',
-                    background: isActive ? 'var(--color-bg-alt)' : 'transparent',
-                    transition: 'all 0.2s ease',
-                  }}>
-                    <Icon size={15} /> {label}
-                  </div>
-                )}
-              </NavLink>
-            ))}
-
-            {/* User menu */}
-            <div style={{
-              marginLeft: '8px', paddingLeft: '12px',
-              borderLeft: '1px solid var(--color-border)',
-              display: 'flex', alignItems: 'center', gap: '8px',
-            }}>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-secondary)', lineHeight: 1.1 }}>
-                  {session.name}
-                </div>
-                <div style={{ fontSize: '0.55rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)' }}>
-                  {session.role}
-                </div>
-              </div>
-              <button onClick={handleLogout} title="Sign out" style={{
-                width: '32px', height: '32px', borderRadius: '50%',
-                background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
-                color: 'var(--color-text)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <LogOut size={13} />
-              </button>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ textAlign: 'right', lineHeight: 1.15 }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+              {session.name}
             </div>
-          </nav>
-
-          {/* Mobile toggle */}
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden"
-            style={{
-              background: 'none', border: 'none',
-              padding: '8px', color: 'var(--color-secondary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            <div style={{ fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)' }}>
+              {isPractitioner && !isImpersonating ? 'Practitioner' : 'Patient'}
+            </div>
+          </div>
+          <button onClick={() => { logout(); navigate('/'); }} style={{
+            width: '30px', height: '30px', borderRadius: '50%',
+            background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+            color: 'var(--color-text)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <LogOut size={12} />
           </button>
         </div>
-
-        {mobileOpen && (
-          <nav style={{
-            borderTop: '1px solid var(--color-border)',
-            background: 'white', padding: '8px',
-            display: 'flex', flexDirection: 'column', gap: '2px',
-          }} className="md:hidden">
-            {NAV.map(({ to, icon: Icon, label }) => (
-              <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} style={{ textDecoration: 'none' }}>
-                {({ isActive }) => (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    padding: '12px 14px', borderRadius: '10px',
-                    fontSize: '0.88rem', fontWeight: 500,
-                    color: isActive ? 'var(--color-accent)' : 'var(--color-text)',
-                    background: isActive ? 'var(--color-bg-alt)' : 'transparent',
-                  }}>
-                    <Icon size={17} /> {label}
-                  </div>
-                )}
-              </NavLink>
-            ))}
-            <div style={{
-              marginTop: '6px', paddingTop: '8px',
-              borderTop: '1px solid var(--color-border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 14px',
-            }}>
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{session.name}</div>
-                <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)' }}>{session.role}</div>
-              </div>
-              <button onClick={handleLogout} style={{
-                background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
-                padding: '8px 12px', borderRadius: '50px', cursor: 'pointer',
-                fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
-                color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '5px',
-              }}>
-                <LogOut size={12} /> Logout
-              </button>
-            </div>
-          </nav>
-        )}
       </header>
 
-      {/* Main */}
+      {/* ── Main scrollable content ── */}
       <main style={{
-        flex: 1, maxWidth: '1200px', margin: '0 auto', width: '100%', padding: '24px 20px',
+        flex: 1,
+        overflow: 'auto',
+        padding: '16px 16px 100px',
+        WebkitOverflowScrolling: 'touch',
       }}>
         <Routes>
           {isPractitioner && !isImpersonating ? (
             <>
-              {/* Practitioner-only routes */}
               <Route path="/" element={<PractitionerDashboard />} />
               <Route path="/patients/:id" element={<PatientDetail />} />
               <Route path="/exercises" element={<Exercises />} />
@@ -243,7 +157,6 @@ function Layout() {
             </>
           ) : (
             <>
-              {/* Patient routes (and practitioner impersonating) */}
               <Route path="/" element={<Dashboard />} />
               <Route path="/plan" element={<MyPlan />} />
               <Route path="/programs" element={<Programs />} />
@@ -262,17 +175,56 @@ function Layout() {
         </Routes>
       </main>
 
-      {/* Footer */}
-      <footer style={{
-        background: 'var(--color-footer)', color: 'rgba(255,255,255,0.6)',
-        textAlign: 'center', padding: '20px 20px',
-        fontSize: '0.78rem', marginTop: 'auto',
-      }}>
-        <div style={{ fontFamily: "'Tenor Sans', serif", color: 'white', fontSize: '0.92rem', marginBottom: '4px' }}>
-          Your Form Sux
-        </div>
-        <div>Wellness Centre — Toronto</div>
-      </footer>
+      {/* ── Bottom Tab Bar (mobile native feel) ── */}
+      {showTabs && (
+        <nav style={{
+          position: 'fixed',
+          bottom: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '100%',
+          maxWidth: '480px',
+          background: 'white',
+          borderTop: '1px solid var(--color-border)',
+          display: 'flex',
+          paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+          zIndex: 50,
+          boxShadow: '0 -2px 12px rgba(0,0,0,0.04)',
+        }}>
+          {TABS.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              style={{ textDecoration: 'none', flex: 1 }}
+            >
+              {({ isActive }) => (
+                <div style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '10px 4px 6px', gap: '3px',
+                  transition: 'all 0.15s',
+                }}>
+                  <div style={{
+                    width: '36px', height: '28px', borderRadius: '14px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isActive ? 'var(--color-accent)' : 'transparent',
+                    transition: 'all 0.2s',
+                  }}>
+                    <Icon size={18} color={isActive ? 'white' : 'var(--color-text)'} strokeWidth={isActive ? 2.5 : 1.8} />
+                  </div>
+                  <span style={{
+                    fontSize: '0.58rem', fontWeight: isActive ? 700 : 500,
+                    color: isActive ? 'var(--color-accent)' : 'var(--color-text)',
+                    letterSpacing: '0.3px',
+                  }}>
+                    {label}
+                  </span>
+                </div>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }
