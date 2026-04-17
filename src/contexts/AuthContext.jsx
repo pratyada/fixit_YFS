@@ -11,7 +11,10 @@ import {
 import { auth } from '../lib/firebase';
 
 const googleProvider = new GoogleAuthProvider();
-import { getUserProfile, setUserProfile } from '../lib/firestore';
+import { getUserProfile, setUserProfile, updateUserRole } from '../lib/firestore';
+
+// Emails that should automatically be set as admin on first login
+const ADMIN_EMAILS = ['museinitialize@gmail.com'];
 
 const AuthContext = createContext(null);
 
@@ -24,8 +27,13 @@ export function AuthProvider({ children }) {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        // Load Firestore profile
-        const prof = await getUserProfile(firebaseUser.uid);
+        let prof = await getUserProfile(firebaseUser.uid);
+        // Auto-fix admin role if needed
+        const email = firebaseUser.email?.toLowerCase() || '';
+        if (ADMIN_EMAILS.includes(email) && prof && prof.role !== 'admin') {
+          await updateUserRole(firebaseUser.uid, 'admin');
+          prof = { ...prof, role: 'admin' };
+        }
         setProfile(prof);
       } else {
         setUser(null);
@@ -60,20 +68,28 @@ export function AuthProvider({ children }) {
 
   const loginWithGoogle = async () => {
     const cred = await signInWithPopup(auth, googleProvider);
-    // Create/update Firestore profile on first Google sign-in
     let prof = await getUserProfile(cred.user.uid);
+    const email = cred.user.email?.toLowerCase() || '';
+    const isAdminEmail = ADMIN_EMAILS.includes(email);
+
     if (!prof) {
+      // First-time login — create profile
       const profileData = {
         name: cred.user.displayName || '',
         email: cred.user.email,
         photoURL: cred.user.photoURL || '',
         condition: '',
-        role: 'patient',
+        role: isAdminEmail ? 'admin' : 'patient',
         createdAt: new Date().toISOString(),
       };
       await setUserProfile(cred.user.uid, profileData);
       prof = { id: cred.user.uid, ...profileData };
+    } else if (isAdminEmail && prof.role !== 'admin') {
+      // Existing user who should be admin — fix their role
+      await updateUserRole(cred.user.uid, 'admin');
+      prof = { ...prof, role: 'admin' };
     }
+
     setProfile(prof);
     return cred.user;
   };
