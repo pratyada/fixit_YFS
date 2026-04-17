@@ -14,7 +14,7 @@ const googleProvider = new GoogleAuthProvider();
 import { getUserProfile, setUserProfile, updateUserRole } from '../lib/firestore';
 
 // Emails that should automatically be set as admin on first login
-const ADMIN_EMAILS = ['museinitialize@gmail.com'];
+const ADMIN_EMAILS = ['musee.initialize@gmail.com'];
 
 const AuthContext = createContext(null);
 
