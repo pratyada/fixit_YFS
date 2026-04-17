@@ -1,4 +1,6 @@
 // ─── Firebase Configuration ───
+// Values are read from environment variables (VITE_ prefix for Vite).
+// Set them in .env.local (local dev) and in Vercel dashboard (production).
 
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
@@ -6,13 +8,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD39NxL6_1FWGUYNt6ZHC187OB3lvdTOeU",
-  authDomain: "fixit-6167d.firebaseapp.com",
-  projectId: "fixit-6167d",
-  storageBucket: "fixit-6167d.firebasestorage.app",
-  messagingSenderId: "1080637793002",
-  appId: "1:1080637793002:web:c12498744c61c60b5dad93",
-  measurementId: "G-P7YV6ECEZ9",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
