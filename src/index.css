@@ -1,0 +1,191 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&family=Tenor+Sans&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-primary: #B0C4BB;
+    --color-secondary: #4E4E53;
+    --color-accent: #708E86;
+    --color-tertiary: #B7ACA0;
+    --color-text: #687276;
+    --color-bg: #FFFFFF;
+    --color-bg-alt: #F4F7F6;
+    --color-border: #E2E0DF;
+    --color-footer: #77786A;
+    --color-success: #6BA368;
+    --color-warning: #D4A853;
+    --color-danger: #C06060;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Public Sans', sans-serif;
+    font-weight: 400;
+    color: var(--color-text);
+    background: var(--color-bg-alt);
+    line-height: 1.6;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: 'Tenor Sans', serif;
+    color: var(--color-secondary);
+    font-weight: 400;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  h1 { font-size: 1.85rem; letter-spacing: -1px; }
+  h2 { font-size: 1.5rem; letter-spacing: -0.8px; }
+  h3 { font-size: 1.2rem; }
+  h4 { font-size: 1.05rem; }
+
+  @media (min-width: 768px) {
+    h1 { font-size: 2.5rem; }
+    h2 { font-size: 1.85rem; }
+    h3 { font-size: 1.4rem; }
+    h4 { font-size: 1.15rem; }
+    body { font-size: 16px; }
+  }
+
+  h6 {
+    font-family: 'Public Sans', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--color-accent);
+    margin: 0;
+  }
+
+  p { margin: 0; }
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: color 0.25s ease;
+  }
+  a:hover { color: var(--color-tertiary); }
+
+  img { display: block; max-width: 100%; }
+
+  input, textarea, select {
+    font-family: 'Public Sans', sans-serif;
+    font-size: 0.875rem;
+    padding: 10px 14px;
+    border: 1.5px solid var(--color-border);
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    width: 100%;
+    color: var(--color-secondary);
+    background: white;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(112, 142, 134, 0.1);
+  }
+
+  button { cursor: pointer; font-family: 'Public Sans', sans-serif; }
+}
+
+@layer components {
+  /* Card system */
+  .yfs-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--color-border);
+    padding: 20px;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .yfs-card:hover {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  }
+  .yfs-card-elevated {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .yfs-card-elevated:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 28px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+
+  /* Section spacing */
+  .yfs-section {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Stat badge */
+  .yfs-stat {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+
+  /* Button styles */
+  .yfs-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 12px 24px;
+    border-radius: 50px;
+    border: none;
+    transition: all 0.25s ease;
+  }
+  .yfs-btn-primary {
+    background: var(--color-secondary);
+    color: white;
+  }
+  .yfs-btn-primary:hover {
+    background: var(--color-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(78, 78, 83, 0.25);
+  }
+
+  /* Tag / pill */
+  .yfs-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 50px;
+  }
+}
+
+@layer utilities {
+  .fade-in {
+    animation: fadeInUp 0.45s ease-out forwards;
+    opacity: 0;
+  }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--color-bg-alt); }
+::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 3px; }
