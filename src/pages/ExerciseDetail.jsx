@@ -204,16 +204,26 @@ export default function ExerciseDetail() {
         )}
       </div>
 
-      {/* Pose Check CTA */}
-      <Link to="/pose" style={{
-        display: 'block', background: 'var(--color-bg-alt)', borderRadius: '14px',
-        padding: '20px', textDecoration: 'none', textAlign: 'center',
-        border: '1px solid var(--color-border)', transition: 'all 0.2s',
-      }}>
-        <Camera size={22} style={{ margin: '0 auto 6px', display: 'block', color: 'var(--color-accent)' }} />
-        <h4>Check Your Form</h4>
-        <p style={{ fontSize: '0.75rem', color: 'var(--color-text)' }}>Turn on your camera for real-time pose analysis</p>
-      </Link>
+      {/* Record & Pose Check CTAs */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <Link to={`/exercises/${id}/record`} style={{
+          display: 'block', background: 'linear-gradient(135deg, #708E86 0%, #5A7A72 100%)', borderRadius: '14px',
+          padding: '20px', textDecoration: 'none', textAlign: 'center',
+          border: 'none', transition: 'all 0.2s', color: 'white',
+        }}>
+          <Camera size={22} style={{ margin: '0 auto 6px', display: 'block' }} />
+          <h4 style={{ color: 'white' }}>Record Session</h4>
+          <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>Record front + side angles for AI form analysis</p>
+        </Link>
+        <Link to="/pose" style={{
+          display: 'block', background: 'var(--color-bg-alt)', borderRadius: '14px',
+          padding: '16px', textDecoration: 'none', textAlign: 'center',
+          border: '1px solid var(--color-border)', transition: 'all 0.2s',
+        }}>
+          <h4>Live Pose Check</h4>
+          <p style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>Real-time form analysis with your camera</p>
+        </Link>
+      </div>
 
       {/* Instructions */}
       <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>

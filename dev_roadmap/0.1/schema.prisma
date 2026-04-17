@@ -1,0 +1,312 @@
+// =============================================================================
+// FIXIT — Database Schema (Prisma)
+// =============================================================================
+// This file defines the data model for FIXIT. Drop into prisma/schema.prisma
+// (merge with existing YourFormSux schema) or adapt to Drizzle/raw SQL as
+// dictated by the existing data layer found during discovery.
+//
+// Conventions:
+//   - All tables have created_at / updated_at (Prisma @default + @updatedAt)
+//   - Soft-delete via deleted_at (NULL = active)
+//   - UUIDs as primary keys (matches typical Next.js + Postgres setup)
+//   - cuid() shown; swap for uuid() if existing schema uses UUIDs
+//   - All FKs cascade on update; restrict on delete (force soft-delete instead)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// USERS — extends existing YourFormSux user model
+// -----------------------------------------------------------------------------
+// During discovery, MERGE these new fields into the existing User model rather
+// than creating a parallel table. Shown here as standalone for clarity.
+// -----------------------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  PRACTITIONER
+  PATIENT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  role          UserRole
+  // For PATIENT only: which practitioner owns this patient
+  practitionerId String?
+  practitioner   User?    @relation("PractitionerPatients", fields: [practitionerId], references: [id])
+  patients       User[]   @relation("PractitionerPatients")
+
+  // Existing YourFormSux fields go here (passwordHash, emailVerified, etc.)
+
+  // Relations to FIXIT entities
+  assignmentsCreated Assignment[] @relation("AssignmentPractitioner")
+  assignmentsReceived Assignment[] @relation("AssignmentPatient")
+  sessionsAsPatient   Session[]    @relation("SessionPatient")
+  feedbackGiven       Feedback[]
+  auditEvents         AuditLog[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([role])
+  @@index([practitionerId])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// -----------------------------------------------------------------------------
+// EXERCISES — the FIXIT Library
+// -----------------------------------------------------------------------------
+// Data-driven: adding a new exercise is a seed/admin operation, not a code change.
+// -----------------------------------------------------------------------------
+
+enum ExerciseCategory {
+  LOWER_BODY
+  UPPER_BODY
+  CORE
+}
+
+enum ExerciseDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model Exercise {
+  id              String              @id @default(cuid())
+  slug            String              @unique  // e.g., "squats", "deadlift"
+  name            String                       // "Squats"
+  category        ExerciseCategory
+  difficulty      ExerciseDifficulty  @default(BEGINNER)
+  instructions    String              @db.Text  // markdown
+  demoVideoUrl    String?
+  thumbnailUrl    String?
+  // Arrays of strings — Postgres native; if MySQL, switch to JSON
+  targetMuscles   String[]
+  keyFormCues     String[]            // the specific things the AI checks
+  // Recording config
+  maxDurationSec  Int                 @default(60)
+  requiresFront   Boolean             @default(true)
+  requiresSide    Boolean             @default(true)
+  isActive        Boolean             @default(true)
+
+  assignments Assignment[]
+  sessions    Session[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([category])
+  @@index([isActive])
+  @@map("exercises")
+}
+
+// -----------------------------------------------------------------------------
+// ASSIGNMENTS — practitioner gives an exercise to a patient
+// -----------------------------------------------------------------------------
+
+enum AssignmentStatus {
+  PENDING        // assigned, no submission yet
+  IN_PROGRESS    // patient started but didn't finish
+  SUBMITTED      // patient submitted at least one session
+  REVIEWED       // practitioner has reviewed at least one session
+  ARCHIVED
+}
+
+model Assignment {
+  id             String           @id @default(cuid())
+  practitionerId String
+  practitioner   User             @relation("AssignmentPractitioner", fields: [practitionerId], references: [id])
+  patientId      String
+  patient        User             @relation("AssignmentPatient", fields: [patientId], references: [id])
+  exerciseId     String
+  exercise       Exercise         @relation(fields: [exerciseId], references: [id])
+  status         AssignmentStatus @default(PENDING)
+  notes          String?          @db.Text  // practitioner's note to patient
+  dueAt          DateTime?
+
+  sessions Session[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([practitionerId])
+  @@index([patientId])
+  @@index([exerciseId])
+  @@index([status])
+  @@map("assignments")
+}
+
+// -----------------------------------------------------------------------------
+// SESSIONS — one recording attempt by a patient (front + side videos)
+// -----------------------------------------------------------------------------
+// The AI analysis result is stored as JSON. The shape matches the existing
+// YourFormSux engine output — DOCUMENT THE EXACT SHAPE during discovery and
+// add a Zod schema in /lib/ai/analysis.types.ts.
+// -----------------------------------------------------------------------------
+
+enum SessionStatus {
+  RECORDING       // patient is mid-flow (rare to persist this state)
+  UPLOADING
+  ANALYZING       // AI is processing
+  ANALYZED        // AI done, awaiting practitioner review
+  REVIEWED        // practitioner submitted feedback
+  FAILED          // AI or upload failure — see errorMessage
+}
+
+model Session {
+  id             String        @id @default(cuid())
+  assignmentId   String
+  assignment     Assignment    @relation(fields: [assignmentId], references: [id])
+  patientId      String        // denormalized for query speed
+  patient        User          @relation("SessionPatient", fields: [patientId], references: [id])
+  exerciseId     String        // denormalized
+  exercise       Exercise      @relation(fields: [exerciseId], references: [id])
+
+  status         SessionStatus @default(UPLOADING)
+
+  // Video storage — paths to blob storage; never raw public URLs
+  frontVideoKey  String?       // e.g., "sessions/{id}/front.webm"
+  sideVideoKey   String?
+  videoMimeType  String?
+  durationSecFront Int?
+  durationSecSide  Int?
+
+  // AI analysis result
+  aiModelVersion String?       // e.g., "yfs-pose-v2.3.1" — REQUIRED for retraining loop
+  aiScore        Float?        // 0-100 overall score
+  aiAnalysis     Json?         // full structured output from engine
+  aiSummary      String?       @db.Text  // plain-language summary for patient
+  aiAnalyzedAt   DateTime?
+
+  errorMessage   String?       @db.Text
+
+  feedback Feedback?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([assignmentId])
+  @@index([patientId])
+  @@index([exerciseId])
+  @@index([status])
+  @@index([aiModelVersion])
+  @@index([createdAt])
+  @@map("sessions")
+}
+
+// -----------------------------------------------------------------------------
+// FEEDBACK — practitioner's structured rating of the AI analysis
+// -----------------------------------------------------------------------------
+// THIS IS THE STRATEGIC HEART OF FIXIT — the training-loop input.
+// Schema must remain stable and exportable for model retraining pipelines.
+// -----------------------------------------------------------------------------
+
+model Feedback {
+  id             String   @id @default(cuid())
+  sessionId      String   @unique
+  session        Session  @relation(fields: [sessionId], references: [id])
+  practitionerId String
+  practitioner   User     @relation(fields: [practitionerId], references: [id])
+
+  // 1-5 stars; 5 = AI nailed it
+  rating         Int      // enforce 1-5 at app + DB level (CHECK constraint added in migration)
+
+  whatWasGood       String? @db.Text
+  whatNeedsImproving String? @db.Text
+
+  // Optional structured corrections — array of {issue, correction} objects
+  corrections    Json?
+
+  // Snapshot of the AI model version this feedback applies to.
+  // Critical: even if a Session is later re-analyzed with a newer model,
+  // this feedback row preserves the version it was given against.
+  aiModelVersionSnapshot String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([practitionerId])
+  @@index([rating])
+  @@index([aiModelVersionSnapshot])
+  @@index([createdAt])
+  @@map("feedback")
+}
+
+// -----------------------------------------------------------------------------
+// AUDIT LOG — required for sensitive-data access tracking
+// -----------------------------------------------------------------------------
+
+enum AuditAction {
+  VIEW_PATIENT
+  VIEW_SESSION
+  VIEW_VIDEO
+  CREATE_PRACTITIONER
+  CREATE_PATIENT
+  ASSIGN_EXERCISE
+  SUBMIT_FEEDBACK
+  SOFT_DELETE_USER
+  HARD_DELETE_SESSION
+  EXPORT_DATA
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  actorId    String
+  actor      User        @relation(fields: [actorId], references: [id])
+  action     AuditAction
+  // Polymorphic target — store the type and id of the affected entity
+  targetType String      // "User" | "Session" | "Assignment" | etc.
+  targetId   String
+  // Optional structured context (filters used, before/after diff, etc.)
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?     @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// =============================================================================
+// MIGRATION NOTES (run after `prisma migrate dev`)
+// =============================================================================
+//
+// 1. Add CHECK constraint on feedback.rating:
+//    ALTER TABLE feedback ADD CONSTRAINT feedback_rating_range
+//      CHECK (rating BETWEEN 1 AND 5);
+//
+// 2. Add CHECK constraint on User: practitionerId set IFF role = PATIENT
+//    ALTER TABLE users ADD CONSTRAINT user_practitioner_role
+//      CHECK (
+//        (role = 'PATIENT' AND practitioner_id IS NOT NULL)
+//        OR (role <> 'PATIENT' AND practitioner_id IS NULL)
+//      );
+//
+// 3. Partial unique index — one ACTIVE assignment per (patient, exercise) pair:
+//    CREATE UNIQUE INDEX assignment_patient_exercise_active
+//      ON assignments (patient_id, exercise_id)
+//      WHERE deleted_at IS NULL AND status NOT IN ('ARCHIVED');
+//
+// 4. Materialized view for admin dashboard (refresh hourly):
+//    CREATE MATERIALIZED VIEW fixit_dashboard_metrics AS ...
+//    (define during dashboard implementation; see admin metrics queries)
+//
+// =============================================================================

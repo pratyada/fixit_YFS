@@ -37,7 +37,7 @@ export default function Dashboard() {
   const quickActions = [
     { to: '/plan', icon: Calendar, label: "Today's Plan", desc: 'View your rehab program', color: '#708E86', bg: '#EDF3F1' },
     { to: '/exercises', icon: Dumbbell, label: 'Exercises', desc: 'Browse exercise library', color: '#8B7355', bg: '#F5F0EB' },
-    { to: '/pose', icon: Camera, label: 'Pose Check', desc: 'Real-time form analysis', color: '#6B7FA3', bg: '#EEF1F6' },
+    { to: '/pose', icon: Camera, label: 'Record & Analyze', desc: 'Record form for AI feedback', color: '#6B7FA3', bg: '#EEF1F6' },
     { to: '/pain', icon: Heart, label: 'Log Pain', desc: 'Track how you feel', color: '#A36B6B', bg: '#F6EEEE' },
   ];
 

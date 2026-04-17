@@ -1,8 +1,7 @@
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Home, Dumbbell, Heart, Camera, LogOut } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { seedDemoData } from './data/seed';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -17,9 +16,9 @@ import Programs from './pages/Programs';
 import ProgramDetail from './pages/ProgramDetail';
 import ProgramBuilder from './pages/ProgramBuilder';
 import OutcomeMeasures from './pages/OutcomeMeasures';
+import RecordSession from './pages/RecordSession';
 
 export default function App() {
-  useEffect(() => { seedDemoData(); }, []);
   return (
     <AuthProvider>
       <AppShell />
@@ -28,8 +27,10 @@ export default function App() {
 }
 
 function AppShell() {
-  const { session } = useAuth();
-  if (!session) return <Login />;
+  const { user, loading } = useAuth();
+
+  if (loading) return <SplashScreen />;
+  if (!user) return <Login />;
   return <MobileLayout />;
 }
 
@@ -37,6 +38,7 @@ const TABS = [
   { to: '/', icon: Home, label: 'Home' },
   { to: '/exercises', icon: Dumbbell, label: 'Exercises' },
   { to: '/pose', icon: Camera, label: 'Pose' },
+  { to: '/progress', icon: BarChart3, label: 'Progress' },
   { to: '/pain', icon: Heart, label: 'Pain' },
 ];
 
@@ -47,7 +49,7 @@ function MobileLayout() {
 
   // Hide tabs on detail/sub-pages
   const showTabs = !(/\/(exercises|programs)\//.test(location.pathname)
-    || ['/progress', '/measures', '/reports', '/builder'].includes(location.pathname));
+    || ['/measures', '/reports', '/builder', '/plan'].includes(location.pathname));
 
   return (
     <div style={{
@@ -78,20 +80,20 @@ function MobileLayout() {
           />
           <div style={{ lineHeight: 1.1 }}>
             <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '0.92rem', color: 'var(--color-secondary)', letterSpacing: '-0.3px' }}>
-              Your Form Sux
+              FIXIT
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ textAlign: 'right', lineHeight: 1.15 }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
-              {session.name}
+              {session?.name || 'Patient'}
             </div>
             <div style={{ fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)' }}>
-              Patient
+              {session?.condition || 'Patient'}
             </div>
           </div>
-          <button onClick={() => { logout(); navigate('/'); }} style={{
+          <button onClick={async () => { await logout(); navigate('/'); }} style={{
             width: '30px', height: '30px', borderRadius: '50%',
             background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
             color: 'var(--color-text)', cursor: 'pointer',
@@ -117,6 +119,7 @@ function MobileLayout() {
           <Route path="/builder" element={<ProgramBuilder />} />
           <Route path="/exercises" element={<Exercises />} />
           <Route path="/exercises/:id" element={<ExerciseDetail />} />
+          <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
           <Route path="/pose" element={<PoseChecker />} />
           <Route path="/progress" element={<Progress />} />
           <Route path="/measures" element={<OutcomeMeasures />} />
@@ -176,6 +179,44 @@ function MobileLayout() {
           ))}
         </nav>
       )}
+    </div>
+  );
+}
+
+function SplashScreen() {
+  return (
+    <div style={{
+      minHeight: '100vh', minHeight: '100dvh',
+      background: 'linear-gradient(135deg, #708E86 0%, #4E4E53 100%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexDirection: 'column', gap: '16px',
+    }}>
+      <img
+        src="https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png"
+        alt="YFS"
+        style={{ width: '64px', height: '64px', borderRadius: '50%' }}
+      />
+      <div style={{
+        fontFamily: "'Tenor Sans', serif", fontSize: '1.5rem',
+        color: 'white', letterSpacing: '-0.5px',
+      }}>
+        FIXIT
+      </div>
+      <div style={{
+        width: '32px', height: '3px', borderRadius: '2px',
+        background: 'rgba(255,255,255,0.3)', overflow: 'hidden',
+      }}>
+        <div style={{
+          width: '50%', height: '100%', background: 'white', borderRadius: '2px',
+          animation: 'loading 1s ease-in-out infinite alternate',
+        }} />
+      </div>
+      <style>{`
+        @keyframes loading {
+          from { transform: translateX(0); }
+          to { transform: translateX(100%); }
+        }
+      `}</style>
     </div>
   );
 }
