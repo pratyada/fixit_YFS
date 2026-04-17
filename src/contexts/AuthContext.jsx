@@ -3,10 +3,14 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   updateProfile,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+
+const googleProvider = new GoogleAuthProvider();
 import { getUserProfile, setUserProfile } from '../lib/firestore';
 
 const AuthContext = createContext(null);
@@ -54,6 +58,26 @@ export function AuthProvider({ children }) {
     return cred.user;
   };
 
+  const loginWithGoogle = async () => {
+    const cred = await signInWithPopup(auth, googleProvider);
+    // Create/update Firestore profile on first Google sign-in
+    let prof = await getUserProfile(cred.user.uid);
+    if (!prof) {
+      const profileData = {
+        name: cred.user.displayName || '',
+        email: cred.user.email,
+        photoURL: cred.user.photoURL || '',
+        condition: '',
+        role: 'patient',
+        createdAt: new Date().toISOString(),
+      };
+      await setUserProfile(cred.user.uid, profileData);
+      prof = { id: cred.user.uid, ...profileData };
+    }
+    setProfile(prof);
+    return cred.user;
+  };
+
   const logout = async () => {
     await signOut(auth);
     setUser(null);
@@ -84,6 +108,7 @@ export function AuthProvider({ children }) {
       loading,
       login,
       signup,
+      loginWithGoogle,
       logout,
       refreshProfile,
       activePatientId: user?.uid,
