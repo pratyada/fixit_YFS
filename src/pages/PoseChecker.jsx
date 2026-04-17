@@ -3,6 +3,8 @@ import { Camera, CameraOff, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Squar
 import { Line } from 'react-chartjs-2';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
+import { useAuth } from '../contexts/AuthContext';
+import { addSession } from '../lib/firestore';
 
 const POSE_CONNECTIONS = [
   ['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'],
@@ -23,6 +25,8 @@ function calculateAngle(a, b, c) {
 }
 
 export default function PoseChecker() {
+  const { user } = useAuth();
+
   // Flow: 'select' → 'camera' → 'report'
   const [step, setStep] = useState('select');
   const [selectedExercise, setSelectedExercise] = useState(null);
@@ -121,13 +125,40 @@ export default function PoseChecker() {
     }
   };
 
-  const finishAndAnalyze = () => {
+  const finishAndAnalyze = async () => {
     // Merge front + side frames for analysis
     const allFrames = [...(recordedFramesRef.current.front || []), ...(recordedFramesRef.current.side || [])];
     const analysis = analyzeMovement(allFrames);
     setReport(analysis);
     stopCamera();
     setStep('report');
+
+    // Save to Firestore so practitioner can see it
+    if (user && selectedExercise && analysis && !analysis.error) {
+      try {
+        await addSession(user.uid, {
+          exerciseId: selectedExercise.id,
+          exerciseName: selectedExercise.name,
+          type: 'pose_check',
+          status: 'ANALYZED',
+          aiScore: analysis.overall,
+          aiSummary: analysis.faults?.slice(0, 2).map(f => f.name).join(', ') || 'Analysis complete',
+          aiAnalysis: {
+            overall: analysis.overall,
+            categories: analysis.categories,
+            faults: analysis.faults,
+            angles: analysis.angles,
+            tips: analysis.tips,
+            duration: analysis.duration,
+            totalFrames: analysis.totalFrames,
+          },
+          aiModelVersion: 'movenet-lightning-v1',
+          angles: ['front', 'side'],
+        });
+      } catch (e) {
+        console.error('Failed to save pose check to Firestore:', e);
+      }
+    }
   };
 
   const flipCamera = () => {
