@@ -100,6 +100,11 @@ export function AuthProvider({ children }) {
     ...profile,
   } : null;
 
+  const role = profile?.role || 'patient';
+  const isAdmin = role === 'admin';
+  const isPractitioner = role === 'practitioner';
+  const isPatient = role === 'patient';
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -111,7 +116,11 @@ export function AuthProvider({ children }) {
       loginWithGoogle,
       logout,
       refreshProfile,
-      activePatientId: user?.uid,
+      role,
+      isAdmin,
+      isPractitioner,
+      isPatient,
+      activePatientId: isPatient ? user?.uid : null,
     }}>
       {children}
     </AuthContext.Provider>

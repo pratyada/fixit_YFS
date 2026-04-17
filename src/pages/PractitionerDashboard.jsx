@@ -1,358 +1,281 @@
-import { useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plus, Search, TrendingUp, TrendingDown, Activity, Heart, AlertCircle, ChevronRight, X } from 'lucide-react';
+import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getPatientsByPractitioner, addPatient } from '../data/users';
-import { load } from '../utils/storage';
-import { PROTOCOLS } from '../data/protocols';
-import { PAIN_SCALE, EXERCISE_LIBRARY } from '../data/exercises';
+import { getPatientsByPractitioner, getPatientSessions, getPainEntries } from '../lib/firestore';
+import { EXERCISE_LIBRARY } from '../data/exercises';
 
 export default function PractitionerDashboard() {
-  const { session } = useAuth();
+  const { user, session } = useAuth();
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showAdd, setShowAdd] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientSessions, setPatientSessions] = useState([]);
+  const [patientPain, setPatientPain] = useState([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const patients = useMemo(() =>
-    getPatientsByPractitioner(session.userId),
-    [session.userId, refreshKey]
+  useEffect(() => {
+    if (user) {
+      getPatientsByPractitioner(user.uid).then(p => {
+        setPatients(p);
+        setLoading(false);
+      });
+    }
+  }, [user]);
+
+  const viewPatient = async (patient) => {
+    setSelectedPatient(patient);
+    setLoadingDetail(true);
+    const [sessions, pain] = await Promise.all([
+      getPatientSessions(patient.id),
+      getPainEntries(patient.id),
+    ]);
+    setPatientSessions(sessions);
+    setPatientPain(pain);
+    setLoadingDetail(false);
+  };
+
+  const filtered = patients.filter(p =>
+    !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.condition?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Compute stats per patient
-  const patientStats = useMemo(() => {
-    return patients.map(p => {
-      const sessions = load(`patient_${p.id}_completed_sessions`, []);
-      const painEntries = load(`patient_${p.id}_pain_entries`, []);
-      const assigned = load(`patient_${p.id}_assigned_programs`, []);
+  // Detail view
+  if (selectedPatient) {
+    return (
+      <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <button onClick={() => setSelectedPatient(null)} style={{
+          display: 'flex', alignItems: 'center', gap: '4px',
+          background: 'none', border: 'none', color: 'var(--color-accent)',
+          fontSize: '0.78rem', fontWeight: 500, padding: 0,
+        }}>
+          ← Back to patients
+        </button>
 
-      // Adherence: % of last 7 days with at least 1 session
-      const last7Days = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        last7Days.push(d.toISOString().split('T')[0]);
-      }
-      const daysActive = last7Days.filter(d => sessions.some(s => s.date === d)).length;
-      const adherence = Math.round((daysActive / 7) * 100);
+        {/* Patient header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #708E86 0%, #4E4E53 100%)',
+          borderRadius: '20px', padding: '24px', color: 'white',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            {selectedPatient.photoURL ? (
+              <img src={selectedPatient.photoURL} alt="" style={{ width: '48px', height: '48px', borderRadius: '50%' }} />
+            ) : (
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                {selectedPatient.name?.charAt(0) || '?'}
+              </div>
+            )}
+            <div>
+              <h2 style={{ color: 'white', marginBottom: '2px' }}>{selectedPatient.name}</h2>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>
+                {selectedPatient.condition || 'No condition set'} &bull; {selectedPatient.email}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            <StatBox icon={<Video size={14} />} value={patientSessions.length} label="Sessions" />
+            <StatBox icon={<Heart size={14} />} value={patientPain.length} label="Pain Logs" />
+            <StatBox icon={<Star size={14} />} value={patientSessions.filter(s => s.aiScore).length} label="Analyzed" />
+          </div>
+        </div>
 
-      const lastPain = painEntries[painEntries.length - 1];
-      const previousPain = painEntries[painEntries.length - 2];
-      const painTrend = (lastPain && previousPain)
-        ? lastPain.level - previousPain.level
-        : null;
+        {loadingDetail ? (
+          <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text)' }}>Loading...</div>
+        ) : (
+          <>
+            {/* Sessions */}
+            <div>
+              <h3 style={{ marginBottom: '10px' }}>Recording Sessions</h3>
+              {patientSessions.length === 0 ? (
+                <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '24px', textAlign: 'center', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+                  No recordings yet
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {patientSessions.map(s => {
+                    const ex = EXERCISE_LIBRARY.find(e => e.id === s.exerciseId);
+                    return (
+                      <div key={s.id} style={{
+                        background: 'white', borderRadius: '14px',
+                        border: '1px solid var(--color-border)', padding: '14px 16px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+                            {ex?.name || s.exerciseName || s.exerciseId}
+                          </div>
+                          {s.aiScore && (
+                            <span style={{
+                              fontSize: '0.72rem', fontWeight: 700,
+                              padding: '3px 10px', borderRadius: '50px',
+                              background: s.aiScore >= 80 ? '#E8F5E9' : s.aiScore >= 60 ? '#FFF8E1' : '#FFEBEE',
+                              color: s.aiScore >= 80 ? '#2E7D32' : s.aiScore >= 60 ? '#F57F17' : '#C62828',
+                            }}>
+                              Score: {Math.round(s.aiScore)}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>
+                          {s.status} &bull; {s.createdAt?.toDate ? s.createdAt.toDate().toLocaleDateString() : 'Recent'}
+                        </div>
+                        {s.aiSummary && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-accent)', marginTop: '6px', fontStyle: 'italic' }}>
+                            {s.aiSummary}
+                          </div>
+                        )}
+                        {s.frontVideoUrl && (
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                            {s.frontVideoUrl && (
+                              <a href={s.frontVideoUrl} target="_blank" rel="noopener noreferrer" style={{
+                                fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
+                                color: 'var(--color-accent)',
+                              }}>
+                                Front Video
+                              </a>
+                            )}
+                            {s.sideVideoUrl && (
+                              <a href={s.sideVideoUrl} target="_blank" rel="noopener noreferrer" style={{
+                                fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
+                                color: 'var(--color-accent)',
+                              }}>
+                                Side Video
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-      const program = assigned[0] ? PROTOCOLS.find(pr => pr.id === assigned[0].protocolId) : null;
+            {/* Pain entries */}
+            <div>
+              <h3 style={{ marginBottom: '10px' }}>Pain Journal</h3>
+              {patientPain.length === 0 ? (
+                <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '24px', textAlign: 'center', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+                  No pain entries yet
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {patientPain.slice(0, 10).map(p => (
+                    <div key={p.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: 'white', borderRadius: '10px',
+                      border: '1px solid var(--color-border)', padding: '10px 14px',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--color-secondary)' }}>
+                          {p.location} — {p.activity}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text)' }}>
+                          {p.timestamp?.toDate ? p.timestamp.toDate().toLocaleDateString() : p.date || 'Recent'}
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: '1rem', fontWeight: 700,
+                        color: p.level >= 7 ? '#C62828' : p.level >= 4 ? '#F57F17' : '#2E7D32',
+                      }}>
+                        {p.level}/10
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
-      const lastActiveDate = sessions.length > 0 ? sessions[sessions.length - 1].date : null;
-      const daysSinceLastActive = lastActiveDate
-        ? Math.floor((Date.now() - new Date(lastActiveDate).getTime()) / (24 * 60 * 60 * 1000))
-        : null;
-
-      return {
-        ...p,
-        adherence,
-        daysActive,
-        totalSessions: sessions.length,
-        lastPain,
-        painTrend,
-        program,
-        lastActiveDate,
-        daysSinceLastActive,
-        needsAttention: (lastPain && lastPain.level >= 6) || (daysSinceLastActive != null && daysSinceLastActive > 3),
-      };
-    });
-  }, [patients]);
-
-  const filtered = patientStats.filter(p =>
-    !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.condition.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Aggregate stats
-  const totalPatients = patientStats.length;
-  const avgAdherence = totalPatients > 0
-    ? Math.round(patientStats.reduce((s, p) => s + p.adherence, 0) / totalPatients)
-    : 0;
-  const needAttention = patientStats.filter(p => p.needsAttention).length;
-  const activeToday = patientStats.filter(p => {
-    const sessions = load(`patient_${p.id}_completed_sessions`, []);
-    return sessions.some(s => s.date === new Date().toISOString().split('T')[0]);
-  }).length;
-
+  // Patient list view
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Header */}
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{
         background: 'linear-gradient(135deg, #708E86 0%, #4E4E53 100%)',
         borderRadius: '20px', padding: '24px', color: 'white',
       }}>
-        <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.55)', marginBottom: '4px' }}>
-          {session.name}
+        <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
+          Practitioner
         </div>
-        <h1 style={{ color: 'white', marginBottom: '4px' }}>Patient Caseload</h1>
-        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.85rem', marginBottom: '20px' }}>
-          Monitor adherence, pain trends, and progress across all your patients
+        <h2 style={{ color: 'white', marginBottom: '4px' }}>
+          Welcome, {session?.name}
+        </h2>
+        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem' }}>
+          {patients.length} patient{patients.length !== 1 ? 's' : ''} assigned to you
         </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-          <Stat icon={<Users size={16} />} value={totalPatients} label="Patients" />
-          <Stat icon={<Activity size={16} />} value={`${avgAdherence}%`} label="Avg Adherence" />
-          <Stat icon={<Heart size={16} />} value={activeToday} label="Active Today" />
-          <Stat icon={<AlertCircle size={16} />} value={needAttention} label="Need Review" />
-        </div>
       </div>
 
-      {/* Search + Add */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-border)' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search patients..." style={{ paddingLeft: '36px' }} />
-        </div>
-        <button onClick={() => setShowAdd(true)} style={{
-          display: 'flex', alignItems: 'center', gap: '5px',
-          background: 'var(--color-secondary)', color: 'white',
-          padding: '11px 16px', borderRadius: '12px', border: 'none',
-          fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px',
-          cursor: 'pointer', flexShrink: 0,
-        }}>
-          <Plus size={14} /> Add Patient
-        </button>
+      {/* Search */}
+      <div style={{ position: 'relative' }}>
+        <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text)' }} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search patients..." style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
       </div>
 
-      {/* Needs attention banner */}
-      {needAttention > 0 && (
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)' }}>Loading patients...</div>
+      ) : filtered.length === 0 ? (
         <div style={{
-          background: '#FFF3F0', borderRadius: '12px', padding: '12px 16px',
-          border: '1px solid #FFCDD2', display: 'flex', alignItems: 'center', gap: '10px',
+          background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)',
+          padding: '40px 24px', textAlign: 'center',
         }}>
-          <AlertCircle size={18} color="#C62828" />
-          <div style={{ fontSize: '0.82rem', color: '#C62828' }}>
-            <strong>{needAttention}</strong> patient{needAttention !== 1 ? 's' : ''} may need your attention — high pain or no recent activity
-          </div>
+          <Users size={32} color="var(--color-border)" style={{ margin: '0 auto 12px' }} />
+          <h4>No patients yet</h4>
+          <p style={{ fontSize: '0.82rem', color: 'var(--color-text)', marginTop: '4px' }}>
+            Ask your admin to assign patients to you
+          </p>
         </div>
-      )}
-
-      {/* Patients */}
-      <div>
-        <h3 style={{ marginBottom: '12px' }}>All Patients ({filtered.length})</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--color-text)' }}>
-              No patients found. Click "Add Patient" to get started.
-            </div>
-          ) : filtered.map(p => (
-            <PatientCard key={p.id} patient={p} />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {filtered.map(p => (
+            <button
+              key={p.id}
+              onClick={() => viewPatient(p)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px',
+                padding: '14px 16px', borderRadius: '14px',
+                background: 'white', border: '1px solid var(--color-border)',
+                cursor: 'pointer', textAlign: 'left', width: '100%',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.transform = 'translateX(3px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.transform = 'none'; }}
+            >
+              {p.photoURL ? (
+                <img src={p.photoURL} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0 }} />
+              ) : (
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+                  background: '#EDF3F1', color: '#708E86',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.1rem', fontWeight: 600,
+                }}>
+                  {p.name?.charAt(0) || '?'}
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{p.name || 'Unnamed'}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>{p.condition || 'No condition'}</div>
+              </div>
+              <ChevronRight size={16} color="var(--color-border)" />
+            </button>
           ))}
         </div>
-      </div>
-
-      {showAdd && <AddPatientModal onClose={() => setShowAdd(false)} onAdded={() => { setShowAdd(false); setRefreshKey(k => k + 1); }} practitionerId={session.userId} />}
+      )}
     </div>
   );
 }
 
-function PatientCard({ patient: p }) {
-  const adherenceColor = p.adherence >= 80 ? '#4CAF50' : p.adherence >= 50 ? '#FFC107' : '#F44336';
-  const painColor = p.lastPain ? PAIN_SCALE[p.lastPain.level]?.color : '#888';
-
-  return (
-    <Link to={`/patients/${p.id}`} style={{
-      background: 'white', borderRadius: '14px',
-      border: `1px solid ${p.needsAttention ? '#FFCDD2' : 'var(--color-border)'}`,
-      padding: '16px', textDecoration: 'none',
-      display: 'flex', alignItems: 'center', gap: '14px',
-      transition: 'all 0.2s',
-    }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)';
-        e.currentTarget.style.transform = 'translateY(-1px)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = 'none';
-        e.currentTarget.style.transform = 'none';
-      }}
-    >
-      {/* Avatar */}
-      <div style={{
-        width: '52px', height: '52px', borderRadius: '50%',
-        background: 'var(--color-bg-alt)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '1.6rem', flexShrink: 0,
-      }}>
-        {p.avatar}
-      </div>
-
-      {/* Name + condition */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-secondary)' }}>{p.name}</div>
-          {p.needsAttention && (
-            <span style={{
-              fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px',
-              background: '#FFEBEE', color: '#C62828',
-              padding: '2px 7px', borderRadius: '50px',
-            }}>
-              Review
-            </span>
-          )}
-        </div>
-        <div style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>
-          {p.condition} • Age {p.age}
-          {p.program && ` • ${p.program.name}`}
-        </div>
-      </div>
-
-      {/* Stats column */}
-      <div style={{ display: 'flex', gap: '14px', flexShrink: 0 }}>
-        <MiniStat
-          label="Adherence"
-          value={`${p.adherence}%`}
-          color={adherenceColor}
-        />
-        <MiniStat
-          label="Pain"
-          value={p.lastPain ? `${p.lastPain.level}/10` : '—'}
-          color={painColor}
-          trend={p.painTrend}
-        />
-        <MiniStat
-          label="Sessions"
-          value={p.totalSessions}
-          color="var(--color-text)"
-        />
-      </div>
-
-      <ChevronRight size={16} color="var(--color-border)" style={{ flexShrink: 0 }} />
-    </Link>
-  );
-}
-
-function MiniStat({ label, value, color, trend }) {
-  return (
-    <div style={{ textAlign: 'center', minWidth: '52px' }}>
-      <div style={{ fontSize: '1rem', fontWeight: 700, color, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-        {value}
-        {trend != null && trend !== 0 && (
-          trend < 0 ? <TrendingDown size={11} color="#4CAF50" /> : <TrendingUp size={11} color="#F44336" />
-        )}
-      </div>
-      <div style={{ fontSize: '0.55rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--color-text)', marginTop: '3px' }}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function Stat({ icon, value, label }) {
+function StatBox({ icon, value, label }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)',
-      border: '1px solid rgba(255,255,255,0.1)',
-      borderRadius: '12px', padding: '12px 8px', textAlign: 'center',
+      background: 'rgba(255,255,255,0.12)', borderRadius: '12px',
+      padding: '10px 8px', textAlign: 'center',
     }}>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px', color: 'rgba(255,255,255,0.6)' }}>{icon}</div>
-      <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: '0.55rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'rgba(255,255,255,0.5)', marginTop: '3px' }}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function AddPatientModal({ onClose, onAdded, practitionerId }) {
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [condition, setCondition] = useState('ACL Reconstruction');
-  const [side, setSide] = useState('Right');
-
-  const submit = () => {
-    if (!name.trim() || !age) return;
-    addPatient({
-      name: name.trim(),
-      age: Number(age),
-      condition,
-      side,
-      practitionerId,
-      surgeryDate: null,
-    });
-    onAdded();
-  };
-
-  return (
-    <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-      zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: 'white', borderRadius: '16px', maxWidth: '440px', width: '100%',
-        padding: '24px',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <h3>Add New Patient</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-secondary)' }}>
-            <X size={18} />
-          </button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div>
-            <Label>Full Name</Label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="John Doe" autoFocus />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '10px' }}>
-            <div>
-              <Label>Age</Label>
-              <input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="35" />
-            </div>
-            <div>
-              <Label>Condition</Label>
-              <select value={condition} onChange={e => setCondition(e.target.value)}>
-                <option>ACL Reconstruction</option>
-                <option>Meniscus Repair</option>
-                <option>Patellofemoral Pain</option>
-                <option>Rotator Cuff Repair</option>
-                <option>Frozen Shoulder</option>
-                <option>Low Back Pain</option>
-                <option>Sciatica</option>
-                <option>Ankle Sprain</option>
-                <option>Plantar Fasciitis</option>
-                <option>Tennis Elbow</option>
-                <option>Neck Pain</option>
-                <option>Hip Bursitis</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <Label>Affected Side</Label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {['Left', 'Right', 'Both', 'N/A'].map(s => (
-                <button key={s} onClick={() => setSide(s)} style={{
-                  flex: 1, padding: '10px', borderRadius: '10px',
-                  fontSize: '0.78rem', fontWeight: 500, cursor: 'pointer',
-                  border: `1.5px solid ${side === s ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                  background: side === s ? 'var(--color-accent)' : 'white',
-                  color: side === s ? 'white' : 'var(--color-text)',
-                }}>{s}</button>
-              ))}
-            </div>
-          </div>
-          <button onClick={submit} disabled={!name.trim() || !age} style={{
-            padding: '12px', borderRadius: '10px', marginTop: '8px',
-            background: name.trim() && age ? 'var(--color-secondary)' : '#ccc',
-            color: 'white', border: 'none',
-            fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px',
-            cursor: name.trim() && age ? 'pointer' : 'default',
-          }}>
-            Add Patient
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Label({ children }) {
-  return (
-    <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--color-secondary)', marginBottom: '5px' }}>
-      {children}
+      <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white' }}>{value}</div>
+      <div style={{ fontSize: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.45)' }}>{label}</div>
     </div>
   );
 }

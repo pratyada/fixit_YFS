@@ -163,6 +163,50 @@ export async function addCompletedSession(uid, data) {
   });
 }
 
+// ─── Admin: User Management ───
+
+export async function getAllUsers() {
+  return queryDocs(
+    query(collection(db, 'users'), orderBy('createdAt', 'desc'))
+  );
+}
+
+export async function getUsersByRole(role) {
+  return queryDocs(
+    query(collection(db, 'users'), where('role', '==', role))
+  );
+}
+
+export async function updateUserRole(uid, role) {
+  await updateDoc(doc(db, 'users', uid), {
+    role,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function assignPatientToPractitioner(patientId, practitionerId) {
+  await updateDoc(doc(db, 'users', patientId), {
+    practitionerId,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ─── Practitioner: get their patients ───
+
+export async function getPatientsByPractitioner(practitionerId) {
+  return queryDocs(
+    query(collection(db, 'users'), where('practitionerId', '==', practitionerId), where('role', '==', 'patient'))
+  );
+}
+
+// ─── Practitioner: get all sessions for a patient ───
+
+export async function getPatientSessions(patientId) {
+  return queryDocs(
+    query(collection(db, 'users', patientId, 'sessions'), orderBy('createdAt', 'desc'))
+  );
+}
+
 // ─── Feedback (from practitioner on a session) ───
 
 export async function getFeedbackForSession(sessionId) {
@@ -170,6 +214,13 @@ export async function getFeedbackForSession(sessionId) {
     query(collection(db, 'feedback'), where('sessionId', '==', sessionId))
   );
   return results[0] || null;
+}
+
+export async function addFeedback(data) {
+  return addDoc(collection(db, 'feedback'), {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
 }
 
 // ─── Real-time listeners ───

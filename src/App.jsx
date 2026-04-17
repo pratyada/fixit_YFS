@@ -1,6 +1,5 @@
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3 } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 import Login from './pages/Login';
@@ -17,6 +16,8 @@ import ProgramDetail from './pages/ProgramDetail';
 import ProgramBuilder from './pages/ProgramBuilder';
 import OutcomeMeasures from './pages/OutcomeMeasures';
 import RecordSession from './pages/RecordSession';
+import AdminDashboard from './pages/AdminDashboard';
+import PractitionerDashboard from './pages/PractitionerDashboard';
 
 export default function App() {
   return (
@@ -28,13 +29,13 @@ export default function App() {
 
 function AppShell() {
   const { user, loading } = useAuth();
-
   if (loading) return <SplashScreen />;
   if (!user) return <Login />;
   return <MobileLayout />;
 }
 
-const TABS = [
+// ─── Tab configs per role ───
+const PATIENT_TABS = [
   { to: '/', icon: Home, label: 'Home' },
   { to: '/exercises', icon: Dumbbell, label: 'Exercises' },
   { to: '/pose', icon: Camera, label: 'Pose' },
@@ -42,10 +43,24 @@ const TABS = [
   { to: '/pain', icon: Heart, label: 'Pain' },
 ];
 
+const PRACTITIONER_TABS = [
+  { to: '/', icon: Users, label: 'Patients' },
+  { to: '/exercises', icon: BookOpen, label: 'Library' },
+];
+
+const ADMIN_TABS = [
+  { to: '/', icon: Shield, label: 'Admin' },
+  { to: '/exercises', icon: BookOpen, label: 'Library' },
+];
+
 function MobileLayout() {
-  const { session, logout } = useAuth();
+  const { session, logout, role, isAdmin, isPractitioner } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const TABS = isAdmin ? ADMIN_TABS : isPractitioner ? PRACTITIONER_TABS : PATIENT_TABS;
+
+  const roleLabel = isAdmin ? 'Admin' : isPractitioner ? 'Practitioner' : (session?.condition || 'Patient');
 
   // Hide tabs on detail/sub-pages
   const showTabs = !(/\/(exercises|programs)\//.test(location.pathname)
@@ -87,10 +102,13 @@ function MobileLayout() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ textAlign: 'right', lineHeight: 1.15 }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
-              {session?.name || 'Patient'}
+              {session?.name || 'User'}
             </div>
-            <div style={{ fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)' }}>
-              {session?.condition || 'Patient'}
+            <div style={{
+              fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
+              color: isAdmin ? '#5E35B1' : isPractitioner ? '#2E7D32' : 'var(--color-accent)',
+            }}>
+              {roleLabel}
             </div>
           </div>
           <button onClick={async () => { await logout(); navigate('/'); }} style={{
@@ -112,20 +130,38 @@ function MobileLayout() {
         WebkitOverflowScrolling: 'touch',
       }}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/plan" element={<MyPlan />} />
-          <Route path="/programs" element={<Programs />} />
-          <Route path="/programs/:id" element={<ProgramDetail />} />
-          <Route path="/builder" element={<ProgramBuilder />} />
-          <Route path="/exercises" element={<Exercises />} />
-          <Route path="/exercises/:id" element={<ExerciseDetail />} />
-          <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
-          <Route path="/pose" element={<PoseChecker />} />
-          <Route path="/progress" element={<Progress />} />
-          <Route path="/measures" element={<OutcomeMeasures />} />
-          <Route path="/pain" element={<PainJournal />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="*" element={<Navigate to="/" />} />
+          {isAdmin ? (
+            <>
+              <Route path="/" element={<AdminDashboard />} />
+              <Route path="/exercises" element={<Exercises />} />
+              <Route path="/exercises/:id" element={<ExerciseDetail />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </>
+          ) : isPractitioner ? (
+            <>
+              <Route path="/" element={<PractitionerDashboard />} />
+              <Route path="/exercises" element={<Exercises />} />
+              <Route path="/exercises/:id" element={<ExerciseDetail />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </>
+          ) : (
+            <>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/plan" element={<MyPlan />} />
+              <Route path="/programs" element={<Programs />} />
+              <Route path="/programs/:id" element={<ProgramDetail />} />
+              <Route path="/builder" element={<ProgramBuilder />} />
+              <Route path="/exercises" element={<Exercises />} />
+              <Route path="/exercises/:id" element={<ExerciseDetail />} />
+              <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
+              <Route path="/pose" element={<PoseChecker />} />
+              <Route path="/progress" element={<Progress />} />
+              <Route path="/measures" element={<OutcomeMeasures />} />
+              <Route path="/pain" element={<PainJournal />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </>
+          )}
         </Routes>
       </main>
 
