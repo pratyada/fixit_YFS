@@ -10,11 +10,10 @@ export function AuthProvider({ children }) {
     if (session) save('session', session);
   }, [session]);
 
-  // session shape:
-  // { role: 'practitioner' | 'patient', userId: string, name: string }
+  // session shape: { userId: string, name: string }
 
-  const login = (role, userId, name) => {
-    setSession({ role, userId, name });
+  const login = (userId, name) => {
+    setSession({ userId, name });
   };
 
   const logout = () => {
@@ -22,32 +21,12 @@ export function AuthProvider({ children }) {
     save('session', null);
   };
 
-  const switchPatient = (patientId, name) => {
-    if (session?.role === 'practitioner') {
-      // Practitioners can view a patient
-      setSession({ ...session, viewingPatientId: patientId, viewingPatientName: name });
-    }
-  };
-
-  const stopViewingPatient = () => {
-    if (session?.role === 'practitioner') {
-      const { viewingPatientId, viewingPatientName, ...rest } = session;
-      setSession(rest);
-    }
-  };
-
   return (
     <AuthContext.Provider value={{
       session,
       login,
       logout,
-      switchPatient,
-      stopViewingPatient,
-      isPractitioner: session?.role === 'practitioner',
-      isPatient: session?.role === 'patient',
-      // The "active patient" is either the logged-in patient,
-      // or the patient the practitioner is currently viewing
-      activePatientId: session?.role === 'patient' ? session.userId : session?.viewingPatientId,
+      activePatientId: session?.userId,
     }}>
       {children}
     </AuthContext.Provider>
