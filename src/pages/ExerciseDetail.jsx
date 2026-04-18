@@ -1,11 +1,12 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Clock, Repeat, Target, AlertTriangle, CheckCircle2, Camera, Play, Pause, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Clock, Repeat, Target, AlertTriangle, CheckCircle2, Camera, Play, Pause, RotateCcw, Upload, Video, X } from 'lucide-react';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { usePatientData } from '../hooks/usePatientData';
-import { addCompletedSession } from '../lib/firestore';
+import { addCompletedSession, getExercise, setExercise } from '../lib/firestore';
+import { uploadDemoVideo } from '../lib/storage-firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/storage';
 import ExerciseAnimation from '../components/ExerciseAnimation';
@@ -15,8 +16,9 @@ export default function ExerciseDetail() {
   const { t } = useTranslation('exercises');
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin, isPractitioner } = useAuth();
   const exercise = FIXIT_EXERCISES.find(e => e.id === id) || EXERCISE_LIBRARY.find(e => e.id === id);
+  const canManage = isAdmin || isPractitioner;
 
   // Helper to get translated exercise content from exerciseData namespace
   const getExT = (field) => {
@@ -33,6 +35,45 @@ export default function ExerciseDetail() {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [notes, setNotes] = useState('');
   const [painDuring, setPainDuring] = useState(0);
+
+  // Demo video
+  const [demoVideoUrl, setDemoVideoUrl] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!id) return;
+    getExercise(id).then(doc => {
+      if (doc?.demoVideoUrl) setDemoVideoUrl(doc.demoVideoUrl);
+    }).catch(() => {});
+  }, [id]);
+
+  const handleDemoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      const result = await uploadDemoVideo(id, file, (p) => setUploadProgress(p));
+      await setExercise(id, { demoVideoUrl: result.url, demoVideoPath: result.path });
+      setDemoVideoUrl(result.url);
+    } catch (err) {
+      console.error('Demo upload failed:', err);
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const removeDemoVideo = async () => {
+    try {
+      await setExercise(id, { demoVideoUrl: null, demoVideoPath: null });
+      setDemoVideoUrl(null);
+    } catch (err) {
+      console.error('Failed to remove demo:', err);
+    }
+  };
 
   if (!exercise) {
     return (
@@ -137,6 +178,103 @@ export default function ExerciseDetail() {
           )}
         </div>
       </div>
+
+      {/* Demo Video Guide */}
+      {demoVideoUrl ? (
+        <div style={{
+          background: 'white', borderRadius: '16px',
+          border: '1px solid var(--color-border)', overflow: 'hidden',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px 0',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '28px', height: '28px', borderRadius: '8px',
+                background: '#EDF3F1', color: '#708E86',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Video size={14} />
+              </div>
+              <h4 style={{ margin: 0 }}>Demo Video</h4>
+            </div>
+            {canManage && (
+              <button onClick={removeDemoVideo} style={{
+                background: 'none', border: 'none', color: 'var(--color-text)',
+                cursor: 'pointer', padding: '4px',
+              }} title="Remove demo video">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <div style={{ padding: '12px 16px 16px' }}>
+            <video
+              src={demoVideoUrl}
+              controls
+              playsInline
+              preload="metadata"
+              style={{
+                width: '100%', borderRadius: '12px', background: '#000',
+                maxHeight: '300px',
+              }}
+            />
+          </div>
+        </div>
+      ) : canManage ? (
+        <div style={{
+          background: 'white', borderRadius: '16px',
+          border: '2px dashed var(--color-border)', padding: '24px',
+          textAlign: 'center',
+        }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/*"
+            onChange={handleDemoUpload}
+            style={{ display: 'none' }}
+          />
+          {uploading ? (
+            <div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-secondary)', marginBottom: '8px' }}>
+                Uploading demo video... {Math.round(uploadProgress * 100)}%
+              </div>
+              <div style={{
+                height: '6px', background: 'var(--color-bg-alt)',
+                borderRadius: '3px', overflow: 'hidden', maxWidth: '200px', margin: '0 auto',
+              }}>
+                <div style={{
+                  height: '100%', width: `${uploadProgress * 100}%`,
+                  background: 'var(--color-accent)', borderRadius: '3px',
+                  transition: 'width 0.3s',
+                }} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <Video size={28} style={{ color: 'var(--color-border)', marginBottom: '8px' }} />
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-secondary)', marginBottom: '4px' }}>
+                Add Demo Video
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text)', marginBottom: '12px' }}>
+                Upload a video showing correct form for this exercise
+              </p>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  background: 'var(--color-accent)', color: 'white', border: 'none',
+                  padding: '10px 20px', borderRadius: '10px',
+                  fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '1px', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                <Upload size={14} /> Upload Video
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
 
       {/* Exercise Visual — 2D/3D toggle */}
       <ViewToggleAnimation exerciseId={exercise.id} />

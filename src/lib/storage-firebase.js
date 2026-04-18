@@ -56,6 +56,27 @@ export async function uploadReport(uid, file, onProgress) {
   return { url, path, name: file.name };
 }
 
+// Upload a demo video for an exercise
+export async function uploadDemoVideo(exerciseId, file, onProgress) {
+  const ext = file.name.split('.').pop();
+  const path = `demos/${exerciseId}/demo.${ext}`;
+  const storageRef = ref(storage, path);
+
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(storageRef, file, {
+      contentType: file.type,
+    });
+    task.on('state_changed',
+      snap => onProgress?.(snap.bytesTransferred / snap.totalBytes),
+      reject,
+      async () => {
+        const url = await getDownloadURL(task.snapshot.ref);
+        resolve({ url, path });
+      }
+    );
+  });
+}
+
 // Get a signed download URL for a storage path
 export async function getVideoURL(path) {
   return getDownloadURL(ref(storage, path));
