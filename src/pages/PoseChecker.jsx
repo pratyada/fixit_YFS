@@ -361,13 +361,17 @@ export default function PoseChecker() {
       <div style={{
         position: 'fixed', inset: 0, zIndex: 100,
         background: '#000', display: 'flex', flexDirection: 'column',
+        height: '100vh', height: '100dvh',
+        overflow: 'hidden',
       }}>
         {/* Top bar */}
         <div style={{
-          padding: 'env(safe-area-inset-top, 12px) 16px 12px',
+          padding: '12px 16px',
+          paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)',
           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           zIndex: 10,
+          flexShrink: 0,
         }}>
           <button onClick={() => { stopCamera(); setStep('select'); }} style={{
             background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white',
@@ -502,15 +506,14 @@ export default function PoseChecker() {
           )}
         </div>
 
-        {/* Bottom controls */}
+        {/* Bottom controls — always visible above phone nav bar */}
         <div style={{
-          padding: '20px 20px',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 20px)',
-          background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)',
+          padding: '16px 20px 32px',
+          paddingBottom: 'max(calc(env(safe-area-inset-bottom, 0px) + 32px), 48px)',
+          background: '#000',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px',
           zIndex: 10,
           flexShrink: 0,
-          minHeight: '120px',
         }}>
           {!recording && hasCurrentRecording ? (
             // After recording an angle: retake or next/submit

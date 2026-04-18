@@ -141,6 +141,7 @@ export default function CameraRecorder({ onComplete, onCancel, exerciseName }) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 100,
       background: '#000', display: 'flex', flexDirection: 'column',
+      height: '100vh', height: '100dvh', overflow: 'hidden',
     }}>
       {/* Header */}
       <div style={{
@@ -250,15 +251,14 @@ export default function CameraRecorder({ onComplete, onCancel, exerciseName }) {
         )}
       </div>
 
-      {/* Controls */}
+      {/* Controls — always visible above phone nav bar */}
       <div style={{
-        padding: '20px 20px',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 20px)',
-        background: 'rgba(0,0,0,0.9)',
+        padding: '16px 20px 32px',
+        paddingBottom: 'max(calc(env(safe-area-inset-bottom, 0px) + 32px), 48px)',
+        background: '#000',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px',
         zIndex: 3,
         flexShrink: 0,
-        minHeight: '120px',
       }}>
         {!recording && hasRecording ? (
           <>
