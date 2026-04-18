@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star, ChevronDown, ChevronUp, Send, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getPatientsByPractitioner, getPatientSessions, getPainEntries, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner } from '../lib/firestore';
+import { getPatientsByPractitioner, getPatientSessions, getPainEntries, getAssignments, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner } from '../lib/firestore';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { addAssignment } from '../lib/firestore';
@@ -15,6 +15,7 @@ export default function PractitionerDashboard() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientSessions, setPatientSessions] = useState([]);
   const [patientPain, setPatientPain] = useState([]);
+  const [patientAssignments, setPatientAssignments] = useState([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showAddPatient, setShowAddPatient] = useState(false);
   const [allPatients, setAllPatients] = useState([]);
@@ -54,12 +55,14 @@ export default function PractitionerDashboard() {
   const viewPatient = async (patient) => {
     setSelectedPatient(patient);
     setLoadingDetail(true);
-    const [sessions, pain] = await Promise.all([
+    const [sessions, pain, assignments] = await Promise.all([
       getPatientSessions(patient.id),
       getPainEntries(patient.id),
+      getAssignments(patient.id),
     ]);
     setPatientSessions(sessions);
     setPatientPain(pain);
+    setPatientAssignments(assignments);
     setLoadingDetail(false);
   };
 
@@ -108,6 +111,82 @@ export default function PractitionerDashboard() {
 
         {/* Assign Exercise */}
         <AssignExercisePanel patient={selectedPatient} practitionerId={user.uid} />
+
+        {/* Assigned Exercises Overview */}
+        {!loadingDetail && patientAssignments.length > 0 && (
+          <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '16px' }}>
+            <h3 style={{ marginBottom: '12px' }}>
+              Assigned Exercises ({patientAssignments.length})
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {patientAssignments.map(a => {
+                const ex = FIXIT_EXERCISES.find(e => e.id === a.exerciseId);
+                // Find sessions matching this exercise
+                const exerciseSessions = patientSessions.filter(s => s.exerciseId === a.exerciseId);
+                const latestSession = exerciseSessions[0];
+                const bestScore = exerciseSessions.length > 0
+                  ? Math.max(...exerciseSessions.filter(s => s.aiScore).map(s => s.aiScore))
+                  : null;
+                const sessionCount = exerciseSessions.length;
+
+                return (
+                  <div key={a.id} style={{
+                    padding: '12px', borderRadius: '12px',
+                    background: 'var(--color-bg-alt)',
+                    border: '1px solid var(--color-border)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+                          {ex?.name || a.exerciseName || a.exerciseId}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--color-text)' }}>
+                          {a.sets}x{a.reps} &bull; {a.frequency || 'Daily'}
+                          {a.notes && <> &bull; <em>{a.notes}</em></>}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        {bestScore ? (
+                          <div style={{
+                            fontSize: '1rem', fontWeight: 700,
+                            color: bestScore >= 80 ? '#2E7D32' : bestScore >= 60 ? '#F57F17' : '#C62828',
+                          }}>
+                            {Math.round(bestScore)}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.72rem', color: '#9E9E9E' }}>—</div>
+                        )}
+                        <div style={{ fontSize: '0.58rem', color: 'var(--color-text)' }}>
+                          {bestScore ? 'Best' : 'No score'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Session count & status */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem' }}>
+                      <span style={{
+                        padding: '2px 8px', borderRadius: '50px',
+                        background: sessionCount > 0 ? '#E8F5E9' : '#FFF8E1',
+                        color: sessionCount > 0 ? '#2E7D32' : '#F57F17',
+                        fontWeight: 600,
+                      }}>
+                        {sessionCount} session{sessionCount !== 1 ? 's' : ''}
+                      </span>
+                      {latestSession && (
+                        <span style={{ color: 'var(--color-text)' }}>
+                          Last: {latestSession.createdAt?.toDate ? latestSession.createdAt.toDate().toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Recent'}
+                        </span>
+                      )}
+                      {latestSession?.status === 'REVIEWED' && (
+                        <CheckCircle2 size={13} color="#4CAF50" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {loadingDetail ? (
           <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text)' }}>Loading...</div>
