@@ -51,5 +51,21 @@
     "equipmentNeeded": "Equipment Needed",
     "view2D": "2D Animation",
     "view3D": "3D Rotatable"
+  },
+  "poseChecker": {
+    "title": "Pose Checker",
+    "subtitle": "Select an exercise to analyze your form",
+    "searchPlaceholder": "Search exercises...",
+    "frontSideAnalysis": "Front + Side Analysis",
+    "jointAngles": "Joint Angles",
+    "angleTimeline": "Angle Timeline",
+    "recommendations": "Recommendations",
+    "recordAgain": "Record Again",
+    "newExercise": "New Exercise",
+    "analysisFailed": "Analysis Failed",
+    "excellentForm": "Excellent Form!",
+    "goodForm": "Good Form",
+    "needsImprovement": "Needs Improvement",
+    "poorForm": "Poor Form"
   }
 }

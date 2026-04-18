@@ -55,38 +55,39 @@ function AppShell() {
 
 // ─── Tab configs per role ───
 const PATIENT_TABS = [
-  { to: '/', icon: Home, label: 'Home' },
-  { to: '/exercises', icon: Dumbbell, label: 'Exercises' },
-  { to: '/pose', icon: Camera, label: 'Pose' },
-  { to: '/progress', icon: BarChart3, label: 'Progress' },
-  { to: '/pain', icon: Heart, label: 'Pain' },
+  { to: '/', icon: Home, labelKey: 'nav:tabs.home' },
+  { to: '/exercises', icon: Dumbbell, labelKey: 'nav:tabs.exercises' },
+  { to: '/pose', icon: Camera, labelKey: 'nav:tabs.pose' },
+  { to: '/progress', icon: BarChart3, labelKey: 'nav:tabs.progress' },
+  { to: '/pain', icon: Heart, labelKey: 'nav:tabs.pain' },
 ];
 
 const PRACTITIONER_TABS = [
-  { to: '/', icon: Users, label: 'Patients' },
-  { to: '/exercises', icon: BookOpen, label: 'Library' },
+  { to: '/', icon: Users, labelKey: 'nav:tabs.patients' },
+  { to: '/exercises', icon: BookOpen, labelKey: 'nav:tabs.library' },
 ];
 
 const ADMIN_TABS = [
-  { to: '/', icon: Shield, label: 'Admin' },
-  { to: '/exercises', icon: BookOpen, label: 'Library' },
-  { to: '/kiosk', icon: Camera, label: 'Kiosk' },
+  { to: '/', icon: Shield, labelKey: 'nav:tabs.admin' },
+  { to: '/exercises', icon: BookOpen, labelKey: 'nav:tabs.library' },
+  { to: '/kiosk', icon: Camera, labelKey: 'nav:tabs.kiosk' },
 ];
 
 const ROLE_META = {
-  admin: { icon: Shield, color: '#5E35B1', bg: '#EDE7F6', label: 'Admin', desc: 'Manage users, roles & platform settings' },
-  practitioner: { icon: Stethoscope, color: '#2E7D32', bg: '#E8F5E9', label: 'Practitioner', desc: 'Manage patients & assign exercises' },
-  patient: { icon: Home, color: '#1565C0', bg: '#E3F2FD', label: 'Patient', desc: 'Track exercises & recovery progress' },
+  admin: { icon: Shield, color: '#5E35B1', bg: '#EDE7F6', labelKey: 'nav:roles.admin.label', descKey: 'nav:roles.admin.desc' },
+  practitioner: { icon: Stethoscope, color: '#2E7D32', bg: '#E8F5E9', labelKey: 'nav:roles.practitioner.label', descKey: 'nav:roles.practitioner.desc' },
+  patient: { icon: Home, color: '#1565C0', bg: '#E3F2FD', labelKey: 'nav:roles.patient.label', descKey: 'nav:roles.patient.desc' },
 };
 
 function MobileLayout() {
+  const { t } = useTranslation('nav');
   const { session, logout, role, isAdmin, isPractitioner, hasMultipleRoles, switchRole, allRoles } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const TABS = isAdmin ? ADMIN_TABS : isPractitioner ? PRACTITIONER_TABS : PATIENT_TABS;
 
-  const roleLabel = isAdmin ? 'Admin' : isPractitioner ? 'Practitioner' : (session?.condition || 'Patient');
+  const roleLabel = isAdmin ? t('roles.admin.label') : isPractitioner ? t('roles.practitioner.label') : (session?.condition || t('roles.patient.label'));
   const roleMeta = ROLE_META[role] || ROLE_META.patient;
 
   // Hide tabs on detail/sub-pages
@@ -130,7 +131,7 @@ function MobileLayout() {
           />
           <div style={{ lineHeight: 1.1 }}>
             <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '0.92rem', color: 'var(--color-secondary)', letterSpacing: '-0.3px' }}>
-              FIXIT
+              {t('auth:brandName')}
             </div>
           </div>
         </div>
@@ -148,7 +149,7 @@ function MobileLayout() {
                   color: roleMeta.color,
                   display: 'flex', alignItems: 'center', gap: '3px',
                 }}
-                title={`Switch role (${allRoles.join(' / ')})`}
+                title={t('header.switchRole', { roles: allRoles.join(' / ') })}
               >
                 {roleLabel}
                 <ArrowRightLeft size={8} style={{ opacity: 0.6 }} />
@@ -239,7 +240,7 @@ function MobileLayout() {
           zIndex: 50,
           boxShadow: '0 -2px 12px rgba(0,0,0,0.04)',
         }}>
-          {TABS.map(({ to, icon: Icon, label }) => (
+          {TABS.map(({ to, icon: Icon, labelKey }) => (
             <NavLink
               key={to}
               to={to}
@@ -265,7 +266,7 @@ function MobileLayout() {
                     color: isActive ? 'var(--color-accent)' : 'var(--color-text)',
                     letterSpacing: '0.3px',
                   }}>
-                    {label}
+                    {t(labelKey)}
                   </span>
                 </div>
               )}
@@ -279,6 +280,7 @@ function MobileLayout() {
 
 // ─── Role Picker Screen (shown after login for multi-role users) ───
 function RolePickerScreen() {
+  const { t } = useTranslation('nav');
   const { session, allRoles, pickRole, logout } = useAuth();
 
   return (
@@ -302,15 +304,15 @@ function RolePickerScreen() {
           fontFamily: "'Tenor Sans', serif", fontSize: '1.3rem',
           color: 'var(--color-secondary)', marginBottom: '4px',
         }}>
-          FIXIT
+          {t('auth:brandName')}
         </div>
         <div style={{ fontSize: '0.85rem', color: 'var(--color-text)', marginBottom: '6px' }}>
-          Welcome, <strong>{session?.name || 'User'}</strong>
+          {t('rolePicker.welcome', { name: session?.name || 'User' })}
         </div>
         <div style={{
           fontSize: '0.75rem', color: 'var(--color-text)', marginBottom: '24px',
         }}>
-          How would you like to continue?
+          {t('rolePicker.howToContinue')}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -341,10 +343,10 @@ function RolePickerScreen() {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.95rem', fontWeight: 700, color: meta.color }}>
-                    {meta.label}
+                    {t(meta.labelKey)}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--color-text)', marginTop: '2px' }}>
-                    {meta.desc}
+                    {t(meta.descKey)}
                   </div>
                 </div>
               </button>
@@ -361,7 +363,7 @@ function RolePickerScreen() {
             margin: '20px auto 0',
           }}
         >
-          <LogOut size={12} /> Sign out
+          <LogOut size={12} /> {t('rolePicker.signOut')}
         </button>
       </div>
     </div>
@@ -369,6 +371,7 @@ function RolePickerScreen() {
 }
 
 function SplashScreen() {
+  const { t } = useTranslation('auth');
   return (
     <div style={{
       minHeight: '100vh', minHeight: '100dvh',
@@ -385,7 +388,7 @@ function SplashScreen() {
         fontFamily: "'Tenor Sans', serif", fontSize: '1.5rem',
         color: 'white', letterSpacing: '-0.5px',
       }}>
-        FIXIT
+        {t('brandName')}
       </div>
       <div style={{
         width: '32px', height: '3px', borderRadius: '2px',

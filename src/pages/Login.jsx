@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function Login() {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { loginWithGoogle } = useAuth();
   const [error, setError] = useState('');
@@ -16,7 +19,7 @@ export default function Login() {
       navigate('/');
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
-        setError(err.message || 'Sign-in failed. Please try again.');
+        setError(err.message || t('signInFailed'));
       }
     } finally {
       setLoading(false);
@@ -47,14 +50,14 @@ export default function Login() {
             fontFamily: "'Tenor Sans', serif", fontSize: '1.6rem',
             color: 'var(--color-secondary)', letterSpacing: '-0.5px',
           }}>
-            FIXIT
+            {t('brandName')}
           </div>
           <div style={{
             fontSize: '0.6rem', fontWeight: 600,
             textTransform: 'uppercase', letterSpacing: '2px',
             color: 'var(--color-accent)', marginTop: '4px',
           }}>
-            by Your Form Sux
+            {t('byLine')}
           </div>
         </div>
 
@@ -63,7 +66,7 @@ export default function Login() {
           textAlign: 'center', fontSize: '0.88rem',
           color: 'var(--color-text)', marginBottom: '28px', lineHeight: 1.5,
         }}>
-          AI-powered exercise form analysis for your recovery journey
+          {t('tagline')}
         </p>
 
         {/* Google Sign In Button */}
@@ -84,7 +87,7 @@ export default function Login() {
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = 'none'; }}
         >
           {loading ? (
-            'Signing in...'
+            t('signingIn')
           ) : (
             <>
               <svg width="20" height="20" viewBox="0 0 48 48">
@@ -93,7 +96,7 @@ export default function Login() {
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
               </svg>
-              Continue with Google
+              {t('continueWithGoogle')}
             </>
           )}
         </button>
@@ -112,9 +115,16 @@ export default function Login() {
           textAlign: 'center', fontSize: '0.65rem', marginTop: '24px',
           color: 'var(--color-text)', lineHeight: 1.5,
         }}>
-          Sign in with your Google account to get started.
-          <br />New users are automatically registered.
+          {t('signInHelp')}
+          <br />{t('newUsersAuto')}
         </p>
+
+        <div style={{ textAlign: 'center', marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+          <LanguageSwitcher />
+          <Link to="/privacy" style={{ fontSize: '0.65rem', color: 'var(--color-text)' }}>
+            {t('privacyPolicy')}
+          </Link>
+        </div>
       </div>
     </div>
   );

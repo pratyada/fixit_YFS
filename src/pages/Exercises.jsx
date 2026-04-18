@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Search, Filter, Clock, Repeat, ChevronRight, X, Stethoscope } from 'lucide-react';
 import { EXERCISE_LIBRARY, BODY_PARTS, DIFFICULTY, EQUIPMENT, POSITIONS, GOALS, CONDITIONS } from '../data/exercises';
 import { FIXIT_EXERCISES, PHASE_1_IDS, getAllExercisesWithStatus } from '../data/fixit-exercises';
@@ -20,6 +21,7 @@ const DIFF_COLORS = {
 };
 
 export default function Exercises() {
+  const { t } = useTranslation('exercises');
   const { isPatient, session } = useAuth();
   const isImpersonating = session?.role === 'practitioner' && !!session?.viewingPatientId;
   const isPatientView = isPatient || isImpersonating;
@@ -114,12 +116,12 @@ export default function Exercises() {
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div>
         <h1 style={{ marginBottom: '4px' }}>
-          {isPatientView ? 'My Exercises' : 'Exercise Library'}
+          {isPatientView ? t('myExercises') : t('exerciseLibrary')}
         </h1>
         <p style={{ fontSize: '0.85rem' }}>
           {isPatientView
-            ? `${pool.length} exercises allocated by your practitioner`
-            : `${EXERCISE_LIBRARY.length} physiotherapist-approved exercises`}
+            ? t('exercisesAllocated', { count: pool.length })
+            : t('physiotherapistApproved', { count: EXERCISE_LIBRARY.length })}
         </p>
       </div>
 
@@ -129,9 +131,9 @@ export default function Exercises() {
           border: '1px solid #FFE082', textAlign: 'center',
         }}>
           <Stethoscope size={32} style={{ color: '#F57F17', margin: '0 auto 8px', display: 'block' }} />
-          <h4 style={{ marginBottom: '4px' }}>No exercises yet</h4>
+          <h4 style={{ marginBottom: '4px' }}>{t('noExercisesYet')}</h4>
           <p style={{ fontSize: '0.82rem' }}>
-            Your practitioner hasn't allocated any exercises yet. Check back soon.
+            {t('noExercisesDesc')}
           </p>
         </div>
       )}
@@ -144,7 +146,7 @@ export default function Exercises() {
         }}>
           <Stethoscope size={16} color="#708E86" />
           <div style={{ fontSize: '0.78rem', color: '#4E4E53' }}>
-            Showing only exercises and categories your practitioner has allocated to you.
+            {t('showingAllocated')}
           </div>
         </div>
       )}
@@ -162,7 +164,7 @@ export default function Exercises() {
           }} />
           <input
             type="text"
-            placeholder="Search by name, muscle, or description..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{ paddingLeft: '36px' }}
@@ -170,7 +172,7 @@ export default function Exercises() {
         </div>
 
         {/* Body part */}
-        <FilterRow label="Body" icon={<Filter size={12} />}>
+        <FilterRow label={t('filters.body')} icon={<Filter size={12} />}>
           {['All', ...(isPatientView ? availableBodyParts : BODY_PARTS)].map(bp => (
             <Pill key={bp} active={bodyFilter === bp} onClick={() => setBodyFilter(bp)}>
               {bp !== 'All' && BODY_PART_ICONS[bp]} {bp}
@@ -179,7 +181,7 @@ export default function Exercises() {
         </FilterRow>
 
         {/* Difficulty */}
-        <FilterRow label="Level">
+        <FilterRow label={t('filters.level')}>
           {['All', ...(isPatientView ? availableLevels : DIFFICULTY)].map(d => (
             <Pill key={d} active={diffFilter === d} onClick={() => setDiffFilter(d)}>{d}</Pill>
           ))}
@@ -192,7 +194,7 @@ export default function Exercises() {
           textTransform: 'uppercase', letterSpacing: '1.2px', cursor: 'pointer',
           padding: '4px 0', display: 'flex', alignItems: 'center', gap: '4px',
         }}>
-          {showAdvanced ? '− Hide' : '+ More'} Filters
+          {showAdvanced ? t('filters.hideFilters') : t('filters.moreFilters')}
           {activeFilterCount > 2 && (
             <span style={{
               background: 'var(--color-accent)', color: 'white',
@@ -205,25 +207,25 @@ export default function Exercises() {
 
         {showAdvanced && (
           <>
-            <FilterRow label="Goal">
+            <FilterRow label={t('filters.goal')}>
               {['All', ...GOALS].map(g => (
                 <Pill key={g} active={goalFilter === g} onClick={() => setGoalFilter(g)}>{g}</Pill>
               ))}
             </FilterRow>
-            <FilterRow label="Equipment">
+            <FilterRow label={t('filters.equipment')}>
               {['All', ...EQUIPMENT].map(e => (
                 <Pill key={e} active={equipmentFilter === e} onClick={() => setEquipmentFilter(e)}>{e}</Pill>
               ))}
             </FilterRow>
-            <FilterRow label="Position">
+            <FilterRow label={t('filters.position')}>
               {['All', ...POSITIONS].map(p => (
                 <Pill key={p} active={positionFilter === p} onClick={() => setPositionFilter(p)}>{p}</Pill>
               ))}
             </FilterRow>
             <div>
-              <Label>Condition</Label>
+              <Label>{t('filters.condition')}</Label>
               <select value={conditionFilter} onChange={e => setConditionFilter(e.target.value)}>
-                <option value="All">All conditions</option>
+                <option value="All">{t('filters.allConditions')}</option>
                 {CONDITIONS.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
@@ -233,11 +235,11 @@ export default function Exercises() {
         {/* Group by + clear */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', paddingTop: '6px', borderTop: '1px solid var(--color-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)' }}>Group by:</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{t('filters.groupBy')}</span>
             {[
-              { k: 'bodyPart', l: 'Body Part' },
-              { k: 'difficulty', l: 'Level' },
-              { k: 'goal', l: 'Goal' },
+              { k: 'bodyPart', l: t('filters.bodyPart') },
+              { k: 'difficulty', l: t('filters.level') },
+              { k: 'goal', l: t('filters.goal') },
             ].map(opt => (
               <button key={opt.k} onClick={() => setGroupBy(opt.k)} style={{
                 fontSize: '0.65rem', padding: '4px 10px', borderRadius: '50px',
@@ -253,7 +255,7 @@ export default function Exercises() {
               background: 'none', border: 'none', cursor: 'pointer',
               color: 'var(--color-text)', fontSize: '0.7rem', fontWeight: 600,
             }}>
-              <X size={12} /> Clear filters
+              <X size={12} /> {t('filters.clearFilters')}
             </button>
           )}
         </div>
@@ -261,13 +263,13 @@ export default function Exercises() {
 
       {/* Result count */}
       <div style={{ fontSize: '0.78rem', color: 'var(--color-text)' }}>
-        Showing <strong style={{ color: 'var(--color-secondary)' }}>{filtered.length}</strong> of {pool.length} exercises
+        {t('showing')} <strong style={{ color: 'var(--color-secondary)' }}>{filtered.length}</strong> {t('ofExercises', { total: pool.length })}
       </div>
 
       {/* Results */}
       {Object.keys(grouped).length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 0', fontSize: '0.85rem', color: 'var(--color-text)' }}>
-          No exercises found matching your filters.
+          {t('noMatchingFilters')}
         </div>
       ) : (
         Object.entries(grouped).map(([groupKey, exercises]) => (
@@ -318,7 +320,7 @@ function ExerciseCard({ exercise: ex }) {
           textTransform: 'uppercase', letterSpacing: '1.5px',
           transform: 'rotate(35deg)',
         }}>
-          Coming Soon
+          {t('comingSoon')}
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '10px' }}>

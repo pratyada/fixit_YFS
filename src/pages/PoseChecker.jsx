@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Camera, CameraOff, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, Search, ChevronRight, FlipHorizontal, RotateCcw, Check } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
 import { analyzeMovement } from '../utils/movementAnalysis';
@@ -26,6 +27,8 @@ function calculateAngle(a, b, c) {
 }
 
 export default function PoseChecker() {
+  const { t } = useTranslation('exercises');
+  const { t: tKiosk } = useTranslation('kiosk');
   const { user } = useAuth();
 
   // Flow: 'select' → 'camera' → 'report'
@@ -88,8 +91,8 @@ export default function PoseChecker() {
       setCameraReady(true); setLoading(false);
     } catch (err) {
       setError(err.message.includes('Permission') || err.message.includes('NotAllowed')
-        ? 'Camera permission denied. Please allow camera access.'
-        : `Failed: ${err.message}`);
+        ? tKiosk('camera.cameraPermissionDenied')
+        : `${tKiosk('camera.failedPrefix')} ${err.message}`);
       setLoading(false);
     }
   };
@@ -276,14 +279,14 @@ export default function PoseChecker() {
     return (
       <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div>
-          <h1 style={{ marginBottom: '4px' }}>Pose Checker</h1>
-          <p style={{ fontSize: '0.85rem' }}>Select an exercise to analyze your form</p>
+          <h1 style={{ marginBottom: '4px' }}>{t('poseChecker.title')}</h1>
+          <p style={{ fontSize: '0.85rem' }}>{t('poseChecker.subtitle')}</p>
         </div>
 
         {/* Search */}
         <div style={{ position: 'relative' }}>
           <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text)' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..." style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('poseChecker.searchPlaceholder')} style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
         </div>
 
         {/* Body part filter */}
@@ -377,14 +380,14 @@ export default function PoseChecker() {
             background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white',
             padding: '8px 16px', borderRadius: '50px', fontSize: '0.72rem', fontWeight: 600,
           }}>
-            Cancel
+            {t('cancel', { ns: 'common' })}
           </button>
           <div style={{ textAlign: 'center' }}>
             <div style={{ color: 'white', fontSize: '0.82rem', fontWeight: 600 }}>
               {selectedExercise?.name}
             </div>
             <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>
-              {angleName} angle &bull; {currentAngle + 1}/{ANGLES.length}
+              {tKiosk('camera.angleOf', { angle: angleName, current: currentAngle + 1, total: ANGLES.length })}
             </div>
           </div>
           <button onClick={flipCamera} style={{
@@ -416,7 +419,7 @@ export default function PoseChecker() {
           }}>
             <Camera size={14} color="white" />
             <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>
-              {angleName} view
+              {angleName === 'front' ? tKiosk('camera.frontView') : tKiosk('camera.sideView')}
             </span>
             {hasCurrentRecording && <Check size={14} color="#4CAF50" />}
           </div>
@@ -446,9 +449,9 @@ export default function PoseChecker() {
               padding: '10px 14px', borderRadius: '12px',
               color: 'white', fontSize: '0.72rem',
             }}>
-              <div>L Knee: <strong>{liveAngles.leftKnee}°</strong></div>
-              {liveAngles.rightKnee && <div>R Knee: <strong>{liveAngles.rightKnee}°</strong></div>}
-              {liveAngles.leftHip && <div>L Hip: <strong>{liveAngles.leftHip}°</strong></div>}
+              <div>{tKiosk('camera.lKnee')} <strong>{liveAngles.leftKnee}°</strong></div>
+              {liveAngles.rightKnee && <div>{tKiosk('camera.rKnee')} <strong>{liveAngles.rightKnee}°</strong></div>}
+              {liveAngles.leftHip && <div>{tKiosk('camera.lHip')} <strong>{liveAngles.leftHip}°</strong></div>}
             </div>
           )}
 
@@ -485,7 +488,7 @@ export default function PoseChecker() {
               flexDirection: 'column', gap: '12px', zIndex: 10,
             }}>
               <RefreshCw size={32} style={{ color: '#B0C4BB', animation: 'spin 1s linear infinite' }} />
-              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>Loading AI model...</p>
+              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>{tKiosk('camera.loadingAI')}</p>
             </div>
           )}
 
@@ -501,7 +504,7 @@ export default function PoseChecker() {
                 background: 'rgba(255,255,255,0.15)', color: 'white',
                 padding: '10px 20px', borderRadius: '50px', border: 'none',
                 fontSize: '0.72rem', fontWeight: 600,
-              }}>Try Again</button>
+              }}>{tKiosk('camera.tryAgain')}</button>
             </div>
           )}
         </div>
@@ -524,7 +527,7 @@ export default function PoseChecker() {
                 display: 'flex', alignItems: 'center', gap: '6px',
                 fontSize: '0.72rem', fontWeight: 600,
               }}>
-                <RotateCcw size={14} /> Retake
+                <RotateCcw size={14} /> {tKiosk('camera.retake')}
               </button>
 
               {!allDone && currentAngle === 0 ? (
@@ -533,7 +536,7 @@ export default function PoseChecker() {
                   padding: '14px 28px', borderRadius: '50px',
                   fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
                 }}>
-                  Next: Side Angle
+                  {tKiosk('camera.nextSideAngle')}
                 </button>
               ) : allDone ? (
                 <button onClick={finishAndAnalyze} style={{
@@ -542,7 +545,7 @@ export default function PoseChecker() {
                   display: 'flex', alignItems: 'center', gap: '6px',
                   fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
                 }}>
-                  <Check size={16} /> Analyze Form
+                  <Check size={16} /> {tKiosk('camera.analyzeForm')}
                 </button>
               ) : null}
             </>
@@ -607,7 +610,7 @@ export default function PoseChecker() {
             {selectedExercise?.name}
           </div>
           <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '1.5px', opacity: 0.5, marginBottom: '12px' }}>
-            Front + Side Analysis
+            {t('poseChecker.frontSideAnalysis')}
           </div>
           <div style={{
             width: '100px', height: '100px', borderRadius: '50%',
@@ -616,19 +619,19 @@ export default function PoseChecker() {
             margin: '0 auto 12px', flexDirection: 'column',
           }}>
             <div style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>{report.overall}</div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 600, opacity: 0.7 }}>/ 100</div>
+            <div style={{ fontSize: '0.6rem', fontWeight: 600, opacity: 0.7 }}>{tKiosk('report.outOf100')}</div>
           </div>
           <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {report.overall >= 80 ? 'Excellent Form!' : report.overall >= 60 ? 'Good Form' : report.overall >= 40 ? 'Needs Improvement' : 'Poor Form'}
+            {report.overall >= 80 ? t('poseChecker.excellentForm') : report.overall >= 60 ? t('poseChecker.goodForm') : report.overall >= 40 ? t('poseChecker.needsImprovement') : t('poseChecker.poorForm')}
           </div>
           <div style={{ fontSize: '0.75rem', opacity: 0.7, marginTop: '4px' }}>
-            {report.duration}s recorded &bull; {report.totalFrames} frames analyzed
+            {tKiosk('report.recorded', { duration: report.duration, frames: report.totalFrames })}
           </div>
         </div>
 
         {/* Categories */}
         <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
-          <h4 style={{ marginBottom: '16px' }}>Score Breakdown</h4>
+          <h4 style={{ marginBottom: '16px' }}>{tKiosk('report.scoreBreakdown')}</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {report.categories.map(cat => (
               <div key={cat.name}>
@@ -650,7 +653,7 @@ export default function PoseChecker() {
 
         {/* Faults */}
         <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
-          <h4 style={{ marginBottom: '14px' }}>Form Analysis</h4>
+          <h4 style={{ marginBottom: '14px' }}>{tKiosk('report.formAnalysis')}</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {report.faults.map(fault => (
               <div key={fault.id} style={{
@@ -673,7 +676,7 @@ export default function PoseChecker() {
 
         {/* Joint Angles */}
         <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
-          <h4 style={{ marginBottom: '14px' }}>Joint Angles</h4>
+          <h4 style={{ marginBottom: '14px' }}>{t('poseChecker.jointAngles')}</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
             {Object.entries(report.angles).map(([joint, data]) => (
               <div key={joint} style={{ background: 'var(--color-bg-alt)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
@@ -692,7 +695,7 @@ export default function PoseChecker() {
         {/* Timeline */}
         {report.timeline.length > 3 && (
           <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
-            <h4 style={{ marginBottom: '14px' }}>Angle Timeline</h4>
+            <h4 style={{ marginBottom: '14px' }}>{t('poseChecker.angleTimeline')}</h4>
             <div style={{ height: '200px' }}>
               <Line
                 data={{
@@ -718,7 +721,7 @@ export default function PoseChecker() {
 
         {/* Recommendations */}
         <div style={{ background: '#EDF3F1', borderRadius: '16px', padding: '20px', border: '1px solid #D8E8E3' }}>
-          <h4 style={{ marginBottom: '10px' }}>Recommendations</h4>
+          <h4 style={{ marginBottom: '10px' }}>{t('poseChecker.recommendations')}</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {report.tips.map((tip, i) => (
               <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '0.85rem', color: 'var(--color-secondary)' }}>
@@ -736,7 +739,7 @@ export default function PoseChecker() {
             padding: '12px 24px', borderRadius: '50px', border: 'none',
             fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', cursor: 'pointer',
           }}>
-            <Camera size={14} /> Record Again
+            <Camera size={14} /> {t('poseChecker.recordAgain')}
           </button>
           <button onClick={() => { setStep('select'); setReport(null); }} style={{
             background: 'white', color: 'var(--color-text)',
@@ -744,7 +747,7 @@ export default function PoseChecker() {
             border: '1px solid var(--color-border)',
             fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.2px', cursor: 'pointer',
           }}>
-            New Exercise
+            {t('poseChecker.newExercise')}
           </button>
         </div>
       </div>
@@ -756,14 +759,14 @@ export default function PoseChecker() {
     return (
       <div className="fade-in" style={{ textAlign: 'center', padding: '40px' }}>
         <AlertCircle size={40} color="var(--color-danger)" style={{ margin: '0 auto 12px' }} />
-        <h3>Analysis Failed</h3>
+        <h3>{t('poseChecker.analysisFailed')}</h3>
         <p style={{ fontSize: '0.85rem', color: 'var(--color-text)', marginTop: '8px' }}>{report.error}</p>
         <button onClick={() => setStep('select')} style={{
           marginTop: '16px', background: 'var(--color-secondary)', color: 'white',
           padding: '12px 24px', borderRadius: '50px', border: 'none',
           fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', cursor: 'pointer',
         }}>
-          Try Again
+          {tKiosk('camera.tryAgain')}
         </button>
       </div>
     );

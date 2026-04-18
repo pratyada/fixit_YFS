@@ -1,39 +1,39 @@
 {
   "brandName": "FIXIT",
-  "checkYourForm": "Vérifiez votre forme",
-  "tapExercise": "Appuyez sur un exercice pour obtenir votre score IA de posture",
-  "startPoseCheck": "Commencer la vérification de posture",
-  "poweredBy": "Propulsé par FIXIT \u2022 yourformsux.com",
+  "checkYourForm": "V\u00e9rifiez votre forme",
+  "tapExercise": "Appuyez sur un exercice pour obtenir votre score IA",
+  "startPoseCheck": "D\u00e9marrer la v\u00e9rification",
+  "poweredBy": "Propuls\u00e9 par FIXIT \u2022 yourformsux.com",
   "camera": {
     "back": "Retour",
     "frontAngle": "avant",
-    "sideAngle": "côté",
+    "sideAngle": "lat\u00e9ral",
     "frontView": "vue avant",
-    "sideView": "vue côté",
+    "sideView": "vue lat\u00e9rale",
     "angleOf": "angle {{angle}} \u2022 {{current}}/{{total}}",
-    "loadingAI": "Chargement du modèle IA...",
-    "cameraPermissionDenied": "Permission caméra refusée. Veuillez autoriser l'accès à la caméra.",
-    "failedPrefix": "Échec :",
-    "lKnee": "G. Genou :",
-    "rKnee": "D. Genou :",
-    "lHip": "G. Hanche :",
+    "loadingAI": "Chargement du mod\u00e8le IA...",
+    "cameraPermissionDenied": "Acc\u00e8s cam\u00e9ra refus\u00e9. Veuillez autoriser l'acc\u00e8s \u00e0 la cam\u00e9ra.",
+    "failedPrefix": "\u00c9chec :",
+    "lKnee": "Genou G :",
+    "rKnee": "Genou D :",
+    "lHip": "Hanche G :",
     "retake": "Reprendre",
-    "nextSideAngle": "Suivant : Angle côté",
+    "nextSideAngle": "Suivant : Angle lat\u00e9ral",
     "analyzeForm": "Analyser la forme",
-    "tryAgain": "Réessayer",
+    "tryAgain": "R\u00e9essayer",
     "tryAnotherExercise": "Essayer un autre exercice"
   },
   "report": {
     "outOf100": "/ 100",
-    "recorded": "{{duration}}s enregistré(s) \u2022 {{frames}} images analysées",
-    "scoreBreakdown": "Détail du score",
+    "recorded": "{{duration}}s enregistr\u00e9es \u2022 {{frames}} images analys\u00e9es",
+    "scoreBreakdown": "D\u00e9tail du score",
     "formAnalysis": "Analyse de la forme",
     "newExercise": "Nouvel exercice"
   },
   "scoreLabels": {
     "excellent": "Excellent !",
     "goodForm": "Bonne forme",
-    "needsWork": "À améliorer",
-    "keepPracticing": "Continuez à pratiquer"
+    "needsWork": "\u00c0 am\u00e9liorer",
+    "keepPracticing": "Continuez \u00e0 pratiquer"
   }
 }

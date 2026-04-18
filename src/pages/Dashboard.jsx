@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Dumbbell, TrendingUp, Camera, Heart, Calendar, Award, ArrowRight, Flame, Target, ChevronRight, Sparkles, Play, CheckCircle2, Stethoscope } from 'lucide-react';
 import { usePatientData } from '../hooks/usePatientData';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +10,7 @@ const ALL_EXERCISES = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY];
 function findExercise(id) { return ALL_EXERCISES.find(e => e.id === id); }
 
 export default function Dashboard() {
+  const { t, i18n } = useTranslation('dashboard');
   const [completedSessions] = usePatientData('completed_sessions', []);
   const [painEntries] = usePatientData('pain_entries', []);
   const [profile] = usePatientData('user_profile', null);
@@ -39,10 +41,10 @@ export default function Dashboard() {
   const totalExercises = new Set(completedSessions.map(s => s.exerciseId)).size;
 
   const quickActions = [
-    { to: '/plan', icon: Calendar, label: "Today's Plan", desc: 'View your rehab program', color: '#708E86', bg: '#EDF3F1' },
-    { to: '/exercises', icon: Dumbbell, label: 'Exercises', desc: 'Browse exercise library', color: '#8B7355', bg: '#F5F0EB' },
-    { to: '/pose', icon: Camera, label: 'Record & Analyze', desc: 'Record form for AI feedback', color: '#6B7FA3', bg: '#EEF1F6' },
-    { to: '/pain', icon: Heart, label: 'Log Pain', desc: 'Track how you feel', color: '#A36B6B', bg: '#F6EEEE' },
+    { to: '/plan', icon: Calendar, label: t('quickActions.todaysPlan'), desc: t('quickActions.todaysPlanDesc'), color: '#708E86', bg: '#EDF3F1' },
+    { to: '/exercises', icon: Dumbbell, label: t('quickActions.exercises'), desc: t('quickActions.exercisesDesc'), color: '#8B7355', bg: '#F5F0EB' },
+    { to: '/pose', icon: Camera, label: t('quickActions.recordAnalyze'), desc: t('quickActions.recordAnalyzeDesc'), color: '#6B7FA3', bg: '#EEF1F6' },
+    { to: '/pain', icon: Heart, label: t('quickActions.logPain'), desc: t('quickActions.logPainDesc'), color: '#A36B6B', bg: '#F6EEEE' },
   ];
 
   return (
@@ -73,13 +75,13 @@ export default function Dashboard() {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px' }}>
-            Welcome Back
+            {t('welcomeBack')}
           </div>
           <h1 style={{ color: 'white', fontSize: '1.7rem', marginBottom: '6px' }}>
-            {profile?.name ? `Hey, ${profile.name}` : 'Your Recovery Journey'}
+            {profile?.name ? t('heyName', { name: profile.name }) : t('yourRecoveryJourney')}
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', maxWidth: '420px', lineHeight: '1.5' }}>
-            Every rep brings you closer to full recovery. Stay consistent and trust the process.
+            {t('motivational')}
           </p>
 
           {/* Stats Grid */}
@@ -89,10 +91,10 @@ export default function Dashboard() {
             gap: '10px',
             marginTop: '20px',
           }}>
-            <StatCard icon={<Flame size={16} />} value={streak} label="Day Streak" />
-            <StatCard icon={<Target size={16} />} value={todaySessions.length} label="Today" />
-            <StatCard icon={<Dumbbell size={16} />} value={thisWeek.length} label="This Week" />
-            <StatCard icon={<Award size={16} />} value={totalExercises} label="Tried" />
+            <StatCard icon={<Flame size={16} />} value={streak} label={t('stats.dayStreak')} />
+            <StatCard icon={<Target size={16} />} value={todaySessions.length} label={t('stats.today')} />
+            <StatCard icon={<Dumbbell size={16} />} value={thisWeek.length} label={t('stats.thisWeek')} />
+            <StatCard icon={<Award size={16} />} value={totalExercises} label={t('stats.tried')} />
           </div>
         </div>
       </div>
@@ -107,7 +109,7 @@ export default function Dashboard() {
 
       {/* ── Quick Actions ── */}
       <div>
-        <h3 style={{ marginBottom: '12px' }}>Quick Actions</h3>
+        <h3 style={{ marginBottom: '12px' }}>{t('quickActions.title')}</h3>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
@@ -187,7 +189,7 @@ export default function Dashboard() {
             }}>
               <Heart size={14} />
             </div>
-            <h4 style={{ margin: 0 }}>Pain Status</h4>
+            <h4 style={{ margin: 0 }}>{t('painStatus.title')}</h4>
           </div>
           {lastPain ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -211,7 +213,7 @@ export default function Dashboard() {
                   {PAIN_SCALE[lastPain.level]?.label}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--color-text)', marginTop: '4px' }}>
-                  {new Date(lastPain.timestamp).toLocaleDateString('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  {new Date(lastPain.timestamp).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                 </div>
               </div>
             </div>
@@ -221,13 +223,13 @@ export default function Dashboard() {
               color: 'var(--color-text)', fontSize: '0.85rem',
             }}>
               <Heart size={24} style={{ margin: '0 auto 8px', color: 'var(--color-border)' }} />
-              <div>No pain logged yet</div>
+              <div>{t('painStatus.noPainLogged')}</div>
               <Link to="/pain" style={{
                 display: 'inline-block', marginTop: '8px',
                 fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase',
                 letterSpacing: '1.5px', color: 'var(--color-accent)',
               }}>
-                Log your first entry
+                {t('painStatus.logFirstEntry')}
               </Link>
             </div>
           )}
@@ -248,7 +250,7 @@ export default function Dashboard() {
             }}>
               <TrendingUp size={14} />
             </div>
-            <h4 style={{ margin: 0 }}>Recent Activity</h4>
+            <h4 style={{ margin: 0 }}>{t('recentActivity.title')}</h4>
           </div>
           {completedSessions.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -272,13 +274,13 @@ export default function Dashboard() {
               color: 'var(--color-text)', fontSize: '0.85rem',
             }}>
               <Dumbbell size={24} style={{ margin: '0 auto 8px', color: 'var(--color-border)' }} />
-              <div>No exercises completed yet</div>
+              <div>{t('recentActivity.noExercises')}</div>
               <Link to="/exercises" style={{
                 display: 'inline-block', marginTop: '8px',
                 fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase',
                 letterSpacing: '1.5px', color: 'var(--color-accent)',
               }}>
-                Start your first exercise
+                {t('recentActivity.startFirst')}
               </Link>
             </div>
           )}
@@ -294,24 +296,24 @@ export default function Dashboard() {
         <FeatureCard
           to="/pose"
           icon={<Camera size={20} />}
-          title="AI Pose Analysis"
-          desc="Turn on your camera and get real-time form feedback while exercising"
+          title={t('features.aiPoseAnalysis')}
+          desc={t('features.aiPoseAnalysisDesc')}
           gradient="linear-gradient(135deg, #EDF3F1, #D8E8E3)"
           iconColor="#708E86"
         />
         <FeatureCard
           to="/progress"
           icon={<TrendingUp size={20} />}
-          title="Track Progress"
-          desc="See your recovery journey with charts, milestones, and trends"
+          title={t('features.trackProgress')}
+          desc={t('features.trackProgressDesc')}
           gradient="linear-gradient(135deg, #F5F0EB, #E8DFD4)"
           iconColor="#8B7355"
         />
         <FeatureCard
           to="/reports"
           icon={<Sparkles size={20} />}
-          title="Upload MRI & Reports"
-          desc="Store your medical documents securely on your device"
+          title={t('features.uploadReports')}
+          desc={t('features.uploadReportsDesc')}
           gradient="linear-gradient(135deg, #EEF1F6, #DDE3ED)"
           iconColor="#6B7FA3"
         />
@@ -332,14 +334,14 @@ export default function Dashboard() {
           fontStyle: 'italic',
           lineHeight: 1.5,
         }}>
-          "The body achieves what the mind believes."
+          {t('quote.text')}
         </p>
         <p style={{
           fontSize: '0.7rem', marginTop: '8px',
           color: 'var(--color-accent)', fontWeight: 500,
           textTransform: 'uppercase', letterSpacing: '1.5px',
         }}>
-          — Your Form Sux Team
+          {t('quote.author')}
         </p>
       </div>
     </div>
@@ -373,6 +375,7 @@ function StatCard({ icon, value, label }) {
 }
 
 function AssignedExercisesSection({ assignedExercises, completedToday }) {
+  const { t } = useTranslation('dashboard');
   const totalAssigned = assignedExercises.length;
   const doneCount = assignedExercises.filter(a => completedToday.has(a.exerciseId)).length;
   const allDone = doneCount === totalAssigned && totalAssigned > 0;
@@ -398,9 +401,9 @@ function AssignedExercisesSection({ assignedExercises, completedToday }) {
             <Stethoscope size={16} />
           </div>
           <div>
-            <h3 style={{ marginBottom: '2px' }}>Assigned by Your Practitioner</h3>
+            <h3 style={{ marginBottom: '2px' }}>{t('assigned.title')}</h3>
             <div style={{ fontSize: '0.7rem', color: 'var(--color-text)' }}>
-              {doneCount} of {totalAssigned} completed today
+              {t('assigned.completedToday', { done: doneCount, total: totalAssigned })}
             </div>
           </div>
         </div>
@@ -411,7 +414,7 @@ function AssignedExercisesSection({ assignedExercises, completedToday }) {
             padding: '5px 12px', borderRadius: '50px',
             fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
           }}>
-            <CheckCircle2 size={11} /> All Done
+            <CheckCircle2 size={11} /> {t('assigned.allDone')}
           </div>
         )}
       </div>

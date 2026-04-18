@@ -1,5 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Clock, Repeat, Target, AlertTriangle, CheckCircle2, Camera, Play, Pause, RotateCcw } from 'lucide-react';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
@@ -11,10 +12,18 @@ import ExerciseAnimation from '../components/ExerciseAnimation';
 import Exercise3D from '../components/Exercise3D';
 
 export default function ExerciseDetail() {
+  const { t } = useTranslation('exercises');
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const exercise = FIXIT_EXERCISES.find(e => e.id === id) || EXERCISE_LIBRARY.find(e => e.id === id);
+
+  // Helper to get translated exercise content from exerciseData namespace
+  const getExT = (field) => {
+    const key = `${exercise?.id}.${field}`;
+    const val = t(key, { ns: 'exerciseData', returnObjects: field === 'instructions' || field === 'tips' || field === 'contraindications' || field === 'musclesTargeted' });
+    return val !== key ? val : exercise?.[field];
+  };
   const [completedSessions, setCompleted] = usePatientData('completed_sessions', []);
   const [currentSet, setCurrentSet] = useState(0);
   const [currentRep, setCurrentRep] = useState(0);
@@ -28,8 +37,8 @@ export default function ExerciseDetail() {
   if (!exercise) {
     return (
       <div style={{ textAlign: 'center', padding: '64px 0' }}>
-        <p>Exercise not found.</p>
-        <Link to="/exercises" style={{ color: 'var(--color-accent)', marginTop: '8px', display: 'inline-block' }}>Back to exercises</Link>
+        <p>{t('detail.exerciseNotFound')}</p>
+        <Link to="/exercises" style={{ color: 'var(--color-accent)', marginTop: '8px', display: 'inline-block' }}>{t('detail.backToExercises')}</Link>
       </div>
     );
   }
@@ -106,24 +115,24 @@ export default function ExerciseDetail() {
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '700px', margin: '0 auto' }}>
       {/* Back */}
       <Link to="/exercises" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.82rem', color: 'var(--color-accent)', textDecoration: 'none' }}>
-        <ArrowLeft size={15} /> Back to Exercises
+        <ArrowLeft size={15} /> {t('detail.backToExercises')}
       </Link>
 
       {/* Header */}
       <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
         <h6 style={{ marginBottom: '8px' }}>{exercise.bodyPart} — {exercise.difficulty}</h6>
-        <h1 style={{ marginBottom: '6px' }}>{exercise.name}</h1>
-        <p style={{ fontSize: '0.85rem', marginBottom: '14px' }}>{exercise.description}</p>
+        <h1 style={{ marginBottom: '6px' }}>{getExT('name')}</h1>
+        <p style={{ fontSize: '0.85rem', marginBottom: '14px' }}>{getExT('description')}</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', fontSize: '0.82rem' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <Clock size={14} style={{ color: 'var(--color-accent)' }} /> {exercise.duration}
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Repeat size={14} style={{ color: 'var(--color-accent)' }} /> {exercise.sets} sets x {exercise.reps} reps
+            <Repeat size={14} style={{ color: 'var(--color-accent)' }} /> {t('detail.setsXReps', { sets: exercise.sets, reps: exercise.reps })}
           </span>
           {exercise.holdSeconds && (
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <Target size={14} style={{ color: 'var(--color-accent)' }} /> {exercise.holdSeconds}s hold
+              <Target size={14} style={{ color: 'var(--color-accent)' }} /> {t('detail.holdSeconds', { seconds: exercise.holdSeconds })}
             </span>
           )}
         </div>
@@ -137,7 +146,7 @@ export default function ExerciseDetail() {
         background: 'linear-gradient(135deg, #708E86 0%, #4E4E53 100%)',
         borderRadius: '16px', padding: '22px', color: 'white',
       }}>
-        <h4 style={{ color: 'white', marginBottom: '16px' }}>Workout Tracker</h4>
+        <h4 style={{ color: 'white', marginBottom: '16px' }}>{t('detail.workoutTracker')}</h4>
 
         {!sessionComplete ? (
           <>
@@ -145,18 +154,18 @@ export default function ExerciseDetail() {
               <div style={{ fontSize: '2.2rem', fontFamily: 'monospace', fontWeight: 600 }}>{formatTime(timer)}</div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '10px' }}>
                 {!isActive ? (
-                  <button onClick={startTimer} style={btnStyle('rgba(255,255,255,0.2)')}><Play size={13} /> Start</button>
+                  <button onClick={startTimer} style={btnStyle('rgba(255,255,255,0.2)')}><Play size={13} /> {t('start', { ns: 'common' })}</button>
                 ) : (
-                  <button onClick={pauseTimer} style={btnStyle('rgba(255,255,255,0.2)')}><Pause size={13} /> Pause</button>
+                  <button onClick={pauseTimer} style={btnStyle('rgba(255,255,255,0.2)')}><Pause size={13} /> {t('pause', { ns: 'common' })}</button>
                 )}
-                <button onClick={resetSession} style={btnStyle('rgba(255,255,255,0.1)')}><RotateCcw size={13} /> Reset</button>
+                <button onClick={resetSession} style={btnStyle('rgba(255,255,255,0.1)')}><RotateCcw size={13} /> {t('reset', { ns: 'common' })}</button>
               </div>
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '8px' }}>
-                <span>Set {currentSet + 1} of {exercise.sets}</span>
-                <span>Rep {currentRep + 1} of {exercise.reps}</span>
+                <span>{t('detail.setOf', { current: currentSet + 1, total: exercise.sets })}</span>
+                <span>{t('detail.repOf', { current: currentRep + 1, total: exercise.reps })}</span>
               </div>
               <div style={{ height: '6px', background: 'rgba(255,255,255,0.15)', borderRadius: '3px', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: 'white', borderRadius: '3px', transition: 'width 0.3s' }} />
@@ -172,30 +181,30 @@ export default function ExerciseDetail() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                 }}
               >
-                <CheckCircle2 size={15} /> Complete Rep
+                <CheckCircle2 size={15} /> {t('detail.completeRep')}
               </button>
             </div>
           </>
         ) : (
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ fontSize: '2.5rem' }}>🎉</div>
-            <h3 style={{ color: 'white' }}>Exercise Complete!</h3>
+            <h3 style={{ color: 'white' }}>{t('detail.exerciseComplete')}</h3>
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
-              {exercise.sets} sets x {exercise.reps} reps in {formatTime(timer)}
+              {t('detail.setsRepsInTime', { sets: exercise.sets, reps: exercise.reps, time: formatTime(timer) })}
             </p>
 
             <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
                 <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '6px' }}>
-                  Pain during exercise (0-10)
+                  {t('detail.painDuringExercise')}
                 </label>
                 <input type="range" min="0" max="10" value={painDuring} onChange={e => setPainDuring(Number(e.target.value))}
                   style={{ width: '100%', border: 'none', padding: 0, background: 'transparent', accentColor: 'white' }} />
                 <div style={{ textAlign: 'center', fontSize: '0.85rem' }}>{painDuring}/10</div>
               </div>
               <div>
-                <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '6px' }}>Notes</label>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="How did it feel?" rows={2}
+                <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '6px' }}>{t('detail.notes')}</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('detail.notesPlaceholder')} rows={2}
                   style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', borderRadius: '8px', fontSize: '0.82rem' }} />
               </div>
             </div>
@@ -206,7 +215,7 @@ export default function ExerciseDetail() {
               fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1.2px',
               cursor: 'pointer',
             }}>
-              Save & Finish
+              {t('detail.saveAndFinish')}
             </button>
           </div>
         )}
@@ -220,24 +229,24 @@ export default function ExerciseDetail() {
           border: 'none', transition: 'all 0.2s', color: 'white',
         }}>
           <Camera size={22} style={{ margin: '0 auto 6px', display: 'block' }} />
-          <h4 style={{ color: 'white' }}>Record Session</h4>
-          <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>Record front + side angles for AI form analysis</p>
+          <h4 style={{ color: 'white' }}>{t('detail.recordSession')}</h4>
+          <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>{t('detail.recordSessionDesc')}</p>
         </Link>
         <Link to="/pose" style={{
           display: 'block', background: 'var(--color-bg-alt)', borderRadius: '14px',
           padding: '16px', textDecoration: 'none', textAlign: 'center',
           border: '1px solid var(--color-border)', transition: 'all 0.2s',
         }}>
-          <h4>Live Pose Check</h4>
-          <p style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>Real-time form analysis with your camera</p>
+          <h4>{t('detail.livePoseCheck')}</h4>
+          <p style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>{t('detail.livePoseCheckDesc')}</p>
         </Link>
       </div>
 
       {/* Instructions */}
       <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
-        <h3 style={{ marginBottom: '14px' }}>How To Perform</h3>
+        <h3 style={{ marginBottom: '14px' }}>{t('detail.howToPerform')}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {exercise.instructions.map((step, i) => (
+          {(getExT('instructions') || []).map((step, i) => (
             <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '0.85rem' }}>
               <span style={{
                 width: '24px', height: '24px', borderRadius: '50%',
@@ -256,10 +265,10 @@ export default function ExerciseDetail() {
       {/* Tips */}
       <div style={{ background: '#F0F9F0', borderRadius: '14px', padding: '20px', border: '1px solid #C8E6C9' }}>
         <h4 style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <CheckCircle2 size={15} style={{ color: '#4CAF50' }} /> Pro Tips
+          <CheckCircle2 size={15} style={{ color: '#4CAF50' }} /> {t('detail.proTips')}
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {exercise.tips.map((tip, i) => (
+          {(getExT('tips') || []).map((tip, i) => (
             <div key={i} style={{ fontSize: '0.82rem', display: 'flex', gap: '6px' }}>
               <span style={{ color: '#4CAF50' }}>✓</span> {tip}
             </div>
@@ -271,10 +280,10 @@ export default function ExerciseDetail() {
       {exercise.contraindications?.length > 0 && (
         <div style={{ background: '#FFF3F0', borderRadius: '14px', padding: '20px', border: '1px solid #FFCDD2' }}>
           <h4 style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#C62828' }}>
-            <AlertTriangle size={15} /> Cautions
+            <AlertTriangle size={15} /> {t('detail.cautions')}
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {exercise.contraindications.map((c, i) => (
+            {(getExT('contraindications') || []).map((c, i) => (
               <div key={i} style={{ fontSize: '0.82rem', color: '#D32F2F', display: 'flex', gap: '6px' }}>
                 ⚠️ {c}
               </div>
@@ -286,9 +295,9 @@ export default function ExerciseDetail() {
       {/* Muscles & Equipment */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '16px' }}>
-          <h4 style={{ marginBottom: '8px' }}>Muscles Targeted</h4>
+          <h4 style={{ marginBottom: '8px' }}>{t('detail.musclesTargeted')}</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {exercise.musclesTargeted.map(m => (
+            {(getExT('musclesTargeted') || []).map(m => (
               <span key={m} style={{
                 fontSize: '0.72rem', background: 'var(--color-bg-alt)', color: 'var(--color-accent)',
                 padding: '4px 12px', borderRadius: '50px', fontWeight: 500,
@@ -297,7 +306,7 @@ export default function ExerciseDetail() {
           </div>
         </div>
         <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '16px' }}>
-          <h4 style={{ marginBottom: '8px' }}>Equipment Needed</h4>
+          <h4 style={{ marginBottom: '8px' }}>{t('detail.equipmentNeeded')}</h4>
           <p style={{ fontSize: '0.85rem' }}>{exercise.equipmentNeeded}</p>
         </div>
       </div>
@@ -306,6 +315,7 @@ export default function ExerciseDetail() {
 }
 
 function ViewToggleAnimation({ exerciseId }) {
+  const { t } = useTranslation('exercises');
   const [mode, setMode] = useState('2d');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -315,8 +325,8 @@ function ViewToggleAnimation({ exerciseId }) {
         alignSelf: 'center', border: '1px solid var(--color-border)',
       }}>
         {[
-          { k: '2d', l: '2D Animation' },
-          { k: '3d', l: '3D Rotatable' },
+          { k: '2d', l: t('detail.view2D') },
+          { k: '3d', l: t('detail.view3D') },
         ].map(opt => (
           <button
             key={opt.k}

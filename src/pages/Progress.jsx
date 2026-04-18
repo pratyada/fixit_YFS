@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement,
@@ -15,6 +16,7 @@ function findExercise(id) { return ALL_EXERCISES.find(e => e.id === id); }
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler);
 
 export default function Progress() {
+  const { t, i18n } = useTranslation('progress');
   const [sessions] = usePatientData('completed_sessions', []);
   const [painEntries] = usePatientData('pain_entries', []);
 
@@ -35,17 +37,17 @@ export default function Progress() {
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
       const count = sessions.filter(s => s.date === dateStr).length;
-      days.push({ date: dateStr, label: d.toLocaleDateString('en', { month: 'short', day: 'numeric' }), count });
+      days.push({ date: dateStr, label: d.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' }), count });
     }
     return days;
-  }, [sessions]);
+  }, [sessions, i18n.language]);
 
   const painData = useMemo(() => {
     return painEntries.slice(-20).map(e => ({
-      label: new Date(e.timestamp).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+      label: new Date(e.timestamp).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' }),
       value: e.level,
     }));
-  }, [painEntries]);
+  }, [painEntries, i18n.language]);
 
   const exerciseBreakdown = useMemo(() => {
     const counts = {};
@@ -69,48 +71,48 @@ export default function Progress() {
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div>
-        <h1 style={{ marginBottom: '4px' }}>Your Progress</h1>
-        <p style={{ fontSize: '0.85rem' }}>Track your recovery journey over time</p>
+        <h1 style={{ marginBottom: '4px' }}>{t('title')}</h1>
+        <p style={{ fontSize: '0.85rem' }}>{t('subtitle')}</p>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
-        <SummaryCard icon={<Calendar size={17} />} value={stats.totalSessions} label="Total Sessions" color="#708E86" />
-        <SummaryCard icon={<TrendingUp size={17} />} value={`${stats.totalMinutes}m`} label="Active Time" color="#B0C4BB" />
-        <SummaryCard icon={<Target size={17} />} value={stats.uniqueExercises} label="Exercises Done" color="#B7ACA0" />
-        <SummaryCard icon={<Award size={17} />} value={stats.avgPain} label="Avg Pain" color="#C06060" />
+        <SummaryCard icon={<Calendar size={17} />} value={stats.totalSessions} label={t('stats.totalSessions')} color="#708E86" />
+        <SummaryCard icon={<TrendingUp size={17} />} value={`${stats.totalMinutes}m`} label={t('stats.activeTime')} color="#B0C4BB" />
+        <SummaryCard icon={<Target size={17} />} value={stats.uniqueExercises} label={t('stats.exercisesDone')} color="#B7ACA0" />
+        <SummaryCard icon={<Award size={17} />} value={stats.avgPain} label={t('stats.avgPain')} color="#C06060" />
       </div>
 
       {/* Activity Chart */}
       <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '20px' }}>
-        <h4 style={{ marginBottom: '14px' }}>Daily Activity (Last 14 Days)</h4>
+        <h4 style={{ marginBottom: '14px' }}>{t('charts.dailyActivity')}</h4>
         <div style={{ height: '180px' }}>
           {sessions.length > 0 ? (
             <Bar data={{
               labels: dailyData.map(d => d.label),
               datasets: [{ data: dailyData.map(d => d.count), backgroundColor: '#B0C4BB', borderRadius: 6, borderSkipped: false }],
             }} options={chartOpts} />
-          ) : <Empty msg="Complete some exercises to see your activity chart" />}
+          ) : <Empty msg={t('empty.activityChart')} />}
         </div>
       </div>
 
       {/* Pain Trend */}
       <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '20px' }}>
-        <h4 style={{ marginBottom: '14px' }}>Pain Level Trend</h4>
+        <h4 style={{ marginBottom: '14px' }}>{t('charts.painLevelTrend')}</h4>
         <div style={{ height: '180px' }}>
           {painData.length > 1 ? (
             <Line data={{
               labels: painData.map(d => d.label),
               datasets: [{ data: painData.map(d => d.value), borderColor: '#C06060', backgroundColor: 'rgba(192,96,96,0.08)', fill: true, pointBackgroundColor: '#C06060' }],
             }} options={{ ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, max: 10 } } }} />
-          ) : <Empty msg="Log pain entries to see your trend over time" />}
+          ) : <Empty msg={t('empty.painTrend')} />}
         </div>
       </div>
 
       {/* Breakdowns */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
         <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '20px' }}>
-          <h4 style={{ marginBottom: '14px' }}>Most Performed Exercises</h4>
+          <h4 style={{ marginBottom: '14px' }}>{t('charts.mostPerformed')}</h4>
           {exerciseBreakdown.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {exerciseBreakdown.map((ex, i) => {
@@ -128,11 +130,11 @@ export default function Progress() {
                 );
               })}
             </div>
-          ) : <Empty msg="No exercises completed yet" />}
+          ) : <Empty msg={t('empty.noExercises')} />}
         </div>
 
         <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '20px' }}>
-          <h4 style={{ marginBottom: '14px' }}>Body Part Distribution</h4>
+          <h4 style={{ marginBottom: '14px' }}>{t('charts.bodyPartDistribution')}</h4>
           {sessions.length > 0 ? (
             <div style={{ height: '200px' }}>
               <Doughnut data={{
@@ -155,16 +157,16 @@ export default function Progress() {
                 cutout: '65%',
               }} />
             </div>
-          ) : <Empty msg="Complete exercises to see distribution" />}
+          ) : <Empty msg={t('empty.bodyPart')} />}
         </div>
       </div>
 
       {/* Milestones */}
       <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '20px' }}>
-        <h4 style={{ marginBottom: '12px' }}>Milestones</h4>
+        <h4 style={{ marginBottom: '12px' }}>{t('milestones.title')}</h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
-          <Milestone emoji="🌱" label="First Exercise" achieved={sessions.length >= 1} />
-          <Milestone emoji="🔥" label="7-Day Streak" achieved={(() => {
+          <Milestone emoji="🌱" label={t('milestones.firstExercise')} achieved={sessions.length >= 1} />
+          <Milestone emoji="🔥" label={t('milestones.sevenDayStreak')} achieved={(() => {
             let s = 0;
             const dates = [...new Set(sessions.map(x => x.date))].sort().reverse();
             const d = new Date();
@@ -174,8 +176,8 @@ export default function Progress() {
             }
             return s >= 7;
           })()} />
-          <Milestone emoji="💯" label="50 Sessions" achieved={sessions.length >= 50} />
-          <Milestone emoji="🏆" label="All Exercises" achieved={new Set(sessions.map(s => s.exerciseId)).size >= EXERCISE_LIBRARY.length} />
+          <Milestone emoji="💯" label={t('milestones.fiftySessions')} achieved={sessions.length >= 50} />
+          <Milestone emoji="🏆" label={t('milestones.allExercises')} achieved={new Set(sessions.map(s => s.exerciseId)).size >= EXERCISE_LIBRARY.length} />
         </div>
       </div>
     </div>
@@ -200,6 +202,7 @@ function SummaryCard({ icon, value, label, color }) {
 }
 
 function Milestone({ emoji, label, achieved }) {
+  const { t } = useTranslation('progress');
   return (
     <div style={{
       textAlign: 'center', padding: '14px 8px', borderRadius: '12px',
@@ -208,7 +211,7 @@ function Milestone({ emoji, label, achieved }) {
     }}>
       <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>{emoji}</div>
       <div style={{ fontSize: '0.72rem', fontWeight: 500, color: 'var(--color-secondary)' }}>{label}</div>
-      {achieved && <div style={{ fontSize: '0.55rem', fontWeight: 700, color: 'var(--color-success)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '1px' }}>ACHIEVED</div>}
+      {achieved && <div style={{ fontSize: '0.55rem', fontWeight: 700, color: 'var(--color-success)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('milestones.achieved')}</div>}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw, Camera, TrendingUp, Award, Calendar } from 'lucide-react';
 import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner, getKioskSessions } from '../lib/firestore';
 
@@ -10,6 +11,7 @@ const ROLE_COLORS = {
 };
 
 export default function AdminDashboard() {
+  const { t, i18n } = useTranslation('admin');
   const [tab, setTab] = useState('users'); // 'users' | 'kiosk'
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,18 +104,18 @@ export default function AdminDashboard() {
         borderRadius: '20px', padding: '24px', color: 'white',
       }}>
         <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
-          Admin Panel
+          {t('adminPanel')}
         </div>
         <h2 style={{ color: 'white', marginBottom: '16px' }}>
-          {tab === 'users' ? 'User Management' : 'Clinic Kiosk Log'}
+          {tab === 'users' ? t('userManagement') : t('clinicKioskLog')}
         </h2>
         {tab === 'users' ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
             {[
-              { label: 'Total', value: counts.total, icon: Users },
-              { label: 'Admins', value: counts.admin, icon: Shield },
-              { label: 'Practitioners', value: counts.practitioner, icon: Stethoscope },
-              { label: 'Patients', value: counts.patient, icon: User },
+              { label: t('stats.total'), value: counts.total, icon: Users },
+              { label: t('stats.admins'), value: counts.admin, icon: Shield },
+              { label: t('stats.practitioners'), value: counts.practitioner, icon: Stethoscope },
+              { label: t('stats.patients'), value: counts.patient, icon: User },
             ].map(s => (
               <div key={s.label} style={{
                 background: 'rgba(255,255,255,0.12)', borderRadius: '12px',
@@ -128,10 +130,10 @@ export default function AdminDashboard() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
             {[
-              { label: 'Total Checks', value: kioskStats.total, icon: Camera },
-              { label: 'Today', value: kioskStats.todayCount, icon: Calendar },
-              { label: 'Avg Score', value: kioskStats.avgScore, icon: TrendingUp },
-              { label: 'Top Exercise', value: kioskStats.topExercise?.[1] || 0, icon: Award },
+              { label: t('stats.totalChecks'), value: kioskStats.total, icon: Camera },
+              { label: t('stats.today'), value: kioskStats.todayCount, icon: Calendar },
+              { label: t('stats.avgScore'), value: kioskStats.avgScore, icon: TrendingUp },
+              { label: t('stats.topExercise'), value: kioskStats.topExercise?.[1] || 0, icon: Award },
             ].map(s => (
               <div key={s.label} style={{
                 background: 'rgba(255,255,255,0.12)', borderRadius: '12px',
@@ -149,22 +151,22 @@ export default function AdminDashboard() {
       {/* Tab Switcher */}
       <div style={{ display: 'flex', gap: '6px', background: 'var(--color-bg-alt)', borderRadius: '50px', padding: '4px', border: '1px solid var(--color-border)' }}>
         {[
-          { key: 'users', label: 'Users', icon: Users },
-          { key: 'kiosk', label: 'Kiosk Log', icon: Camera },
-        ].map(t => (
+          { key: 'users', label: t('tabs.users'), icon: Users },
+          { key: 'kiosk', label: t('tabs.kioskLog'), icon: Camera },
+        ].map(tb => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tb.key}
+            onClick={() => setTab(tb.key)}
             style={{
               flex: 1, padding: '9px 14px', borderRadius: '50px', border: 'none',
-              background: tab === t.key ? 'var(--color-secondary)' : 'transparent',
-              color: tab === t.key ? 'white' : 'var(--color-text)',
+              background: tab === tb.key ? 'var(--color-secondary)' : 'transparent',
+              color: tab === tb.key ? 'white' : 'var(--color-text)',
               fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
               transition: 'all 0.2s',
             }}
           >
-            <t.icon size={13} /> {t.label}
+            <tb.icon size={13} /> {tb.label}
           </button>
         ))}
       </div>
@@ -179,7 +181,7 @@ export default function AdminDashboard() {
               display: 'flex', alignItems: 'center', gap: '8px',
             }}>
               <Award size={14} color="#708E86" />
-              Most popular: <strong>{kioskStats.topExercise[0]}</strong> ({kioskStats.topExercise[1]} checks)
+              {t('kiosk.mostPopular', { name: kioskStats.topExercise[0], count: kioskStats.topExercise[1] })}
             </div>
           )}
 
@@ -197,12 +199,12 @@ export default function AdminDashboard() {
           {/* Kiosk Session List */}
           {kioskLoading ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
-              Loading kiosk data...
+              {t('kiosk.loadingKiosk')}
             </div>
           ) : kioskSessions.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
               <Camera size={32} style={{ margin: '0 auto 8px', display: 'block', color: 'var(--color-border)' }} />
-              No kiosk sessions yet. Set up the iPad in the clinic to start collecting data.
+              {t('kiosk.noKioskSessions')}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -230,7 +232,7 @@ export default function AdminDashboard() {
                             {s.exerciseName}
                           </div>
                           <div style={{ fontSize: '0.65rem', color: 'var(--color-text)' }}>
-                            {date.toLocaleDateString('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            {date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                             {s.duration ? ` \u2022 ${s.duration}s` : ''}
                             {s.totalFrames ? ` \u2022 ${s.totalFrames} frames` : ''}
                           </div>
@@ -241,7 +243,7 @@ export default function AdminDashboard() {
                         letterSpacing: '0.8px', padding: '4px 10px', borderRadius: '50px',
                         background: scoreColor + '18', color: scoreColor,
                       }}>
-                        {s.score >= 80 ? 'Excellent' : s.score >= 60 ? 'Good' : s.score >= 40 ? 'Needs Work' : 'Poor'}
+                        {s.score >= 80 ? t('kiosk.excellent') : s.score >= 60 ? t('kiosk.good') : s.score >= 40 ? t('kiosk.needsWork') : t('kiosk.poor')}
                       </div>
                     </div>
                     {/* Score breakdown mini */}
@@ -260,7 +262,7 @@ export default function AdminDashboard() {
                     {/* Faults */}
                     {s.faults?.length > 0 && (
                       <div style={{ fontSize: '0.7rem', color: 'var(--color-text)' }}>
-                        <span style={{ fontWeight: 600 }}>Issues: </span>
+                        <span style={{ fontWeight: 600 }}>{t('kiosk.issues')} </span>
                         {s.faults.map((f, j) => (
                           <span key={j} style={{
                             color: f.severity === 'high' ? '#C62828' : f.severity === 'moderate' ? '#E65100' : '#2E7D32',
@@ -285,12 +287,12 @@ export default function AdminDashboard() {
           <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text)' }} />
           <input
             value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search users..."
+            placeholder={t('searchUsers')}
             style={{ paddingLeft: '34px', fontSize: '0.82rem' }}
           />
         </div>
         <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={{ width: 'auto', fontSize: '0.82rem' }}>
-          <option value="all">All Roles</option>
+          <option value="all">{t('allRoles')}</option>
           {ROLES.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
         </select>
         <button onClick={loadUsers} style={{
@@ -304,11 +306,11 @@ export default function AdminDashboard() {
       {/* User List */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
-          Loading users...
+          {t('loadingUsers')}
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
-          No users found
+          {t('noUsersFound')}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -346,7 +348,7 @@ export default function AdminDashboard() {
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
-                      {u.name || 'No name'}
+                      {u.name || t('noName')}
                     </div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {u.email}
@@ -374,7 +376,7 @@ export default function AdminDashboard() {
                     {/* Role changer (multi-select) */}
                     <div>
                       <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', display: 'block', marginBottom: '6px' }}>
-                        Roles (select multiple)
+                        {t('roles.selectMultiple')}
                       </label>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         {ROLES.map(r => {
@@ -405,7 +407,7 @@ export default function AdminDashboard() {
                       </div>
                       {roles.length > 1 && (
                         <div style={{ fontSize: '0.62rem', color: 'var(--color-text)', marginTop: '4px' }}>
-                          This user will choose their view on login
+                          {t('roles.chooseOnLogin')}
                         </div>
                       )}
                     </div>
@@ -414,14 +416,14 @@ export default function AdminDashboard() {
                     {u.role === 'patient' && practitioners.length > 0 && (
                       <div>
                         <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', display: 'block', marginBottom: '6px' }}>
-                          Assigned Practitioner
+                          {t('assignedPractitioner')}
                         </label>
                         <select
                           value={u.practitionerId || ''}
                           onChange={e => handleAssignPractitioner(u.id, e.target.value)}
                           style={{ fontSize: '0.82rem' }}
                         >
-                          <option value="">Unassigned</option>
+                          <option value="">{t('unassigned')}</option>
                           {practitioners.map(p => (
                             <option key={p.id} value={p.id}>{p.name} ({p.email})</option>
                           ))}
@@ -431,10 +433,10 @@ export default function AdminDashboard() {
 
                     {/* Info */}
                     <div style={{ fontSize: '0.7rem', color: 'var(--color-text)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <div><strong>UID:</strong> {u.id}</div>
-                      {u.condition && <div><strong>Condition:</strong> {u.condition}</div>}
-                      {assignedPract && <div><strong>Practitioner:</strong> {assignedPract.name}</div>}
-                      {u.createdAt && <div><strong>Joined:</strong> {new Date(u.createdAt).toLocaleDateString()}</div>}
+                      <div><strong>{t('uid')}</strong> {u.id}</div>
+                      {u.condition && <div><strong>{t('condition')}</strong> {u.condition}</div>}
+                      {assignedPract && <div><strong>{t('practitioner')}</strong> {assignedPract.name}</div>}
+                      {u.createdAt && <div><strong>{t('joined')}</strong> {new Date(u.createdAt).toLocaleDateString(i18n.language)}</div>}
                     </div>
                   </div>
                 )}

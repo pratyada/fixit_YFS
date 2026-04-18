@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Camera, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, ChevronRight, RotateCcw, Check, ArrowLeft, Zap } from 'lucide-react';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
@@ -23,12 +24,13 @@ function calculateAngle(a, b, c) {
 }
 
 const scoreColor = (s) => s >= 80 ? '#4CAF50' : s >= 60 ? '#FFC107' : s >= 40 ? '#FF9800' : '#F44336';
-const scoreLabel = (s) => s >= 80 ? 'Excellent!' : s >= 60 ? 'Good Form' : s >= 40 ? 'Needs Work' : 'Keep Practicing';
+// scoreLabel is now handled via t() in components
 const formatTime = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
 const BODY_ICONS = { 'Lower Body': '🦵', 'Upper Body': '💪', Core: '🎯' };
 
 export default function ClinicKiosk() {
+  const { t } = useTranslation('kiosk');
   const [step, setStep] = useState('select'); // select | camera | report
   const [selectedExercise, setSelectedExercise] = useState(null);
 
@@ -270,7 +272,7 @@ export default function ClinicKiosk() {
       overflow: 'hidden',
     }} onClick={resetIdle}>
 
-      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} />}
+      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} t={t} />}
 
       {step === 'camera' && (
         <CameraScreen
@@ -296,6 +298,7 @@ export default function ClinicKiosk() {
           onBack={backToSelect}
           onRetryCamera={startCamera}
           formatTime={formatTime}
+          t={t}
         />
       )}
 
@@ -303,6 +306,7 @@ export default function ClinicKiosk() {
         <ReportScreen
           report={report}
           exercise={selectedExercise}
+          t={t}
           onTryAgain={() => {
             setCurrentAngle(0);
             setAngleRecorded({ front: false, side: false });
@@ -322,7 +326,7 @@ export default function ClinicKiosk() {
         }}>
           <AlertCircle size={48} color="#ef5350" />
           <p style={{ color: '#ef9a9a', textAlign: 'center', fontSize: '1.1rem' }}>{report.error}</p>
-          <button onClick={backToSelect} style={kioskBtn('#863bff')}>Try Another Exercise</button>
+          <button onClick={backToSelect} style={kioskBtn('#863bff')}>{t('camera.tryAnotherExercise')}</button>
         </div>
       )}
 
@@ -354,7 +358,7 @@ function kioskBtn(bg, size = 'normal') {
 // ═══════════════════════════════════════════════
 // EXERCISE SELECT SCREEN (iPad-optimized grid)
 // ═══════════════════════════════════════════════
-function SelectScreen({ exercises, onSelect }) {
+function SelectScreen({ exercises, onSelect, t }) {
   return (
     <div className="kiosk-fade" style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -384,10 +388,10 @@ function SelectScreen({ exercises, onSelect }) {
           color: 'white', fontSize: '1.8rem', fontWeight: 300,
           marginBottom: '8px',
         }}>
-          Check Your Form
+          {t('checkYourForm')}
         </h1>
         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1rem' }}>
-          Tap an exercise to get your AI pose score
+          {t('tapExercise')}
         </p>
       </div>
 
@@ -457,7 +461,7 @@ function SelectScreen({ exercises, onSelect }) {
               fontSize: '0.75rem', fontWeight: 600, color: '#863bff',
               textTransform: 'uppercase', letterSpacing: '1px',
             }}>
-              <Camera size={14} /> Start Pose Check <ChevronRight size={14} />
+              <Camera size={14} /> {t('startPoseCheck')} <ChevronRight size={14} />
             </div>
           </button>
         ))}
@@ -468,7 +472,7 @@ function SelectScreen({ exercises, onSelect }) {
         textAlign: 'center', marginTop: '40px', padding: '20px',
         color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem',
       }}>
-        Powered by FIXIT &bull; yourformsux.com
+        {t('poweredBy')}
       </div>
     </div>
   );
@@ -482,7 +486,7 @@ function CameraScreen({
   cameraReady, loading, error, recording, recordTimer,
   angleRecorded, liveAngles, showGrid,
   onToggleGrid, onStartRecording, onStopRecording,
-  onRetake, onNextAngle, onFinish, onBack, onRetryCamera, formatTime,
+  onRetake, onNextAngle, onFinish, onBack, onRetryCamera, formatTime, t,
 }) {
   const hasCurrentRecording = angleRecorded[angleName];
   const allDone = angleRecorded.front && angleRecorded.side;
@@ -502,7 +506,7 @@ function CameraScreen({
           padding: '10px 20px', borderRadius: '50px', fontSize: '0.85rem', fontWeight: 600,
           cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
         }}>
-          <ArrowLeft size={16} /> Back
+          <ArrowLeft size={16} /> {t('camera.back')}
         </button>
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: 'white', fontSize: '1.1rem', fontWeight: 700 }}>{exercise?.name}</div>
@@ -510,7 +514,7 @@ function CameraScreen({
             color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: 600,
             textTransform: 'uppercase', letterSpacing: '1.5px',
           }}>
-            {angleName} angle &bull; {currentAngle + 1}/{ANGLES.length}
+            {t('camera.angleOf', { angle: angleName, current: currentAngle + 1, total: ANGLES.length })}
           </div>
         </div>
         <div style={{ width: '80px' }} />
@@ -539,7 +543,7 @@ function CameraScreen({
             color: 'white', fontSize: '0.85rem', fontWeight: 600,
             textTransform: 'uppercase', letterSpacing: '1.5px',
           }}>
-            {angleName} view
+            {t(`camera.${angleName}View`)}
           </span>
           {hasCurrentRecording && <Check size={16} color="#4CAF50" />}
         </div>
@@ -569,9 +573,9 @@ function CameraScreen({
             padding: '14px 18px', borderRadius: '14px',
             color: 'white', fontSize: '0.9rem',
           }}>
-            <div>L Knee: <strong>{liveAngles.leftKnee}°</strong></div>
-            {liveAngles.rightKnee && <div>R Knee: <strong>{liveAngles.rightKnee}°</strong></div>}
-            {liveAngles.leftHip && <div>L Hip: <strong>{liveAngles.leftHip}°</strong></div>}
+            <div>{t('camera.lKnee')} <strong>{liveAngles.leftKnee}°</strong></div>
+            {liveAngles.rightKnee && <div>{t('camera.rKnee')} <strong>{liveAngles.rightKnee}°</strong></div>}
+            {liveAngles.leftHip && <div>{t('camera.lHip')} <strong>{liveAngles.leftHip}°</strong></div>}
           </div>
         )}
 
@@ -609,7 +613,7 @@ function CameraScreen({
             flexDirection: 'column', gap: '16px', zIndex: 10,
           }}>
             <RefreshCw size={40} style={{ color: '#B0C4BB', animation: 'spin 1s linear infinite' }} />
-            <p style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.6)' }}>Loading AI model...</p>
+            <p style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.6)' }}>{t('camera.loadingAI')}</p>
           </div>
         )}
 
@@ -621,7 +625,7 @@ function CameraScreen({
           }}>
             <AlertCircle size={44} color="#ef5350" />
             <p style={{ color: '#ef9a9a', textAlign: 'center', fontSize: '1rem' }}>{error}</p>
-            <button onClick={onRetryCamera} style={kioskBtn('rgba(255,255,255,0.15)')}>Try Again</button>
+            <button onClick={onRetryCamera} style={kioskBtn('rgba(255,255,255,0.15)')}>{t('camera.tryAgain')}</button>
           </div>
         )}
       </div>
@@ -637,15 +641,15 @@ function CameraScreen({
         {!recording && hasCurrentRecording ? (
           <>
             <button onClick={onRetake} style={kioskBtn('rgba(255,255,255,0.15)')}>
-              <RotateCcw size={16} /> Retake
+              <RotateCcw size={16} /> {t('camera.retake')}
             </button>
             {!allDone && currentAngle === 0 ? (
               <button onClick={onNextAngle} style={kioskBtn('#863bff', 'large')}>
-                Next: Side Angle
+                {t('camera.nextSideAngle')}
               </button>
             ) : allDone ? (
               <button onClick={onFinish} style={kioskBtn('#4CAF50', 'large')}>
-                <Check size={18} /> Analyze Form
+                <Check size={18} /> {t('camera.analyzeForm')}
               </button>
             ) : null}
           </>
@@ -688,7 +692,8 @@ function CameraScreen({
 // ═══════════════════════════════════════════════
 // REPORT SCREEN (iPad-optimized)
 // ═══════════════════════════════════════════════
-function ReportScreen({ report, exercise, onTryAgain, onNewExercise }) {
+function ReportScreen({ report, exercise, t, onTryAgain, onNewExercise }) {
+  const scoreLabel = (s) => s >= 80 ? t('scoreLabels.excellent') : s >= 60 ? t('scoreLabels.goodForm') : s >= 40 ? t('scoreLabels.needsWork') : t('scoreLabels.keepPracticing');
   return (
     <div className="kiosk-fade" style={{
       flex: 1, overflow: 'auto', padding: '40px',
@@ -717,13 +722,13 @@ function ReportScreen({ report, exercise, onTryAgain, onNewExercise }) {
           <div style={{ fontSize: '3.5rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>
             {report.overall}
           </div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>/ 100</div>
+          <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>{t('report.outOf100')}</div>
         </div>
         <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'white' }}>
           {scoreLabel(report.overall)}
         </div>
         <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)', marginTop: '8px' }}>
-          {report.duration}s recorded &bull; {report.totalFrames} frames analyzed
+          {t('report.recorded', { duration: report.duration, frames: report.totalFrames })}
         </div>
       </div>
 
@@ -738,7 +743,7 @@ function ReportScreen({ report, exercise, onTryAgain, onNewExercise }) {
           background: 'rgba(255,255,255,0.05)', borderRadius: '20px',
           border: '1px solid rgba(255,255,255,0.1)', padding: '24px',
         }}>
-          <h4 style={{ color: 'white', marginBottom: '20px', fontSize: '1rem' }}>Score Breakdown</h4>
+          <h4 style={{ color: 'white', marginBottom: '20px', fontSize: '1rem' }}>{t('report.scoreBreakdown')}</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {report.categories.map(cat => (
               <div key={cat.name}>
@@ -769,7 +774,7 @@ function ReportScreen({ report, exercise, onTryAgain, onNewExercise }) {
           background: 'rgba(255,255,255,0.05)', borderRadius: '20px',
           border: '1px solid rgba(255,255,255,0.1)', padding: '24px',
         }}>
-          <h4 style={{ color: 'white', marginBottom: '20px', fontSize: '1rem' }}>Form Analysis</h4>
+          <h4 style={{ color: 'white', marginBottom: '20px', fontSize: '1rem' }}>{t('report.formAnalysis')}</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {report.faults.map(fault => (
               <div key={fault.id} style={{
@@ -833,10 +838,10 @@ function ReportScreen({ report, exercise, onTryAgain, onNewExercise }) {
       {/* Actions */}
       <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '40px' }}>
         <button onClick={onTryAgain} style={kioskBtn('#863bff', 'large')}>
-          <Camera size={18} /> Try Again
+          <Camera size={18} /> {t('camera.tryAgain')}
         </button>
         <button onClick={onNewExercise} style={kioskBtn('rgba(255,255,255,0.1)', 'large')}>
-          New Exercise
+          {t('report.newExercise')}
         </button>
       </div>
 
@@ -844,7 +849,7 @@ function ReportScreen({ report, exercise, onTryAgain, onNewExercise }) {
         textAlign: 'center', color: 'rgba(255,255,255,0.15)', fontSize: '0.75rem',
         paddingBottom: '20px',
       }}>
-        Powered by FIXIT &bull; yourformsux.com
+        {t('poweredBy')}
       </div>
     </div>
   );
