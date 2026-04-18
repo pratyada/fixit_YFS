@@ -504,11 +504,13 @@ export default function PoseChecker() {
 
         {/* Bottom controls */}
         <div style={{
-          padding: '16px 20px',
-          paddingBottom: 'env(safe-area-inset-bottom, 16px)',
-          background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)',
+          padding: '20px 20px',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 20px)',
+          background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px',
           zIndex: 10,
+          flexShrink: 0,
+          minHeight: '120px',
         }}>
           {!recording && hasCurrentRecording ? (
             // After recording an angle: retake or next/submit

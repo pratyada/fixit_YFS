@@ -252,11 +252,13 @@ export default function CameraRecorder({ onComplete, onCancel, exerciseName }) {
 
       {/* Controls */}
       <div style={{
-        padding: '16px 20px',
-        paddingBottom: 'env(safe-area-inset-bottom, 16px)',
-        background: 'rgba(0,0,0,0.8)',
+        padding: '20px 20px',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 20px)',
+        background: 'rgba(0,0,0,0.9)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px',
         zIndex: 3,
+        flexShrink: 0,
+        minHeight: '120px',
       }}>
         {!recording && hasRecording ? (
           <>
