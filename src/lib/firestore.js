@@ -247,6 +247,12 @@ export async function addFeedback(data) {
   });
 }
 
+export async function getAllFeedback(limitCount = 500) {
+  return queryDocs(
+    query(collection(db, 'feedback'), orderBy('createdAt', 'desc'), limit(limitCount))
+  );
+}
+
 // ─── Real-time listeners ───
 
 export function onAssignments(uid, callback) {

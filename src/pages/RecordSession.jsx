@@ -2,6 +2,7 @@
 // Full flow: select exercise → record front+side → upload → view AI results
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Upload, CheckCircle2, AlertCircle, Video, Clock, Target } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,6 +13,7 @@ import { uploadVideo } from '../lib/storage-firebase';
 import { addSession, updateSession } from '../lib/firestore';
 
 export default function RecordSession() {
+  const { t } = useTranslation('exercises');
   const { exerciseId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -26,9 +28,9 @@ export default function RecordSession() {
     return (
       <div className="fade-in" style={{ textAlign: 'center', padding: '40px 20px' }}>
         <AlertCircle size={40} color="var(--color-danger)" style={{ margin: '0 auto 12px' }} />
-        <h3>Exercise not found</h3>
+        <h3>{t('detail.exerciseNotFound')}</h3>
         <Link to="/exercises" style={{ fontSize: '0.8rem', marginTop: '12px', display: 'inline-block' }}>
-          Back to exercises
+          {t('detail.backToExercises')}
         </Link>
       </div>
     );
@@ -104,7 +106,7 @@ export default function RecordSession() {
         display: 'flex', alignItems: 'center', gap: '4px',
         fontSize: '0.78rem', fontWeight: 500, color: 'var(--color-accent)',
       }}>
-        <ArrowLeft size={14} /> Back to exercise
+        <ArrowLeft size={14} /> {t('detail.backToExercises')}
       </Link>
 
       {step === 'intro' && (
@@ -115,7 +117,7 @@ export default function RecordSession() {
             borderRadius: '20px', padding: '24px', color: 'white',
           }}>
             <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
-              Record Session
+              {t('detail.recordSession')}
             </div>
             <h2 style={{ color: 'white', marginBottom: '8px' }}>{exercise.name}</h2>
             <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.82rem', lineHeight: 1.5 }}>
@@ -128,7 +130,7 @@ export default function RecordSession() {
             background: 'white', borderRadius: '16px',
             border: '1px solid var(--color-border)', padding: '20px',
           }}>
-            <h3 style={{ marginBottom: '14px' }}>How it works</h3>
+            <h3 style={{ marginBottom: '14px' }}>{'How it works'}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <StepInfo
                 num="1"
@@ -179,7 +181,7 @@ export default function RecordSession() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             }}
           >
-            <Video size={18} /> Start Recording
+            <Video size={18} /> {'Start Recording'}
           </button>
         </>
       )}

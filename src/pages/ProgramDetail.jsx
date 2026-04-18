@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Calendar, Target, AlertTriangle, ChevronDown, ChevronUp, CheckCircle2, Plus, Play } from 'lucide-react';
 import { PROTOCOLS, getProtocolById } from '../data/protocols';
 import { getById as getExercise } from '../data/exercises';
@@ -7,6 +8,7 @@ import { useLocalState } from '../hooks/useLocalState';
 import { usePatientData } from '../hooks/usePatientData';
 
 export default function ProgramDetail() {
+  const { t } = useTranslation('plan');
   const { id } = useParams();
   const [customPrograms] = useLocalState('custom_programs', []);
   const [assignedPrograms, setAssignedPrograms] = usePatientData('assigned_programs', []);
@@ -141,7 +143,7 @@ export default function ProgramDetail() {
 
       {/* Phases */}
       <div>
-        <h3 style={{ marginBottom: '12px' }}>Program Phases</h3>
+        <h3 style={{ marginBottom: '12px' }}>{t('rehabilitationPhases')}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {program.phases.map((phase, i) => (
             <PhaseCard
@@ -152,6 +154,7 @@ export default function ProgramDetail() {
               toggle={() => setExpandedPhase(expandedPhase === i ? -1 : i)}
               completedToday={completedToday}
               isCurrent={isAssigned && currentWeek <= weeksRangeEnd(phase.weeks)}
+              t={t}
             />
           ))}
         </div>
@@ -178,7 +181,7 @@ function Stat({ icon, label }) {
   );
 }
 
-function PhaseCard({ phase, index, expanded, toggle, completedToday }) {
+function PhaseCard({ phase, index, expanded, toggle, completedToday, t }) {
   return (
     <div style={{
       background: 'white', borderRadius: '14px',
@@ -218,7 +221,7 @@ function PhaseCard({ phase, index, expanded, toggle, completedToday }) {
 
           {phase.goals?.length > 0 && (
             <div>
-              <h6 style={{ marginBottom: '6px' }}>Goals</h6>
+              <h6 style={{ marginBottom: '6px' }}>{t('goals')}</h6>
               {phase.goals.map((g, j) => (
                 <div key={j} style={{ fontSize: '0.78rem', display: 'flex', gap: '6px', marginBottom: '3px' }}>
                   <span style={{ color: '#4CAF50' }}>✓</span> {g}
@@ -228,7 +231,7 @@ function PhaseCard({ phase, index, expanded, toggle, completedToday }) {
           )}
 
           <div>
-            <h6 style={{ marginBottom: '8px' }}>Exercises</h6>
+            <h6 style={{ marginBottom: '8px' }}>{t('exercises', { count: phase.exercises.length })}</h6>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {phase.exercises.map((ex, j) => {
                 const exData = getExercise(ex.id);
@@ -265,7 +268,7 @@ function PhaseCard({ phase, index, expanded, toggle, completedToday }) {
           {phase.precautions?.length > 0 && (
             <div style={{ background: '#FFF8E1', borderRadius: '10px', padding: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, color: '#F57F17', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                <AlertTriangle size={12} /> Precautions
+                <AlertTriangle size={12} /> {t('precautions')}
               </div>
               {phase.precautions.map((p, j) => (
                 <div key={j} style={{ fontSize: '0.78rem', color: '#E65100', marginBottom: '3px' }}>

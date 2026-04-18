@@ -112,7 +112,7 @@ export default function PractitionerDashboard() {
         </div>
 
         {/* Assign Exercise */}
-        <AssignExercisePanel patient={selectedPatient} practitionerId={user.uid} />
+        <AssignExercisePanel patient={selectedPatient} practitionerId={user.uid} t={t} />
 
         {/* Assigned Exercises Overview */}
         {!loadingDetail && patientAssignments.length > 0 && (
@@ -211,6 +211,8 @@ export default function PractitionerDashboard() {
                       session={s}
                       patient={selectedPatient}
                       practitionerId={user.uid}
+                      t={t}
+                      i18n={i18n}
                     />
                   ))}
                 </div>
@@ -369,16 +371,16 @@ export default function PractitionerDashboard() {
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)' }}>Loading patients...</div>
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)' }}>{t('loadingPatients')}</div>
       ) : filtered.length === 0 ? (
         <div style={{
           background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)',
           padding: '40px 24px', textAlign: 'center',
         }}>
           <Users size={32} color="var(--color-border)" style={{ margin: '0 auto 12px' }} />
-          <h4>No patients yet</h4>
+          <h4>{t('noPatientsYet')}</h4>
           <p style={{ fontSize: '0.82rem', color: 'var(--color-text)', marginTop: '4px' }}>
-            Ask your admin to assign patients to you
+            {t('noPatientsDesc')}
           </p>
         </div>
       ) : (
@@ -410,8 +412,8 @@ export default function PractitionerDashboard() {
                 </div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{p.name || 'Unnamed'}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>{p.condition || 'No condition'}</div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{p.name || t('noName', { defaultValue: 'Unnamed' })}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>{p.condition || t('noCondition')}</div>
               </div>
               <ChevronRight size={16} color="var(--color-border)" />
             </button>
@@ -422,7 +424,7 @@ export default function PractitionerDashboard() {
   );
 }
 
-function AssignExercisePanel({ patient, practitionerId }) {
+function AssignExercisePanel({ patient, practitionerId, t }) {
   const [showPanel, setShowPanel] = useState(false);
   const [notes, setNotes] = useState('');
   const [sets, setSets] = useState(3);
@@ -461,7 +463,7 @@ function AssignExercisePanel({ patient, practitionerId }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
         cursor: 'pointer',
       }}>
-        <Dumbbell size={16} /> Assign Exercise
+        <Dumbbell size={16} /> {t('assignExercise.title')}
       </button>
     );
   }
@@ -473,7 +475,7 @@ function AssignExercisePanel({ patient, practitionerId }) {
       display: 'flex', flexDirection: 'column', gap: '12px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h4>Assign Exercise to {patient.name?.split(' ')[0]}</h4>
+        <h4>{t('assignExercise.assignTo', { name: patient.name?.split(' ')[0] })}</h4>
         <button onClick={() => setShowPanel(false)} style={{
           background: 'none', border: 'none', color: 'var(--color-text)',
           fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
@@ -483,19 +485,19 @@ function AssignExercisePanel({ patient, practitionerId }) {
       {/* Sets/Reps config */}
       <div style={{ display: 'flex', gap: '8px' }}>
         <div style={{ flex: 1 }}>
-          <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>Sets</label>
+          <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>{t('assignExercise.sets')}</label>
           <input type="number" value={sets} onChange={e => setSets(Number(e.target.value))} min={1} max={10} style={{ fontSize: '0.82rem' }} />
         </div>
         <div style={{ flex: 1 }}>
-          <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>Reps</label>
+          <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>{t('assignExercise.reps')}</label>
           <input type="number" value={reps} onChange={e => setReps(Number(e.target.value))} min={1} max={50} style={{ fontSize: '0.82rem' }} />
         </div>
       </div>
 
       {/* Notes */}
       <div>
-        <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>Notes (optional)</label>
-        <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g., Focus on depth..." style={{ fontSize: '0.82rem' }} />
+        <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>{t('assignExercise.notesOptional')}</label>
+        <input value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('assignExercise.notesPlaceholder')} style={{ fontSize: '0.82rem' }} />
       </div>
 
       {/* Exercise list */}
@@ -527,7 +529,7 @@ function AssignExercisePanel({ patient, practitionerId }) {
                   letterSpacing: '0.5px', cursor: assigning ? 'default' : 'pointer',
                   opacity: assigning ? 0.5 : 1,
                 }}>
-                  Assign
+                  {t('assignExercise.assign')}
                 </button>
               )}
             </div>
@@ -538,7 +540,7 @@ function AssignExercisePanel({ patient, practitionerId }) {
   );
 }
 
-function SessionCard({ session: s, patient, practitionerId }) {
+function SessionCard({ session: s, patient, practitionerId, t, i18n }) {
   const [expanded, setExpanded] = useState(false);
   const [feedbackMode, setFeedbackMode] = useState(false);
   const [rating, setRating] = useState(3);
@@ -547,6 +549,9 @@ function SessionCard({ session: s, patient, practitionerId }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(s.status === 'REVIEWED');
   const [existingFeedback, setExistingFeedback] = useState(null);
+  // AI retraining: per-fault corrections + score override
+  const [faultCorrections, setFaultCorrections] = useState({});
+  const [scoreOverride, setScoreOverride] = useState(null);
 
   const ex = EXERCISE_LIBRARY.find(e => e.id === s.exerciseId);
   const analysis = s.aiAnalysis;
@@ -569,6 +574,13 @@ function SessionCard({ session: s, patient, practitionerId }) {
   const submitFeedback = async () => {
     setSubmitting(true);
     try {
+      // Build fault corrections for AI retraining
+      const corrections = Object.entries(faultCorrections).map(([faultId, verdict]) => ({
+        faultId,
+        faultName: analysis?.faults?.find(f => f.id === faultId)?.name || faultId,
+        verdict, // 'agree' | 'disagree' | 'partial'
+      }));
+
       await addFeedback({
         sessionId: s.id,
         patientId: patient.id,
@@ -579,12 +591,18 @@ function SessionCard({ session: s, patient, practitionerId }) {
         whatWasGood: whatGood,
         whatNeedsImproving: whatImprove,
         aiScore: s.aiScore,
+        practitionerScore: scoreOverride,
         aiModelVersionSnapshot: s.aiModelVersion || 'movenet-lightning-v1',
+        // AI retraining data
+        faultCorrections: corrections,
+        aiCategories: analysis?.categories || [],
+        aiFaults: analysis?.faults || [],
+        aiAngles: analysis?.angles || null,
       });
       await updateSession(patient.id, s.id, { status: 'REVIEWED' });
       setSubmitted(true);
       setFeedbackMode(false);
-      setExistingFeedback({ rating, whatWasGood: whatGood, whatNeedsImproving: whatImprove });
+      setExistingFeedback({ rating, whatWasGood: whatGood, whatNeedsImproving: whatImprove, faultCorrections: corrections, practitionerScore: scoreOverride });
     } catch (e) {
       console.error('Failed to submit feedback:', e);
     } finally {
@@ -617,9 +635,9 @@ function SessionCard({ session: s, patient, practitionerId }) {
             {ex?.name || s.exerciseName || s.exerciseId}
           </div>
           <div style={{ fontSize: '0.68rem', color: 'var(--color-text)' }}>
-            {s.createdAt?.toDate ? s.createdAt.toDate().toLocaleDateString('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Recent'}
-            {s.type === 'pose_check' && ' • Pose Check'}
-            {submitted && ' • Reviewed'}
+            {s.createdAt?.toDate ? s.createdAt.toDate().toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : t('recent')}
+            {s.type === 'pose_check' && ` • ${t('feedback.poseCheck')}`}
+            {submitted && ` • ${t('feedback.reviewed')}`}
           </div>
         </div>
         {submitted && <CheckCircle2 size={16} color="#4CAF50" />}
@@ -643,7 +661,7 @@ function SessionCard({ session: s, patient, practitionerId }) {
               {analysis.categories && (
                 <div>
                   <div style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', marginBottom: '8px' }}>
-                    Score Breakdown
+                    {t('analysis.scoreBreakdown')}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {analysis.categories.map(cat => (
@@ -664,7 +682,7 @@ function SessionCard({ session: s, patient, practitionerId }) {
               {analysis.faults?.length > 0 && (
                 <div>
                   <div style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', marginBottom: '8px' }}>
-                    Form Issues
+                    {t('analysis.formIssues')}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {analysis.faults.map(f => (
@@ -684,7 +702,7 @@ function SessionCard({ session: s, patient, practitionerId }) {
               {analysis.angles && (
                 <div>
                   <div style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', marginBottom: '8px' }}>
-                    Joint Angles
+                    {t('analysis.jointAngles')}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {Object.entries(analysis.angles).map(([joint, data]) => (
@@ -701,21 +719,36 @@ function SessionCard({ session: s, patient, practitionerId }) {
             </>
           )}
 
-          {/* Video links */}
+          {/* Inline Video Players */}
           {(s.frontVideoUrl || s.sideVideoUrl) && (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {s.frontVideoUrl && (
-                <a href={s.frontVideoUrl} target="_blank" rel="noopener noreferrer" style={{
-                  fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
-                  color: 'var(--color-accent)', padding: '6px 12px', background: 'var(--color-bg-alt)', borderRadius: '6px',
-                }}>Front Video</a>
-              )}
-              {s.sideVideoUrl && (
-                <a href={s.sideVideoUrl} target="_blank" rel="noopener noreferrer" style={{
-                  fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
-                  color: 'var(--color-accent)', padding: '6px 12px', background: 'var(--color-bg-alt)', borderRadius: '6px',
-                }}>Side Video</a>
-              )}
+            <div>
+              <div style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', marginBottom: '8px' }}>
+                Session Videos
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {s.frontVideoUrl && (
+                  <div style={{ flex: 1, minWidth: '140px' }}>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      {t('analysis.frontVideo')}
+                    </div>
+                    <video src={s.frontVideoUrl} controls playsInline preload="metadata" style={{
+                      width: '100%', borderRadius: '8px', background: '#000',
+                      maxHeight: '200px',
+                    }} />
+                  </div>
+                )}
+                {s.sideVideoUrl && (
+                  <div style={{ flex: 1, minWidth: '140px' }}>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      {t('analysis.sideVideo')}
+                    </div>
+                    <video src={s.sideVideoUrl} controls playsInline preload="metadata" style={{
+                      width: '100%', borderRadius: '8px', background: '#000',
+                      maxHeight: '200px',
+                    }} />
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -723,7 +756,7 @@ function SessionCard({ session: s, patient, practitionerId }) {
           {existingFeedback && !feedbackMode && (
             <div style={{ background: '#EDF3F1', borderRadius: '10px', padding: '14px', border: '1px solid #D8E8E3' }}>
               <div style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#708E86', marginBottom: '8px' }}>
-                Your Feedback
+                {t('feedback.yourFeedback')}
               </div>
               <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
                 {[1,2,3,4,5].map(i => (
@@ -732,12 +765,36 @@ function SessionCard({ session: s, patient, practitionerId }) {
               </div>
               {existingFeedback.whatWasGood && (
                 <div style={{ fontSize: '0.78rem', color: '#2E7D32', marginBottom: '4px' }}>
-                  <strong>Good:</strong> {existingFeedback.whatWasGood}
+                  <strong>{t('feedback.good')}</strong> {existingFeedback.whatWasGood}
                 </div>
               )}
               {existingFeedback.whatNeedsImproving && (
                 <div style={{ fontSize: '0.78rem', color: '#E65100' }}>
-                  <strong>Improve:</strong> {existingFeedback.whatNeedsImproving}
+                  <strong>{t('feedback.improve')}</strong> {existingFeedback.whatNeedsImproving}
+                </div>
+              )}
+              {existingFeedback.practitionerScore != null && (
+                <div style={{ fontSize: '0.78rem', color: 'var(--color-secondary)', marginTop: '4px' }}>
+                  <strong>Your Score:</strong> {existingFeedback.practitionerScore} (AI: {s.aiScore})
+                </div>
+              )}
+              {existingFeedback.faultCorrections?.length > 0 && (
+                <div style={{ marginTop: '6px' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#708E86', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    Fault Corrections
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {existingFeedback.faultCorrections.map((c, i) => (
+                      <span key={i} style={{
+                        fontSize: '0.65rem', padding: '3px 8px', borderRadius: '50px',
+                        background: c.verdict === 'agree' ? '#E8F5E9' : c.verdict === 'disagree' ? '#FFEBEE' : '#FFF8E1',
+                        color: c.verdict === 'agree' ? '#2E7D32' : c.verdict === 'disagree' ? '#C62828' : '#F57F17',
+                        fontWeight: 600,
+                      }}>
+                        {c.verdict === 'agree' ? '✓' : c.verdict === 'disagree' ? '✗' : '~'} {c.faultName}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -747,13 +804,13 @@ function SessionCard({ session: s, patient, practitionerId }) {
           {feedbackMode ? (
             <div style={{ background: 'var(--color-bg-alt)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)' }}>
-                Submit Feedback
+                {t('feedback.title')}
               </div>
 
               {/* Star rating */}
               <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)', display: 'block', marginBottom: '6px' }}>
-                  Rating (how accurate was the AI?)
+                  {t('feedback.rating')}
                 </label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {[1,2,3,4,5].map(i => (
@@ -766,21 +823,87 @@ function SessionCard({ session: s, patient, practitionerId }) {
                 </div>
               </div>
 
+              {/* Practitioner's score override */}
+              <div>
+                <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Your Score (AI gave {s.aiScore})
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input
+                    type="range" min="0" max="100"
+                    value={scoreOverride ?? s.aiScore ?? 50}
+                    onChange={e => setScoreOverride(Number(e.target.value))}
+                    style={{ flex: 1, accentColor: 'var(--color-accent)' }}
+                  />
+                  <span style={{
+                    fontSize: '1.1rem', fontWeight: 700, minWidth: '36px', textAlign: 'center',
+                    color: (scoreOverride ?? s.aiScore) >= 80 ? '#2E7D32' : (scoreOverride ?? s.aiScore) >= 60 ? '#F57F17' : '#C62828',
+                  }}>
+                    {scoreOverride ?? s.aiScore ?? '—'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Fault corrections — AI retraining data */}
+              {analysis?.faults?.length > 0 && (
+                <div>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Do you agree with the AI's detected issues?
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {analysis.faults.map(f => {
+                      const verdict = faultCorrections[f.id];
+                      return (
+                        <div key={f.id} style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '8px 10px', borderRadius: '8px',
+                          background: verdict === 'agree' ? '#E8F5E9' : verdict === 'disagree' ? '#FFEBEE' : verdict === 'partial' ? '#FFF8E1' : 'white',
+                          border: '1px solid var(--color-border)',
+                          transition: 'all 0.2s',
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{f.name}</div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--color-text)' }}>{f.severity} severity</div>
+                          </div>
+                          {['agree', 'partial', 'disagree'].map(v => (
+                            <button
+                              key={v}
+                              onClick={() => setFaultCorrections(prev => ({ ...prev, [f.id]: prev[f.id] === v ? undefined : v }))}
+                              style={{
+                                padding: '4px 8px', borderRadius: '6px', border: 'none',
+                                fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase',
+                                cursor: 'pointer', transition: 'all 0.15s',
+                                background: verdict === v
+                                  ? (v === 'agree' ? '#4CAF50' : v === 'disagree' ? '#EF5350' : '#FFC107')
+                                  : '#f0f0f0',
+                                color: verdict === v ? 'white' : '#888',
+                              }}
+                            >
+                              {v === 'agree' ? '✓ Yes' : v === 'disagree' ? '✗ No' : '~ Partial'}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#2E7D32', display: 'block', marginBottom: '4px' }}>
-                  What was good?
+                  {t('feedback.whatGood')}
                 </label>
                 <textarea value={whatGood} onChange={e => setWhatGood(e.target.value)}
-                  placeholder="e.g., Good depth on squats, knees tracking well..."
+                  placeholder={t('feedback.whatGoodPlaceholder')}
                   rows={2} style={{ fontSize: '0.82rem' }} />
               </div>
 
               <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#E65100', display: 'block', marginBottom: '4px' }}>
-                  What needs improving?
+                  {t('feedback.whatImprove')}
                 </label>
                 <textarea value={whatImprove} onChange={e => setWhatImprove(e.target.value)}
-                  placeholder="e.g., Lower back rounding at the bottom, knee valgus on rep 3..."
+                  placeholder={t('feedback.whatImprovePlaceholder')}
                   rows={2} style={{ fontSize: '0.82rem' }} />
               </div>
 
@@ -793,7 +916,7 @@ function SessionCard({ session: s, patient, practitionerId }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                   cursor: submitting ? 'default' : 'pointer',
                 }}>
-                  <Send size={13} /> {submitting ? 'Sending...' : 'Submit Feedback'}
+                  <Send size={13} /> {submitting ? t('feedback.sending') : t('feedback.submitFeedback')}
                 </button>
                 <button onClick={() => setFeedbackMode(false)} style={{
                   padding: '10px 16px', borderRadius: '10px',
@@ -814,7 +937,7 @@ function SessionCard({ session: s, patient, practitionerId }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               cursor: 'pointer',
             }}>
-              <MessageSquare size={14} /> Give Feedback
+              <MessageSquare size={14} /> {t('feedback.giveFeedback')}
             </button>
           ) : null}
         </div>

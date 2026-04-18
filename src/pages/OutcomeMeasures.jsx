@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ClipboardList, ChevronRight, ArrowLeft, CheckCircle2, TrendingUp, TrendingDown } from 'lucide-react';
 import { OUTCOME_MEASURES, getMeasureById } from '../data/outcomeMeasures';
 import { usePatientData } from '../hooks/usePatientData';
@@ -6,6 +7,7 @@ import { generateId } from '../utils/storage';
 import { Line } from 'react-chartjs-2';
 
 export default function OutcomeMeasures() {
+  const { t } = useTranslation('progress');
   const [scores, setScores] = usePatientData('outcome_scores', []);
   const [activeMeasure, setActiveMeasure] = useState(null);
   const [responses, setResponses] = useState({});

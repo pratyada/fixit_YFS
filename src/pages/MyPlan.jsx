@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Calendar, CheckCircle2, Clock, ChevronDown, ChevronUp, AlertTriangle, Play, Lock } from 'lucide-react';
 import { ACL_REHAB_PROGRAM, EXERCISE_LIBRARY } from '../data/exercises';
 import { usePatientData } from '../hooks/usePatientData';
 
 export default function MyPlan() {
+  const { t } = useTranslation('plan');
   const [completedSessions] = usePatientData('completed_sessions', []);
   const [profile, setProfile] = usePatientData('user_profile', null);
   const [expandedPhase, setExpandedPhase] = useState(0);
@@ -38,8 +40,8 @@ export default function MyPlan() {
     return (
       <div className="fade-in" style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div style={{ textAlign: 'center' }}>
-          <h1 style={{ marginBottom: '6px' }}>Set Up Your Rehab Plan</h1>
-          <p style={{ fontSize: '0.85rem' }}>Tell us about your injury so we can personalize your program</p>
+          <h1 style={{ marginBottom: '6px' }}>{t('setup.title')}</h1>
+          <p style={{ fontSize: '0.85rem' }}>{t('setup.subtitle')}</p>
         </div>
 
         <div style={{
@@ -47,10 +49,10 @@ export default function MyPlan() {
           border: '1px solid var(--color-border)', padding: '24px',
           display: 'flex', flexDirection: 'column', gap: '16px',
         }}>
-          <FormField label="Your Name">
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Enter your name" />
+          <FormField label={t('setup.yourName')}>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder={t('setup.namePlaceholder')} />
           </FormField>
-          <FormField label="Injury / Condition">
+          <FormField label={t('setup.injuryCondition')}>
             <select value={injury} onChange={e => setInjury(e.target.value)}>
               <option>ACL Reconstruction</option>
               <option>ACL Tear (Non-surgical)</option>
@@ -64,10 +66,10 @@ export default function MyPlan() {
               <option>General Conditioning</option>
             </select>
           </FormField>
-          <FormField label="Surgery / Injury Date">
+          <FormField label={t('setup.surgeryDate')}>
             <input type="date" value={surgeryDate} onChange={e => setSurgeryDate(e.target.value)} />
           </FormField>
-          <FormField label="Affected Side">
+          <FormField label={t('setup.affectedSide')}>
             <div style={{ display: 'flex', gap: '8px' }}>
               {['Left', 'Right', 'Both'].map(s => (
                 <button
@@ -100,7 +102,7 @@ export default function MyPlan() {
               transition: 'all 0.2s',
             }}
           >
-            Create My Plan
+            {t('setup.createMyPlan')}
           </button>
         </div>
       </div>
@@ -121,13 +123,13 @@ export default function MyPlan() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
-              {profile.injury} — {profile.side} Side
+              {t('header.injurySide', { injury: profile.injury, side: profile.side })}
             </div>
-            <h2 style={{ color: 'white', marginBottom: '4px' }}>{profile.name}'s Rehab Plan</h2>
+            <h2 style={{ color: 'white', marginBottom: '4px' }}>{t('header.rehabPlan', { name: profile.name })}</h2>
             <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.8rem' }}>
               {profile.surgeryDate ? (
-                <>{program.totalWeeks ? `Week ${currentWeek} of ${program.totalWeeks}` : 'Daily routine'} — {program.phases[currentPhaseIdx].name}</>
-              ) : 'Custom rehabilitation program'}
+                <>{program.totalWeeks ? t('header.weekOf', { current: currentWeek, total: program.totalWeeks }) : t('header.dailyRoutine')} — {program.phases[currentPhaseIdx].name}</>
+              ) : t('header.customProgram')}
             </p>
           </div>
           <button
@@ -145,7 +147,7 @@ export default function MyPlan() {
         {profile.surgeryDate && (
           <div style={{ marginTop: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
-              <span>Overall Progress</span>
+              <span>{t('header.overallProgress')}</span>
               <span>{progress}%</span>
             </div>
             <div style={{ height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
@@ -160,9 +162,9 @@ export default function MyPlan() {
         background: 'white', borderRadius: '16px',
         border: '1px solid var(--color-border)', padding: '20px',
       }}>
-        <h3 style={{ marginBottom: '4px' }}>Today's Exercises</h3>
+        <h3 style={{ marginBottom: '4px' }}>{t('todaysExercises')}</h3>
         <p style={{ fontSize: '0.75rem', color: 'var(--color-text)', marginBottom: '14px' }}>
-          {todayCompleted.size} of {program.phases[currentPhaseIdx].exercises.length} completed today
+          {t('completedToday', { done: todayCompleted.size, total: program.phases[currentPhaseIdx].exercises.length })}
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -214,7 +216,7 @@ export default function MyPlan() {
 
       {/* Phase Timeline */}
       <div>
-        <h3 style={{ marginBottom: '12px' }}>Rehabilitation Phases</h3>
+        <h3 style={{ marginBottom: '12px' }}>{t('rehabilitationPhases')}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {program.phases.map((phase, i) => {
             const isCurrent = i === currentPhaseIdx;
@@ -253,7 +255,7 @@ export default function MyPlan() {
                       letterSpacing: '1px', padding: '3px 10px', borderRadius: '50px',
                       background: 'var(--color-accent)', color: 'white',
                     }}>
-                      Current
+                      {t('current')}
                     </span>
                   )}
                   {isExpanded ? <ChevronUp size={15} color="var(--color-text)" /> : <ChevronDown size={15} color="var(--color-text)" />}
@@ -262,7 +264,7 @@ export default function MyPlan() {
                 {isExpanded && (
                   <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
-                      <h6 style={{ marginBottom: '6px' }}>Goals</h6>
+                      <h6 style={{ marginBottom: '6px' }}>{t('goals')}</h6>
                       {phase.goals.map((g, j) => (
                         <div key={j} style={{ fontSize: '0.82rem', display: 'flex', gap: '6px', marginBottom: '4px' }}>
                           <span style={{ color: 'var(--color-success)' }}>•</span> {g}
@@ -270,7 +272,7 @@ export default function MyPlan() {
                       ))}
                     </div>
                     <div>
-                      <h6 style={{ marginBottom: '6px' }}>Exercises ({phase.exercises.length})</h6>
+                      <h6 style={{ marginBottom: '6px' }}>{t('exercises', { count: phase.exercises.length })}</h6>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {phase.exercises.map(exId => {
                           const ex = EXERCISE_LIBRARY.find(e => e.id === exId);
@@ -290,7 +292,7 @@ export default function MyPlan() {
                     {phase.precautions.length > 0 && (
                       <div style={{ background: '#FFF8E1', borderRadius: '10px', padding: '12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 600, color: '#F57F17', marginBottom: '6px' }}>
-                          <AlertTriangle size={13} /> Precautions
+                          <AlertTriangle size={13} /> {t('precautions')}
                         </div>
                         {phase.precautions.map((p, j) => (
                           <div key={j} style={{ fontSize: '0.75rem', color: '#E65100', marginBottom: '3px' }}>⚠️ {p}</div>

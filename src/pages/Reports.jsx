@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Upload, FileText, Trash2, Eye, X, Download, Image, File } from 'lucide-react';
 import { usePatientData } from '../hooks/usePatientData';
 import { generateId } from '../utils/storage';
 
 export default function Reports() {
+  const { t } = useTranslation('progress');
   const [reports, setReports] = usePatientData('medical_reports', []);
   const [viewing, setViewing] = useState(null);
   const [dragActive, setDragActive] = useState(false);

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X, Save, Search, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
@@ -6,6 +7,7 @@ import { useLocalState } from '../hooks/useLocalState';
 import { generateId } from '../utils/storage';
 
 export default function ProgramBuilder() {
+  const { t } = useTranslation('plan');
   const navigate = useNavigate();
   const [customPrograms, setCustomPrograms] = useLocalState('custom_programs', []);
 

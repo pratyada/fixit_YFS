@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw, Camera, TrendingUp, Award, Calendar } from 'lucide-react';
-import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner, getKioskSessions } from '../lib/firestore';
+import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw, Camera, TrendingUp, Award, Calendar, Brain, Download, Star } from 'lucide-react';
+import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner, getKioskSessions, getAllFeedback } from '../lib/firestore';
 
 const ROLES = ['admin', 'practitioner', 'patient'];
 const ROLE_COLORS = {
@@ -12,7 +12,7 @@ const ROLE_COLORS = {
 
 export default function AdminDashboard() {
   const { t, i18n } = useTranslation('admin');
-  const [tab, setTab] = useState('users'); // 'users' | 'kiosk'
+  const [tab, setTab] = useState('users'); // 'users' | 'kiosk' | 'aiTraining'
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -22,6 +22,10 @@ export default function AdminDashboard() {
   // Kiosk state
   const [kioskSessions, setKioskSessions] = useState([]);
   const [kioskLoading, setKioskLoading] = useState(false);
+
+  // AI Training state
+  const [feedbackData, setFeedbackData] = useState([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -37,8 +41,16 @@ export default function AdminDashboard() {
     setKioskLoading(false);
   };
 
+  const loadFeedback = async () => {
+    setFeedbackLoading(true);
+    const data = await getAllFeedback(500);
+    setFeedbackData(data);
+    setFeedbackLoading(false);
+  };
+
   useEffect(() => { loadUsers(); }, []);
   useEffect(() => { if (tab === 'kiosk' && kioskSessions.length === 0) loadKiosk(); }, [tab]);
+  useEffect(() => { if (tab === 'aiTraining' && feedbackData.length === 0) loadFeedback(); }, [tab]);
 
   const handleRoleChange = async (uid, newRole) => {
     await updateUserRole(uid, newRole);
@@ -96,6 +108,48 @@ export default function AdminDashboard() {
     return { total, avgScore, todayCount, topExercise };
   }, [kioskSessions]);
 
+  // AI Training stats
+  const aiStats = useMemo(() => {
+    const total = feedbackData.length;
+    if (!total) return { total: 0, avgRating: 0, avgDelta: 0, agreePct: 0, corrections: 0 };
+    const avgRating = (feedbackData.reduce((a, f) => a + (f.rating || 0), 0) / total).toFixed(1);
+    const withScoreOverride = feedbackData.filter(f => f.practitionerScore != null && f.aiScore != null);
+    const avgDelta = withScoreOverride.length
+      ? Math.round(withScoreOverride.reduce((a, f) => a + Math.abs(f.practitionerScore - f.aiScore), 0) / withScoreOverride.length)
+      : '—';
+    const allCorrections = feedbackData.flatMap(f => f.faultCorrections || []);
+    const corrections = allCorrections.length;
+    const agrees = allCorrections.filter(c => c.verdict === 'agree').length;
+    const agreePct = corrections ? Math.round((agrees / corrections) * 100) : '—';
+    return { total, avgRating, avgDelta, agreePct, corrections };
+  }, [feedbackData]);
+
+  const exportTrainingData = () => {
+    const rows = feedbackData.map(f => ({
+      sessionId: f.sessionId,
+      exerciseId: f.exerciseId,
+      exerciseName: f.exerciseName,
+      aiScore: f.aiScore,
+      practitionerScore: f.practitionerScore,
+      rating: f.rating,
+      whatWasGood: f.whatWasGood,
+      whatNeedsImproving: f.whatNeedsImproving,
+      aiModelVersion: f.aiModelVersionSnapshot,
+      faultCorrections: JSON.stringify(f.faultCorrections || []),
+      aiCategories: JSON.stringify(f.aiCategories || []),
+      aiFaults: JSON.stringify(f.aiFaults || []),
+      aiAngles: JSON.stringify(f.aiAngles || null),
+      createdAt: f.createdAt?.toDate ? f.createdAt.toDate().toISOString() : f.createdAt,
+    }));
+    const headers = Object.keys(rows[0] || {});
+    const csv = [headers.join(','), ...rows.map(r => headers.map(h => `"${String(r[h] || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `fixit-training-data-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header */}
@@ -107,9 +161,27 @@ export default function AdminDashboard() {
           {t('adminPanel')}
         </div>
         <h2 style={{ color: 'white', marginBottom: '16px' }}>
-          {tab === 'users' ? t('userManagement') : t('clinicKioskLog')}
+          {tab === 'users' ? t('userManagement') : tab === 'kiosk' ? t('clinicKioskLog') : 'AI Training Data'}
         </h2>
-        {tab === 'users' ? (
+        {tab === 'aiTraining' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+            {[
+              { label: 'Feedback', value: aiStats.total, icon: Star },
+              { label: 'Avg Rating', value: aiStats.avgRating, icon: Star },
+              { label: 'Score Delta', value: aiStats.avgDelta, icon: TrendingUp },
+              { label: 'AI Agree %', value: aiStats.agreePct, icon: Brain },
+            ].map(s => (
+              <div key={s.label} style={{
+                background: 'rgba(255,255,255,0.12)', borderRadius: '12px',
+                padding: '12px 8px', textAlign: 'center',
+              }}>
+                <s.icon size={14} style={{ margin: '0 auto 4px', display: 'block', opacity: 0.6 }} />
+                <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{s.value}</div>
+                <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.5 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        ) : tab === 'users' ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
             {[
               { label: t('stats.total'), value: counts.total, icon: Users },
@@ -153,6 +225,7 @@ export default function AdminDashboard() {
         {[
           { key: 'users', label: t('tabs.users'), icon: Users },
           { key: 'kiosk', label: t('tabs.kioskLog'), icon: Camera },
+          { key: 'aiTraining', label: 'AI Training', icon: Brain },
         ].map(tb => (
           <button
             key={tb.key}
@@ -270,6 +343,142 @@ export default function AdminDashboard() {
                             {f.name}{j < s.faults.length - 1 ? ', ' : ''}
                           </span>
                         ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'aiTraining' && (
+        <>
+          {/* Export + Refresh */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--color-text)' }}>
+              {aiStats.total} feedback entries &bull; {aiStats.corrections} fault corrections
+            </div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button onClick={exportTrainingData} disabled={feedbackData.length === 0} style={{
+                background: '#5E35B1', color: 'white', border: 'none',
+                borderRadius: '10px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px',
+                fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', opacity: feedbackData.length ? 1 : 0.5,
+              }}>
+                <Download size={13} /> Export CSV
+              </button>
+              <button onClick={loadFeedback} style={{
+                background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+                borderRadius: '10px', width: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}>
+                <RefreshCw size={13} color="var(--color-text)" />
+              </button>
+            </div>
+          </div>
+
+          {/* Info box */}
+          <div style={{
+            background: '#EDE7F6', borderRadius: '12px', padding: '14px 16px',
+            border: '1px solid #D1C4E9', fontSize: '0.78rem', color: '#4E4E53',
+            display: 'flex', alignItems: 'flex-start', gap: '10px',
+          }}>
+            <Brain size={16} color="#5E35B1" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <strong>How AI retraining works:</strong> When practitioners review sessions, they rate the AI's accuracy, provide a corrected score, and agree/disagree with each detected fault. This data is exported as CSV and used to calibrate the movement analysis scoring model.
+            </div>
+          </div>
+
+          {/* Feedback list */}
+          {feedbackLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+              Loading training data...
+            </div>
+          ) : feedbackData.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+              <Brain size={32} style={{ margin: '0 auto 8px', display: 'block', color: 'var(--color-border)' }} />
+              No practitioner feedback yet. Feedback creates training data for AI improvement.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {feedbackData.map((f, i) => {
+                const delta = f.practitionerScore != null && f.aiScore != null
+                  ? f.practitionerScore - f.aiScore : null;
+                const date = f.createdAt?.toDate ? f.createdAt.toDate() : new Date(f.createdAt);
+                return (
+                  <div key={f.id || i} style={{
+                    background: 'white', borderRadius: '14px',
+                    border: '1px solid var(--color-border)', padding: '14px 16px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+                          {f.exerciseName}
+                        </div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text)' }}>
+                          {date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        {[1,2,3,4,5].map(j => (
+                          <Star key={j} size={12} fill={j <= f.rating ? '#F59E0B' : 'none'} color={j <= f.rating ? '#F59E0B' : '#D1D5DB'} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Score comparison */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      <div style={{
+                        flex: 1, background: 'var(--color-bg-alt)', borderRadius: '8px', padding: '8px', textAlign: 'center',
+                      }}>
+                        <div style={{ fontSize: '0.55rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text)', marginBottom: '2px' }}>AI Score</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-secondary)' }}>{f.aiScore ?? '—'}</div>
+                      </div>
+                      {f.practitionerScore != null && (
+                        <div style={{
+                          flex: 1, background: 'var(--color-bg-alt)', borderRadius: '8px', padding: '8px', textAlign: 'center',
+                        }}>
+                          <div style={{ fontSize: '0.55rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text)', marginBottom: '2px' }}>Practitioner</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-secondary)' }}>{f.practitionerScore}</div>
+                        </div>
+                      )}
+                      {delta != null && (
+                        <div style={{
+                          flex: 1, background: Math.abs(delta) <= 10 ? '#E8F5E9' : Math.abs(delta) <= 20 ? '#FFF8E1' : '#FFEBEE',
+                          borderRadius: '8px', padding: '8px', textAlign: 'center',
+                        }}>
+                          <div style={{ fontSize: '0.55rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text)', marginBottom: '2px' }}>Delta</div>
+                          <div style={{
+                            fontSize: '1.1rem', fontWeight: 700,
+                            color: Math.abs(delta) <= 10 ? '#2E7D32' : Math.abs(delta) <= 20 ? '#F57F17' : '#C62828',
+                          }}>
+                            {delta > 0 ? '+' : ''}{delta}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Fault corrections */}
+                    {f.faultCorrections?.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                        {f.faultCorrections.map((c, j) => (
+                          <span key={j} style={{
+                            fontSize: '0.6rem', padding: '3px 8px', borderRadius: '50px', fontWeight: 600,
+                            background: c.verdict === 'agree' ? '#E8F5E9' : c.verdict === 'disagree' ? '#FFEBEE' : '#FFF8E1',
+                            color: c.verdict === 'agree' ? '#2E7D32' : c.verdict === 'disagree' ? '#C62828' : '#F57F17',
+                          }}>
+                            {c.verdict === 'agree' ? '✓' : c.verdict === 'disagree' ? '✗' : '~'} {c.faultName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Text feedback */}
+                    {(f.whatWasGood || f.whatNeedsImproving) && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text)' }}>
+                        {f.whatWasGood && <div><span style={{ color: '#2E7D32', fontWeight: 600 }}>Good:</span> {f.whatWasGood}</div>}
+                        {f.whatNeedsImproving && <div><span style={{ color: '#E65100', fontWeight: 600 }}>Improve:</span> {f.whatNeedsImproving}</div>}
                       </div>
                     )}
                   </div>

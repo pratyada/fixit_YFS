@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, Target, ChevronRight, CheckCircle2, Plus, Filter, Search } from 'lucide-react';
 import { PROTOCOLS } from '../data/protocols';
@@ -7,6 +8,7 @@ import { useLocalState } from '../hooks/useLocalState';
 import { usePatientData } from '../hooks/usePatientData';
 
 export default function Programs() {
+  const { t } = useTranslation('plan');
   const [search, setSearch] = useState('');
   const [bodyFilter, setBodyFilter] = useState('All');
   const [assignedPrograms, setAssignedPrograms] = usePatientData('assigned_programs', []);
