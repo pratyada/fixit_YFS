@@ -1,0 +1,106 @@
+{
+  "consentBanner": {
+    "message": "Nous collectons et traitons vos données pour fournir le suivi d'exercices de physiothérapie et l'analyse de forme par IA. Vos données sont stockées en toute sécurité à Toronto, Canada.",
+    "accept": "J'accepte",
+    "learnMore": "En savoir plus"
+  },
+  "privacyPolicy": {
+    "title": "Politique de confidentialité",
+    "lastUpdated": "Dernière mise à jour : avril 2026",
+    "sections": {
+      "introduction": {
+        "title": "Introduction",
+        "content": "FIXIT par Your Form Sux (« nous », « notre ») s'engage à protéger la vie privée de ses utilisateurs. Cette politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos informations personnelles lorsque vous utilisez notre application de suivi d'exercices de physiothérapie et d'analyse de forme par IA (le « Service »). Nous respectons la Loi sur la protection des renseignements personnels et les documents électroniques (LPRPDE) et toute législation canadienne applicable en matière de protection de la vie privée."
+      },
+      "whatWeCollect": {
+        "title": "Ce que nous collectons",
+        "content": "Nous collectons les catégories suivantes de renseignements personnels :",
+        "items": [
+          "Informations de compte : nom, adresse courriel, photo de profil (via la connexion Google).",
+          "Données de santé et de rééducation : type de blessure, date de chirurgie/blessure, côté du corps affecté, entrées du journal de douleur (niveau de douleur, localisation, activité, enflure, raideur, amplitude de mouvement, notes).",
+          "Données de séances d'exercices : historique des exercices complétés, séries, répétitions, durée, douleur pendant l'exercice, notes de séance, scores d'analyse de forme par IA.",
+          "Données vidéo et de posture : images vidéo captées par la caméra et données de points clés squelettiques pour l'analyse de posture par IA en temps réel et enregistrée. Les images vidéo sont traitées dans le navigateur et ne sont pas stockées sur nos serveurs sauf si vous enregistrez explicitement une séance.",
+          "Données attribuées par le praticien : attributions d'exercices, retours du praticien, programmes attribués.",
+          "Données d'appareil et d'utilisation : type de navigateur, préférence linguistique, horodatages d'interaction."
+        ]
+      },
+      "whyWeCollect": {
+        "title": "Pourquoi nous collectons vos informations",
+        "content": "Nous collectons et traitons vos renseignements personnels aux fins suivantes :",
+        "items": [
+          "Pour fournir et personnaliser le service de suivi d'exercices de physiothérapie.",
+          "Pour offrir l'analyse de forme d'exercice et les retours alimentés par IA.",
+          "Pour permettre la communication praticien-patient et l'attribution d'exercices.",
+          "Pour suivre vos progrès de rééducation dans le temps, y compris les tendances de douleur, l'historique d'exercices et les jalons atteints.",
+          "Pour générer des mesures de résultats et des rapports de progrès pour vous et votre professionnel de santé.",
+          "Pour améliorer nos modèles d'IA et la qualité du service (en utilisant uniquement des données anonymisées et agrégées).",
+          "Pour nous conformer aux obligations légales en vertu du droit canadien en matière de santé et de vie privée."
+        ]
+      },
+      "howWeStore": {
+        "title": "Comment nous stockons vos données",
+        "content": "Vos renseignements personnels sont stockés en toute sécurité à l'aide des services Google Cloud Platform Firebase situés à Toronto, Canada (northamerica-northeast2). Nous mettons en œuvre les mesures de sécurité suivantes :",
+        "items": [
+          "Toutes les données sont chiffrées en transit avec TLS 1.2+ et au repos avec le chiffrement AES-256.",
+          "L'authentification est gérée par la connexion Google avec OAuth 2.0.",
+          "Les règles de sécurité Firestore appliquent un contrôle d'accès basé sur les rôles, garantissant que les patients ne peuvent accéder qu'à leurs propres données, les praticiens ne peuvent voir que leurs patients attribués, et les administrateurs ont un accès de gestion limité.",
+          "Les données de caméra (images vidéo) utilisées pour l'analyse de posture en temps réel sont traitées entièrement dans votre navigateur et ne sont pas transmises à nos serveurs. Les séances enregistrées sont stockées dans Firebase Storage avec des contrôles d'accès stricts.",
+          "Des audits et une surveillance de sécurité réguliers sont effectués pour détecter les accès non autorisés."
+        ]
+      },
+      "whoHasAccess": {
+        "title": "Qui a accès à vos données",
+        "content": "L'accès à vos renseignements personnels est limité à :",
+        "items": [
+          "Vous : accès complet à toutes vos données personnelles, historique d'exercices, journal de douleur et dossiers de progrès.",
+          "Votre praticien attribué : accès à vos séances d'exercices, entrées de douleur, exercices attribués et scores d'analyse IA dans le but de guider votre rééducation.",
+          "Les administrateurs de la plateforme : accès aux fonctions de gestion des utilisateurs (rôles, attributions de praticiens). Les administrateurs n'ont pas accès au contenu de vos données de santé sauf s'ils sont également attribués comme votre praticien.",
+          "Nous ne vendons, ne louons ni ne partageons vos renseignements personnels avec des tiers à des fins de marketing.",
+          "Nous pouvons divulguer vos informations si la loi l'exige, sur ordonnance du tribunal, ou pour protéger les droits, la propriété ou la sécurité de nos utilisateurs ou du public."
+        ]
+      },
+      "dataRetention": {
+        "title": "Conservation des données",
+        "content": "Nous conservons vos renseignements personnels aussi longtemps que votre compte est actif ou que nécessaire pour vous fournir le Service. Périodes de conservation spécifiques :",
+        "items": [
+          "Données de compte et de profil : conservées jusqu'à la suppression de votre compte.",
+          "Données de séances d'exercices et entrées du journal de douleur : conservées jusqu'à la suppression de votre compte.",
+          "Résultats d'analyse IA : conservés jusqu'à la suppression de votre compte.",
+          "Retours du praticien : conservés jusqu'à la suppression de votre compte.",
+          "Les données anonymisées et agrégées utilisées pour l'amélioration du service peuvent être conservées indéfiniment.",
+          "Lors de la suppression du compte, toutes les données personnelles sont définitivement supprimées dans un délai de 30 jours."
+        ]
+      },
+      "yourRights": {
+        "title": "Vos droits",
+        "content": "En vertu de la LPRPDE et de la législation canadienne applicable en matière de vie privée, vous disposez des droits suivants :",
+        "items": [
+          "Droit d'accès : vous pouvez demander l'accès à tous les renseignements personnels que nous détenons à votre sujet.",
+          "Droit de rectification : vous pouvez demander la correction de renseignements personnels inexacts ou incomplets.",
+          "Droit de retrait du consentement : vous pouvez retirer votre consentement à la collecte, l'utilisation ou la divulgation de vos renseignements personnels à tout moment, sous réserve de restrictions légales ou contractuelles.",
+          "Droit de suppression : vous pouvez demander la suppression de votre compte et de toutes les données personnelles associées.",
+          "Droit de déposer une plainte : vous pouvez déposer une plainte auprès du Commissariat à la protection de la vie privée du Canada si vous estimez que vos droits en matière de vie privée ont été violés."
+        ]
+      },
+      "howToDelete": {
+        "title": "Comment supprimer vos données",
+        "content": "Vous pouvez supprimer votre compte et toutes les données associées à tout moment via les paramètres de l'application. Vous pouvez également nous contacter à l'adresse courriel ci-dessous pour demander une suppression complète des données. Toutes les données personnelles seront définitivement supprimées dans un délai de 30 jours suivant votre demande."
+      },
+      "contact": {
+        "title": "Nous contacter",
+        "content": "Si vous avez des questions ou des préoccupations concernant cette politique de confidentialité ou nos pratiques en matière de données, veuillez nous contacter :",
+        "items": [
+          "Courriel : privacy@yourformsux.com",
+          "Site Web : https://yourformsux.com",
+          "Lieu de stockage des données : Toronto, Canada (northamerica-northeast2)"
+        ]
+      }
+    }
+  },
+  "deleteAccount": {
+    "title": "Supprimer mon compte",
+    "warning": "Cette action supprimera définitivement votre compte et toutes les données associées, y compris les séances d'exercices, les entrées de douleur et l'historique des progrès. Cette action est irréversible.",
+    "confirm": "Oui, supprimer mon compte",
+    "cancel": "Annuler"
+  }
+}

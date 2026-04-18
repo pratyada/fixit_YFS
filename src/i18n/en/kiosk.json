@@ -1,0 +1,39 @@
+{
+  "brandName": "FIXIT",
+  "checkYourForm": "Check Your Form",
+  "tapExercise": "Tap an exercise to get your AI pose score",
+  "startPoseCheck": "Start Pose Check",
+  "poweredBy": "Powered by FIXIT \u2022 yourformsux.com",
+  "camera": {
+    "back": "Back",
+    "frontAngle": "front",
+    "sideAngle": "side",
+    "frontView": "front view",
+    "sideView": "side view",
+    "angleOf": "{{angle}} angle \u2022 {{current}}/{{total}}",
+    "loadingAI": "Loading AI model...",
+    "cameraPermissionDenied": "Camera permission denied. Please allow camera access.",
+    "failedPrefix": "Failed:",
+    "lKnee": "L Knee:",
+    "rKnee": "R Knee:",
+    "lHip": "L Hip:",
+    "retake": "Retake",
+    "nextSideAngle": "Next: Side Angle",
+    "analyzeForm": "Analyze Form",
+    "tryAgain": "Try Again",
+    "tryAnotherExercise": "Try Another Exercise"
+  },
+  "report": {
+    "outOf100": "/ 100",
+    "recorded": "{{duration}}s recorded \u2022 {{frames}} frames analyzed",
+    "scoreBreakdown": "Score Breakdown",
+    "formAnalysis": "Form Analysis",
+    "newExercise": "New Exercise"
+  },
+  "scoreLabels": {
+    "excellent": "Excellent!",
+    "goodForm": "Good Form",
+    "needsWork": "Needs Work",
+    "keepPracticing": "Keep Practicing"
+  }
+}

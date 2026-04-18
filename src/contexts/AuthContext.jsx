@@ -11,7 +11,8 @@ import {
 import { auth } from '../lib/firebase';
 
 const googleProvider = new GoogleAuthProvider();
-import { getUserProfile, setUserProfile, updateUserRole, updateUserRoles } from '../lib/firestore';
+import { getUserProfile, setUserProfile, updateUserRole, updateUserRoles, deleteUserData } from '../lib/firestore';
+import i18n from '../i18n';
 
 // Emails that should automatically get admin + practitioner roles
 const ADMIN_EMAILS = ['musee.initialize@gmail.com', 'ashimanaval@gmail.com'];
@@ -51,6 +52,11 @@ export function AuthProvider({ children }) {
         }
 
         setProfile(prof);
+
+        // Restore user's language preference
+        if (prof?.language && prof.language !== i18n.language) {
+          i18n.changeLanguage(prof.language);
+        }
 
         // If user has multiple roles, show the role picker
         const roles = getUserRoles(prof);
@@ -173,6 +179,16 @@ export function AuthProvider({ children }) {
   const isPatient = role === 'patient';
   const hasMultipleRoles = allRoles.length > 1;
 
+  // Delete account (PIPEDA compliance)
+  const deleteAccount = async () => {
+    if (!user) return;
+    await deleteUserData(user.uid);
+    await user.delete();
+    setUser(null);
+    setProfile(null);
+    setActiveRole(null);
+  };
+
   // Switch role (for header toggle)
   const switchRole = (newRole) => {
     if (allRoles.includes(newRole)) {
@@ -198,6 +214,7 @@ export function AuthProvider({ children }) {
       isPatient,
       hasMultipleRoles,
       switchRole,
+      deleteAccount,
       needsRolePick,
       pickRole,
       activePatientId: isPatient ? user?.uid : null,

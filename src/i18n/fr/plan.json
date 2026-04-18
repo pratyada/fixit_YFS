@@ -1,0 +1,42 @@
+{
+  "setup": {
+    "title": "Configurez votre plan de r\u00e9adaptation",
+    "subtitle": "Parlez-nous de votre blessure pour personnaliser votre programme",
+    "yourName": "Votre nom",
+    "namePlaceholder": "Entrez votre nom",
+    "injuryCondition": "Blessure / Condition",
+    "surgeryDate": "Date de chirurgie / blessure",
+    "affectedSide": "C\u00f4t\u00e9 affect\u00e9",
+    "left": "Gauche",
+    "right": "Droit",
+    "both": "Les deux",
+    "createMyPlan": "Cr\u00e9er mon plan"
+  },
+  "injuries": {
+    "aclReconstruction": "Reconstruction du LCA",
+    "aclTearNonSurgical": "D\u00e9chirure du LCA (non chirurgicale)",
+    "meniscusRepair": "R\u00e9paration du m\u00e9nisque",
+    "patellaTendinopathy": "Tendinopathie rotulienne",
+    "rotatorCuffRepair": "R\u00e9paration de la coiffe des rotateurs",
+    "frozenShoulder": "\u00c9paule gel\u00e9e",
+    "lowerBackPain": "Lombalgie",
+    "ankleSprain": "Entorse de la cheville",
+    "hipReplacement": "Proth\u00e8se de hanche",
+    "generalConditioning": "Conditionnement g\u00e9n\u00e9ral"
+  },
+  "header": {
+    "injurySide": "{{injury}} \u2014 C\u00f4t\u00e9 {{side}}",
+    "rehabPlan": "Plan de r\u00e9adaptation de {{name}}",
+    "weekOf": "Semaine {{current}} sur {{total}}",
+    "dailyRoutine": "Routine quotidienne",
+    "customProgram": "Programme de r\u00e9adaptation personnalis\u00e9",
+    "overallProgress": "Progr\u00e8s global"
+  },
+  "todaysExercises": "Exercices du jour",
+  "completedToday": "{{done}} sur {{total}} compl\u00e9t\u00e9s aujourd'hui",
+  "rehabilitationPhases": "Phases de r\u00e9adaptation",
+  "current": "En cours",
+  "goals": "Objectifs",
+  "exercises": "Exercices ({{count}})",
+  "precautions": "Pr\u00e9cautions"
+}

@@ -1,0 +1,30 @@
+{
+  "title": "Vos progr\u00e8s",
+  "subtitle": "Suivez votre parcours de r\u00e9cup\u00e9ration au fil du temps",
+  "stats": {
+    "totalSessions": "S\u00e9ances totales",
+    "activeTime": "Temps actif",
+    "exercisesDone": "Exercices r\u00e9alis\u00e9s",
+    "avgPain": "Douleur moy."
+  },
+  "charts": {
+    "dailyActivity": "Activit\u00e9 quotidienne (14 derniers jours)",
+    "painLevelTrend": "Tendance du niveau de douleur",
+    "mostPerformed": "Exercices les plus r\u00e9alis\u00e9s",
+    "bodyPartDistribution": "R\u00e9partition par partie du corps"
+  },
+  "milestones": {
+    "title": "Jalons",
+    "firstExercise": "Premier exercice",
+    "sevenDayStreak": "7 jours cons\u00e9cutifs",
+    "fiftySessions": "50 s\u00e9ances",
+    "allExercises": "Tous les exercices",
+    "achieved": "ATTEINT"
+  },
+  "empty": {
+    "activityChart": "Compl\u00e9tez des exercices pour voir votre graphique d'activit\u00e9",
+    "painTrend": "Enregistrez des entr\u00e9es de douleur pour voir votre tendance",
+    "noExercises": "Aucun exercice compl\u00e9t\u00e9",
+    "bodyPart": "Compl\u00e9tez des exercices pour voir la r\u00e9partition"
+  }
+}

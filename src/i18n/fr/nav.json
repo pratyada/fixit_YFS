@@ -1,0 +1,35 @@
+{
+  "tabs": {
+    "home": "Accueil",
+    "exercises": "Exercices",
+    "pose": "Posture",
+    "progress": "Progr\u00e8s",
+    "pain": "Douleur",
+    "patients": "Patients",
+    "library": "Biblioth\u00e8que",
+    "admin": "Admin",
+    "kiosk": "Kiosque"
+  },
+  "roles": {
+    "admin": {
+      "label": "Administrateur",
+      "desc": "G\u00e9rer les utilisateurs, les r\u00f4les et les param\u00e8tres"
+    },
+    "practitioner": {
+      "label": "Praticien",
+      "desc": "G\u00e9rer les patients et attribuer des exercices"
+    },
+    "patient": {
+      "label": "Patient",
+      "desc": "Suivre les exercices et les progr\u00e8s de r\u00e9cup\u00e9ration"
+    }
+  },
+  "rolePicker": {
+    "welcome": "Bienvenue, {{name}}",
+    "howToContinue": "Comment souhaitez-vous continuer ?",
+    "signOut": "Se d\u00e9connecter"
+  },
+  "header": {
+    "switchRole": "Changer de r\u00f4le ({{roles}})"
+  }
+}

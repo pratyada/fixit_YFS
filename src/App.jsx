@@ -1,8 +1,12 @@
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LanguageSwitcher from './components/LanguageSwitcher';
+import ConsentBanner from './components/ConsentBanner';
 
 import Login from './pages/Login';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Dashboard from './pages/Dashboard';
 import Exercises from './pages/Exercises';
 import ExerciseDetail from './pages/ExerciseDetail';
@@ -30,10 +34,23 @@ export default function App() {
 
 function AppShell() {
   const { user, loading, needsRolePick } = useAuth();
+  const location = useLocation();
+
   if (loading) return <SplashScreen />;
-  if (!user) return <Login />;
+
+  // Privacy policy accessible without login
+  if (location.pathname === '/privacy' && !user) {
+    return (
+      <div style={{ maxWidth: '480px', margin: '0 auto', padding: '16px' }}>
+        <PrivacyPolicy />
+        <ConsentBanner />
+      </div>
+    );
+  }
+
+  if (!user) return <><Login /><ConsentBanner /></>;
   if (needsRolePick) return <RolePickerScreen />;
-  return <MobileLayout />;
+  return <><MobileLayout /><ConsentBanner /></>;
 }
 
 // ─── Tab configs per role ───
@@ -145,6 +162,7 @@ function MobileLayout() {
               </div>
             )}
           </div>
+          <LanguageSwitcher />
           <button onClick={async () => { await logout(); navigate('/'); }} style={{
             width: '30px', height: '30px', borderRadius: '50%',
             background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
@@ -201,6 +219,7 @@ function MobileLayout() {
               <Route path="*" element={<Navigate to="/" />} />
             </>
           )}
+          <Route path="/privacy" element={<PrivacyPolicy />} />
         </Routes>
       </main>
 

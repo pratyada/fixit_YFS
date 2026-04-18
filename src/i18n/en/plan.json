@@ -1,0 +1,42 @@
+{
+  "setup": {
+    "title": "Set Up Your Rehab Plan",
+    "subtitle": "Tell us about your injury so we can personalize your program",
+    "yourName": "Your Name",
+    "namePlaceholder": "Enter your name",
+    "injuryCondition": "Injury / Condition",
+    "surgeryDate": "Surgery / Injury Date",
+    "affectedSide": "Affected Side",
+    "left": "Left",
+    "right": "Right",
+    "both": "Both",
+    "createMyPlan": "Create My Plan"
+  },
+  "injuries": {
+    "aclReconstruction": "ACL Reconstruction",
+    "aclTearNonSurgical": "ACL Tear (Non-surgical)",
+    "meniscusRepair": "Meniscus Repair",
+    "patellaTendinopathy": "Patella Tendinopathy",
+    "rotatorCuffRepair": "Rotator Cuff Repair",
+    "frozenShoulder": "Frozen Shoulder",
+    "lowerBackPain": "Lower Back Pain",
+    "ankleSprain": "Ankle Sprain",
+    "hipReplacement": "Hip Replacement",
+    "generalConditioning": "General Conditioning"
+  },
+  "header": {
+    "injurySide": "{{injury}} \u2014 {{side}} Side",
+    "rehabPlan": "{{name}}'s Rehab Plan",
+    "weekOf": "Week {{current}} of {{total}}",
+    "dailyRoutine": "Daily routine",
+    "customProgram": "Custom rehabilitation program",
+    "overallProgress": "Overall Progress"
+  },
+  "todaysExercises": "Today's Exercises",
+  "completedToday": "{{done}} of {{total}} completed today",
+  "rehabilitationPhases": "Rehabilitation Phases",
+  "current": "Current",
+  "goals": "Goals",
+  "exercises": "Exercises ({{count}})",
+  "precautions": "Precautions"
+}

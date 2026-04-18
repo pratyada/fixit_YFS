@@ -1,0 +1,106 @@
+{
+  "consentBanner": {
+    "message": "We collect and process your data to provide physiotherapy exercise tracking and AI-powered form analysis. Your data is stored securely in Toronto, Canada.",
+    "accept": "I Accept",
+    "learnMore": "Learn More"
+  },
+  "privacyPolicy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: April 2026",
+    "sections": {
+      "introduction": {
+        "title": "Introduction",
+        "content": "FIXIT by Your Form Sux (\"we\", \"us\", \"our\") is committed to protecting the privacy of our users. This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you use our physiotherapy exercise tracking and AI-powered form analysis application (the \"Service\"). We comply with the Personal Information Protection and Electronic Documents Act (PIPEDA) and all applicable Canadian privacy legislation."
+      },
+      "whatWeCollect": {
+        "title": "What We Collect",
+        "content": "We collect the following categories of personal information:",
+        "items": [
+          "Account information: Name, email address, profile photo (via Google Sign-In).",
+          "Health and rehabilitation data: Injury type, surgery/injury date, affected body side, pain journal entries (pain level, location, activity, swelling, stiffness, range of motion, notes).",
+          "Exercise session data: Completed exercise records, sets, reps, duration, pain during exercise, session notes, AI form analysis scores.",
+          "Video and pose data: Camera-captured video frames and skeletal keypoint data for real-time and recorded AI pose analysis. Video frames are processed in-browser and are not stored on our servers unless you explicitly record a session.",
+          "Practitioner-assigned data: Exercise assignments, practitioner feedback, program assignments.",
+          "Device and usage data: Browser type, language preference, interaction timestamps."
+        ]
+      },
+      "whyWeCollect": {
+        "title": "Why We Collect Your Information",
+        "content": "We collect and process your personal information for the following purposes:",
+        "items": [
+          "To provide and personalize the physiotherapy exercise tracking service.",
+          "To deliver AI-powered exercise form analysis and feedback.",
+          "To enable practitioner-patient communication and exercise assignment.",
+          "To track your rehabilitation progress over time, including pain trends, exercise history, and milestone achievements.",
+          "To generate outcome measures and progress reports for you and your healthcare provider.",
+          "To improve our AI models and service quality (using anonymized, aggregated data only).",
+          "To comply with legal obligations under Canadian health and privacy law."
+        ]
+      },
+      "howWeStore": {
+        "title": "How We Store Your Data",
+        "content": "Your personal information is stored securely using Google Cloud Platform Firebase services located in Toronto, Canada (northamerica-northeast2). We implement the following security measures:",
+        "items": [
+          "All data is encrypted in transit using TLS 1.2+ and at rest using AES-256 encryption.",
+          "Authentication is handled through Google Sign-In with OAuth 2.0.",
+          "Firestore Security Rules enforce role-based access control, ensuring patients can only access their own data, practitioners can only view their assigned patients, and administrators have scoped management access.",
+          "Camera data (video frames) used for real-time pose analysis is processed entirely within your browser and is not transmitted to our servers. Recorded sessions are stored in Firebase Storage with strict access controls.",
+          "Regular security audits and monitoring are performed to detect unauthorized access."
+        ]
+      },
+      "whoHasAccess": {
+        "title": "Who Has Access to Your Data",
+        "content": "Access to your personal information is limited to:",
+        "items": [
+          "You: Full access to all your personal data, exercise history, pain journal, and progress records.",
+          "Your assigned practitioner: Access to your exercise sessions, pain entries, assigned exercises, and AI analysis scores for the purpose of guiding your rehabilitation.",
+          "Platform administrators: Access to user management functions (roles, practitioner assignments). Administrators do not have access to your health data content unless also assigned as your practitioner.",
+          "We do not sell, rent, or share your personal information with third parties for marketing purposes.",
+          "We may disclose your information if required by law, court order, or to protect the rights, property, or safety of our users or the public."
+        ]
+      },
+      "dataRetention": {
+        "title": "Data Retention",
+        "content": "We retain your personal information for as long as your account is active or as needed to provide you the Service. Specific retention periods:",
+        "items": [
+          "Account and profile data: Retained until you delete your account.",
+          "Exercise session data and pain journal entries: Retained until you delete your account.",
+          "AI analysis results: Retained until you delete your account.",
+          "Practitioner feedback: Retained until you delete your account.",
+          "Anonymized and aggregated data used for service improvement may be retained indefinitely.",
+          "Upon account deletion, all personal data is permanently removed within 30 days."
+        ]
+      },
+      "yourRights": {
+        "title": "Your Rights",
+        "content": "Under PIPEDA and applicable Canadian privacy legislation, you have the following rights:",
+        "items": [
+          "Right of access: You may request access to all personal information we hold about you.",
+          "Right of correction: You may request correction of inaccurate or incomplete personal information.",
+          "Right to withdraw consent: You may withdraw your consent to the collection, use, or disclosure of your personal information at any time, subject to legal or contractual restrictions.",
+          "Right to delete: You may request deletion of your account and all associated personal data.",
+          "Right to file a complaint: You may file a complaint with the Office of the Privacy Commissioner of Canada if you believe your privacy rights have been violated."
+        ]
+      },
+      "howToDelete": {
+        "title": "How to Delete Your Data",
+        "content": "You can delete your account and all associated data at any time through the app settings. Alternatively, you can contact us at the email below to request complete data deletion. All personal data will be permanently removed within 30 days of your request."
+      },
+      "contact": {
+        "title": "Contact Us",
+        "content": "If you have any questions or concerns about this Privacy Policy or our data practices, please contact us:",
+        "items": [
+          "Email: privacy@yourformsux.com",
+          "Website: https://yourformsux.com",
+          "Data storage location: Toronto, Canada (northamerica-northeast2)"
+        ]
+      }
+    }
+  },
+  "deleteAccount": {
+    "title": "Delete My Account",
+    "warning": "This will permanently delete your account and all associated data including exercise sessions, pain entries, and progress history. This action cannot be undone.",
+    "confirm": "Yes, Delete My Account",
+    "cancel": "Cancel"
+  }
+}

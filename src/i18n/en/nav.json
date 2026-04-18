@@ -1,0 +1,35 @@
+{
+  "tabs": {
+    "home": "Home",
+    "exercises": "Exercises",
+    "pose": "Pose",
+    "progress": "Progress",
+    "pain": "Pain",
+    "patients": "Patients",
+    "library": "Library",
+    "admin": "Admin",
+    "kiosk": "Kiosk"
+  },
+  "roles": {
+    "admin": {
+      "label": "Admin",
+      "desc": "Manage users, roles & platform settings"
+    },
+    "practitioner": {
+      "label": "Practitioner",
+      "desc": "Manage patients & assign exercises"
+    },
+    "patient": {
+      "label": "Patient",
+      "desc": "Track exercises & recovery progress"
+    }
+  },
+  "rolePicker": {
+    "welcome": "Welcome, {{name}}",
+    "howToContinue": "How would you like to continue?",
+    "signOut": "Sign out"
+  },
+  "header": {
+    "switchRole": "Switch role ({{roles}})"
+  }
+}

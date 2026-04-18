@@ -1,0 +1,46 @@
+{
+  "adminPanel": "Admin Panel",
+  "userManagement": "User Management",
+  "clinicKioskLog": "Clinic Kiosk Log",
+  "tabs": {
+    "users": "Users",
+    "kioskLog": "Kiosk Log"
+  },
+  "stats": {
+    "total": "Total",
+    "admins": "Admins",
+    "practitioners": "Practitioners",
+    "patients": "Patients",
+    "totalChecks": "Total Checks",
+    "today": "Today",
+    "avgScore": "Avg Score",
+    "topExercise": "Top Exercise"
+  },
+  "searchUsers": "Search users...",
+  "allRoles": "All Roles",
+  "loadingUsers": "Loading users...",
+  "noUsersFound": "No users found",
+  "noName": "No name",
+  "roles": {
+    "selectMultiple": "Roles (select multiple)",
+    "chooseOnLogin": "This user will choose their view on login"
+  },
+  "assignedPractitioner": "Assigned Practitioner",
+  "unassigned": "Unassigned",
+  "uid": "UID:",
+  "condition": "Condition:",
+  "practitioner": "Practitioner:",
+  "joined": "Joined:",
+  "kiosk": {
+    "mostPopular": "Most popular: {{name}} ({{count}} checks)",
+    "loadingKiosk": "Loading kiosk data...",
+    "noKioskSessions": "No kiosk sessions yet. Set up the iPad in the clinic to start collecting data.",
+    "excellent": "Excellent",
+    "good": "Good",
+    "needsWork": "Needs Work",
+    "poor": "Poor",
+    "issues": "Issues:",
+    "frames": "frames",
+    "duration": "{{seconds}}s"
+  }
+}

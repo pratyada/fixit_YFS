@@ -1,0 +1,39 @@
+{
+  "brandName": "FIXIT",
+  "checkYourForm": "Vérifiez votre forme",
+  "tapExercise": "Appuyez sur un exercice pour obtenir votre score IA de posture",
+  "startPoseCheck": "Commencer la vérification de posture",
+  "poweredBy": "Propulsé par FIXIT \u2022 yourformsux.com",
+  "camera": {
+    "back": "Retour",
+    "frontAngle": "avant",
+    "sideAngle": "côté",
+    "frontView": "vue avant",
+    "sideView": "vue côté",
+    "angleOf": "angle {{angle}} \u2022 {{current}}/{{total}}",
+    "loadingAI": "Chargement du modèle IA...",
+    "cameraPermissionDenied": "Permission caméra refusée. Veuillez autoriser l'accès à la caméra.",
+    "failedPrefix": "Échec :",
+    "lKnee": "G. Genou :",
+    "rKnee": "D. Genou :",
+    "lHip": "G. Hanche :",
+    "retake": "Reprendre",
+    "nextSideAngle": "Suivant : Angle côté",
+    "analyzeForm": "Analyser la forme",
+    "tryAgain": "Réessayer",
+    "tryAnotherExercise": "Essayer un autre exercice"
+  },
+  "report": {
+    "outOf100": "/ 100",
+    "recorded": "{{duration}}s enregistré(s) \u2022 {{frames}} images analysées",
+    "scoreBreakdown": "Détail du score",
+    "formAnalysis": "Analyse de la forme",
+    "newExercise": "Nouvel exercice"
+  },
+  "scoreLabels": {
+    "excellent": "Excellent !",
+    "goodForm": "Bonne forme",
+    "needsWork": "À améliorer",
+    "keepPracticing": "Continuez à pratiquer"
+  }
+}

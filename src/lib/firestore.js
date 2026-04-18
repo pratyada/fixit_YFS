@@ -13,6 +13,7 @@
 import {
   collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
   query, where, orderBy, limit, onSnapshot, serverTimestamp, Timestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -274,4 +275,32 @@ export function onCompletedSessions(uid, callback) {
     query(collection(db, 'users', uid, 'completedSessions'), orderBy('date', 'desc')),
     snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
   );
+}
+
+// ─── Account Deletion (PIPEDA compliance) ───
+
+async function deleteSubcollection(uid, subcollection) {
+  const snap = await getDocs(collection(db, 'users', uid, subcollection));
+  const batch = writeBatch(db);
+  snap.docs.forEach(d => batch.delete(d.ref));
+  if (snap.docs.length > 0) await batch.commit();
+}
+
+export async function deleteUserData(uid) {
+  // Delete all subcollections
+  const subcollections = ['sessions', 'painEntries', 'assignments', 'completedSessions'];
+  for (const sub of subcollections) {
+    await deleteSubcollection(uid, sub);
+  }
+  // Delete feedback docs referencing this user
+  const feedbackSnap = await getDocs(
+    query(collection(db, 'feedback'), where('practitionerId', '==', uid))
+  );
+  if (feedbackSnap.docs.length > 0) {
+    const batch = writeBatch(db);
+    feedbackSnap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+  // Delete user document
+  await deleteDoc(doc(db, 'users', uid));
 }

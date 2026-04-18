@@ -1,0 +1,50 @@
+{
+  "welcomeBack": "Bon retour",
+  "heyName": "Salut, {{name}}",
+  "yourRecoveryJourney": "Votre parcours de r\u00e9cup\u00e9ration",
+  "motivational": "Chaque r\u00e9p\u00e9tition vous rapproche d\u2019une r\u00e9cup\u00e9ration compl\u00e8te. Restez constant et faites confiance au processus.",
+  "stats": {
+    "dayStreak": "Jours cons\u00e9cutifs",
+    "today": "Aujourd\u2019hui",
+    "thisWeek": "Cette semaine",
+    "tried": "Essay\u00e9s"
+  },
+  "quickActions": {
+    "title": "Actions rapides",
+    "todaysPlan": "Programme du jour",
+    "todaysPlanDesc": "Voir votre programme de r\u00e9adaptation",
+    "exercises": "Exercices",
+    "exercisesDesc": "Parcourir la biblioth\u00e8que d\u2019exercices",
+    "recordAnalyze": "Enregistrer et analyser",
+    "recordAnalyzeDesc": "Enregistrer pour obtenir un retour IA",
+    "logPain": "Noter la douleur",
+    "logPainDesc": "Suivre comment vous vous sentez"
+  },
+  "painStatus": {
+    "title": "\u00c9tat de la douleur",
+    "noPainLogged": "Aucune douleur enregistr\u00e9e",
+    "logFirstEntry": "Enregistrez votre premi\u00e8re entr\u00e9e"
+  },
+  "recentActivity": {
+    "title": "Activit\u00e9 r\u00e9cente",
+    "noExercises": "Aucun exercice compl\u00e9t\u00e9",
+    "startFirst": "Commencez votre premier exercice"
+  },
+  "assigned": {
+    "title": "Attribu\u00e9 par votre praticien",
+    "completedToday": "{{done}} sur {{total}} compl\u00e9t\u00e9s aujourd\u2019hui",
+    "allDone": "Tout termin\u00e9"
+  },
+  "features": {
+    "aiPoseAnalysis": "Analyse de posture IA",
+    "aiPoseAnalysisDesc": "Activez votre cam\u00e9ra et obtenez un retour en temps r\u00e9el sur votre forme",
+    "trackProgress": "Suivre les progr\u00e8s",
+    "trackProgressDesc": "Visualisez votre parcours avec des graphiques, jalons et tendances",
+    "uploadReports": "T\u00e9l\u00e9verser IRM et rapports",
+    "uploadReportsDesc": "Stockez vos documents m\u00e9dicaux en toute s\u00e9curit\u00e9 sur votre appareil"
+  },
+  "quote": {
+    "text": "\u00ab Le corps accomplit ce que l\u2019esprit croit. \u00bb",
+    "author": "\u2014 L\u2019\u00e9quipe Your Form Sux"
+  }
+}

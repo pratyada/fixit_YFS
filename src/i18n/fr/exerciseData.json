@@ -1,0 +1,131 @@
+{
+  "fixit-squats": {
+    "name": "Squats",
+    "description": "Tenez-vous debout, pieds \u00e9cart\u00e9s \u00e0 la largeur des \u00e9paules, abaissez vos hanches vers l'arri\u00e8re et vers le bas comme si vous vous asseyiez sur une chaise, puis poussez par les talons pour revenir debout.",
+    "instructions": [
+      "Tenez-vous debout, pieds \u00e9cart\u00e9s \u00e0 la largeur des \u00e9paules, orteils l\u00e9g\u00e8rement tourn\u00e9s vers l'ext\u00e9rieur",
+      "Gardez la poitrine haute et le tronc engag\u00e9",
+      "Abaissez vos hanches vers l'arri\u00e8re et vers le bas comme si vous vous asseyiez sur une chaise",
+      "Descendez jusqu'\u00e0 ce que les cuisses soient parall\u00e8les au sol (ou aussi bas que confortable)",
+      "Poussez par les talons pour revenir debout"
+    ],
+    "tips": [
+      "Les genoux suivent la direction des orteils \u2014 ne les laissez pas s'effondrer vers l'int\u00e9rieur",
+      "Gardez une colonne vert\u00e9brale neutre \u2014 pas d'arrondissement",
+      "Les talons restent plant\u00e9s tout au long du mouvement",
+      "Visez une profondeur sym\u00e9trique gauche vs droite"
+    ],
+    "keyFormCues": [
+      "Les genoux suivent les orteils (pas d'effondrement vers l'int\u00e9rieur)",
+      "Colonne vert\u00e9brale neutre \u2014 pas d'arrondissement",
+      "Talons plant\u00e9s",
+      "Le pli de la hanche descend sous le pli du genou en bas",
+      "Profondeur sym\u00e9trique gauche vs droite"
+    ],
+    "contraindications": ["Douleur aigu\u00eb au genou", "Chirurgie r\u00e9cente sans autorisation"],
+    "musclesTargeted": ["Quadriceps", "Fessiers", "Ischio-jambiers", "Tronc"]
+  },
+  "fixit-deadlift": {
+    "name": "Soulev\u00e9 de terre",
+    "description": "Articulez au niveau des hanches, gardez le dos plat et poussez \u00e0 travers le sol pour vous tenir droit. La r\u00e9f\u00e9rence pour la force de la cha\u00eene post\u00e9rieure.",
+    "instructions": [
+      "Debout, pieds \u00e9cart\u00e9s \u00e0 la largeur des hanches, poids au-dessus du milieu du pied",
+      "Articulez au niveau des hanches en envoyant vos hanches vers l'arri\u00e8re tout en gardant le dos plat",
+      "Saisissez la barre (ou mains au niveau des tibias) avec les bras tendus",
+      "Poussez \u00e0 travers le sol en \u00e9tendant les hanches et les genoux ensemble",
+      "Tenez-vous droit en haut, \u00e9paules en arri\u00e8re. Inversez le mouvement pour revenir"
+    ],
+    "tips": [
+      "Gardez la barre/les mains pr\u00e8s du corps",
+      "Les hanches et les \u00e9paules montent ensemble",
+      "Extension compl\u00e8te des hanches au verrouillage \u2014 pas de recul",
+      "Phase excentrique (descente) lente pour le contr\u00f4le"
+    ],
+    "keyFormCues": [
+      "Colonne vert\u00e9brale neutre tout au long (pas d'arrondissement ni d'hyperextension)",
+      "La barre/les mains restent pr\u00e8s du corps",
+      "Les hanches et les \u00e9paules montent ensemble",
+      "Verrouillage en haut \u2014 extension compl\u00e8te des hanches, pas de recul",
+      "Genoux et orteils align\u00e9s"
+    ],
+    "contraindications": ["Lombalgie aigu\u00eb", "Hernie discale sans autorisation"],
+    "musclesTargeted": ["Ischio-jambiers", "Fessiers", "\u00c9recteurs du rachis", "Grand dorsal", "Tronc"]
+  },
+  "fixit-reverse-fly": {
+    "name": "\u00c9l\u00e9vation lat\u00e9rale invers\u00e9e",
+    "description": "Penchez-vous en avant, laissez les bras pendre, puis levez-les sur les c\u00f4t\u00e9s en serrant les omoplates. Excellent pour la posture.",
+    "instructions": [
+      "Penchez-vous en avant au niveau des hanches, dos plat, genoux l\u00e9g\u00e8rement fl\u00e9chis",
+      "Laissez les bras pendre droit vers le bas, paumes face \u00e0 face",
+      "Avec une l\u00e9g\u00e8re flexion des coudes, levez les bras sur les c\u00f4t\u00e9s",
+      "Serrez les omoplates ensemble en haut",
+      "Redescendez avec contr\u00f4le"
+    ],
+    "tips": [
+      "Maintenez la position pench\u00e9e \u2014 ne vous redressez pas en pleine r\u00e9p\u00e9tition",
+      "Les bras bougent dans le plan scapulaire",
+      "Pas d'\u00e9lan ni de balancement",
+      "Visez une hauteur de bras sym\u00e9trique"
+    ],
+    "keyFormCues": [
+      "Position pench\u00e9e maintenue",
+      "Les bras bougent dans le plan scapulaire",
+      "Les omoplates se r\u00e9tractent en haut",
+      "Pas d'\u00e9lan / de balancement",
+      "Hauteur de bras sym\u00e9trique"
+    ],
+    "contraindications": ["Douleur aigu\u00eb \u00e0 l'\u00e9paule"],
+    "musclesTargeted": ["Delto\u00efdes post\u00e9rieurs", "Rhombo\u00efdes", "Trap\u00e8ze moyen"]
+  },
+  "fixit-bicep-curl": {
+    "name": "Curl biceps",
+    "description": "Debout, bras le long du corps, fl\u00e9chissez les avant-bras vers les \u00e9paules en gardant les coudes coll\u00e9s aux c\u00f4tes.",
+    "instructions": [
+      "Debout, bras le long du corps, paumes vers l'avant",
+      "Gardez les coudes coll\u00e9s aux c\u00f4tes",
+      "Fl\u00e9chissez les avant-bras vers les \u00e9paules",
+      "Serrez en haut ; redescendez avec contr\u00f4le"
+    ],
+    "tips": [
+      "Les coudes restent ancr\u00e9s \u2014 pas de d\u00e9rive vers l'avant",
+      "Pas de balancement du torse ni de pouss\u00e9e des hanches",
+      "Amplitude compl\u00e8te \u2014 bas et haut",
+      "Tempo contr\u00f4l\u00e9 sur la phase excentrique (descente)"
+    ],
+    "keyFormCues": [
+      "Les coudes restent ancr\u00e9s sur les c\u00f4t\u00e9s (pas de d\u00e9rive vers l'avant)",
+      "Pas de balancement du torse ni de pouss\u00e9e des hanches",
+      "Amplitude compl\u00e8te \u2014 bas et haut",
+      "Poignets neutres, pas effondr\u00e9s",
+      "Phase excentrique contr\u00f4l\u00e9e"
+    ],
+    "contraindications": ["Douleur aigu\u00eb au coude"],
+    "musclesTargeted": ["Biceps brachial", "Brachial", "Avant-bras"]
+  },
+  "fixit-plank": {
+    "name": "Planche",
+    "description": "Maintenez une ligne droite de la t\u00eate aux talons sur vos avant-bras. L'exercice de r\u00e9f\u00e9rence pour l'endurance du tronc.",
+    "instructions": [
+      "Commencez sur les avant-bras et les orteils, coudes directement sous les \u00e9paules",
+      "Le corps forme une ligne droite de la t\u00eate aux talons",
+      "Engagez le tronc, les fessiers et les quadriceps",
+      "Respirez normalement \u2014 ne retenez pas votre souffle",
+      "Maintenez pendant la dur\u00e9e prescrite"
+    ],
+    "tips": [
+      "Ne laissez pas les hanches s'affaisser ou se lever",
+      "Cou neutre \u2014 regardez le sol, pas vers l'avant",
+      "Serrez les fessiers pour prot\u00e9ger le bas du dos",
+      "Augmentez la dur\u00e9e progressivement \u2014 la qualit\u00e9 avant la dur\u00e9e"
+    ],
+    "keyFormCues": [
+      "Hanches au niveau des \u00e9paules \u2014 pas d'affaissement ni de piqu\u00e9",
+      "Cou neutre (regard vers le bas, pas vers l'avant)",
+      "Coudes directement sous les \u00e9paules",
+      "Fessiers engag\u00e9s",
+      "Le corps maintient la ligne pendant toute la dur\u00e9e"
+    ],
+    "contraindications": ["Douleur dorsale aigu\u00eb", "Blessure au poignet"],
+    "musclesTargeted": ["Grand droit de l'abdomen", "Transverse de l'abdomen", "Obliques", "Fessiers", "\u00c9paules"]
+  }
+}

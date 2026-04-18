@@ -1,0 +1,30 @@
+{
+  "title": "Your Progress",
+  "subtitle": "Track your recovery journey over time",
+  "stats": {
+    "totalSessions": "Total Sessions",
+    "activeTime": "Active Time",
+    "exercisesDone": "Exercises Done",
+    "avgPain": "Avg Pain"
+  },
+  "charts": {
+    "dailyActivity": "Daily Activity (Last 14 Days)",
+    "painLevelTrend": "Pain Level Trend",
+    "mostPerformed": "Most Performed Exercises",
+    "bodyPartDistribution": "Body Part Distribution"
+  },
+  "milestones": {
+    "title": "Milestones",
+    "firstExercise": "First Exercise",
+    "sevenDayStreak": "7-Day Streak",
+    "fiftySessions": "50 Sessions",
+    "allExercises": "All Exercises",
+    "achieved": "ACHIEVED"
+  },
+  "empty": {
+    "activityChart": "Complete some exercises to see your activity chart",
+    "painTrend": "Log pain entries to see your trend over time",
+    "noExercises": "No exercises completed yet",
+    "bodyPart": "Complete exercises to see distribution"
+  }
+}

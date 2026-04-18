@@ -1,0 +1,50 @@
+{
+  "welcomeBack": "Welcome Back",
+  "heyName": "Hey, {{name}}",
+  "yourRecoveryJourney": "Your Recovery Journey",
+  "motivational": "Every rep brings you closer to full recovery. Stay consistent and trust the process.",
+  "stats": {
+    "dayStreak": "Day Streak",
+    "today": "Today",
+    "thisWeek": "This Week",
+    "tried": "Tried"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "todaysPlan": "Today's Plan",
+    "todaysPlanDesc": "View your rehab program",
+    "exercises": "Exercises",
+    "exercisesDesc": "Browse exercise library",
+    "recordAnalyze": "Record & Analyze",
+    "recordAnalyzeDesc": "Record form for AI feedback",
+    "logPain": "Log Pain",
+    "logPainDesc": "Track how you feel"
+  },
+  "painStatus": {
+    "title": "Pain Status",
+    "noPainLogged": "No pain logged yet",
+    "logFirstEntry": "Log your first entry"
+  },
+  "recentActivity": {
+    "title": "Recent Activity",
+    "noExercises": "No exercises completed yet",
+    "startFirst": "Start your first exercise"
+  },
+  "assigned": {
+    "title": "Assigned by Your Practitioner",
+    "completedToday": "{{done}} of {{total}} completed today",
+    "allDone": "All Done"
+  },
+  "features": {
+    "aiPoseAnalysis": "AI Pose Analysis",
+    "aiPoseAnalysisDesc": "Turn on your camera and get real-time form feedback while exercising",
+    "trackProgress": "Track Progress",
+    "trackProgressDesc": "See your recovery journey with charts, milestones, and trends",
+    "uploadReports": "Upload MRI & Reports",
+    "uploadReportsDesc": "Store your medical documents securely on your device"
+  },
+  "quote": {
+    "text": "\"The body achieves what the mind believes.\"",
+    "author": "— Your Form Sux Team"
+  }
+}
