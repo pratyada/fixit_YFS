@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw } from 'lucide-react';
-import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner } from '../lib/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw, Camera, TrendingUp, Award, Calendar } from 'lucide-react';
+import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner, getKioskSessions } from '../lib/firestore';
 
 const ROLES = ['admin', 'practitioner', 'patient'];
 const ROLE_COLORS = {
@@ -10,11 +10,16 @@ const ROLE_COLORS = {
 };
 
 export default function AdminDashboard() {
+  const [tab, setTab] = useState('users'); // 'users' | 'kiosk'
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [expandedUser, setExpandedUser] = useState(null);
+
+  // Kiosk state
+  const [kioskSessions, setKioskSessions] = useState([]);
+  const [kioskLoading, setKioskLoading] = useState(false);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -23,7 +28,15 @@ export default function AdminDashboard() {
     setLoading(false);
   };
 
+  const loadKiosk = async () => {
+    setKioskLoading(true);
+    const sessions = await getKioskSessions(200);
+    setKioskSessions(sessions);
+    setKioskLoading(false);
+  };
+
   useEffect(() => { loadUsers(); }, []);
+  useEffect(() => { if (tab === 'kiosk' && kioskSessions.length === 0) loadKiosk(); }, [tab]);
 
   const handleRoleChange = async (uid, newRole) => {
     await updateUserRole(uid, newRole);
@@ -66,6 +79,21 @@ export default function AdminDashboard() {
     patient: users.filter(u => getUserRoles(u).includes('patient')).length,
   };
 
+  // ─── Kiosk stats ───
+  const kioskStats = useMemo(() => {
+    const total = kioskSessions.length;
+    const avgScore = total ? Math.round(kioskSessions.reduce((a, s) => a + (s.score || 0), 0) / total) : 0;
+    const today = new Date().toISOString().split('T')[0];
+    const todayCount = kioskSessions.filter(s => {
+      const d = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+      return d.toISOString().split('T')[0] === today;
+    }).length;
+    const exercises = {};
+    kioskSessions.forEach(s => { exercises[s.exerciseName] = (exercises[s.exerciseName] || 0) + 1; });
+    const topExercise = Object.entries(exercises).sort((a, b) => b[1] - a[1])[0];
+    return { total, avgScore, todayCount, topExercise };
+  }, [kioskSessions]);
+
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header */}
@@ -76,26 +104,181 @@ export default function AdminDashboard() {
         <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
           Admin Panel
         </div>
-        <h2 style={{ color: 'white', marginBottom: '16px' }}>User Management</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-          {[
-            { label: 'Total', value: counts.total, icon: Users },
-            { label: 'Admins', value: counts.admin, icon: Shield },
-            { label: 'Practitioners', value: counts.practitioner, icon: Stethoscope },
-            { label: 'Patients', value: counts.patient, icon: User },
-          ].map(s => (
-            <div key={s.label} style={{
-              background: 'rgba(255,255,255,0.12)', borderRadius: '12px',
-              padding: '12px 8px', textAlign: 'center',
-            }}>
-              <s.icon size={14} style={{ margin: '0 auto 4px', display: 'block', opacity: 0.6 }} />
-              <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{s.value}</div>
-              <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.5 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
+        <h2 style={{ color: 'white', marginBottom: '16px' }}>
+          {tab === 'users' ? 'User Management' : 'Clinic Kiosk Log'}
+        </h2>
+        {tab === 'users' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+            {[
+              { label: 'Total', value: counts.total, icon: Users },
+              { label: 'Admins', value: counts.admin, icon: Shield },
+              { label: 'Practitioners', value: counts.practitioner, icon: Stethoscope },
+              { label: 'Patients', value: counts.patient, icon: User },
+            ].map(s => (
+              <div key={s.label} style={{
+                background: 'rgba(255,255,255,0.12)', borderRadius: '12px',
+                padding: '12px 8px', textAlign: 'center',
+              }}>
+                <s.icon size={14} style={{ margin: '0 auto 4px', display: 'block', opacity: 0.6 }} />
+                <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{s.value}</div>
+                <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.5 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+            {[
+              { label: 'Total Checks', value: kioskStats.total, icon: Camera },
+              { label: 'Today', value: kioskStats.todayCount, icon: Calendar },
+              { label: 'Avg Score', value: kioskStats.avgScore, icon: TrendingUp },
+              { label: 'Top Exercise', value: kioskStats.topExercise?.[1] || 0, icon: Award },
+            ].map(s => (
+              <div key={s.label} style={{
+                background: 'rgba(255,255,255,0.12)', borderRadius: '12px',
+                padding: '12px 8px', textAlign: 'center',
+              }}>
+                <s.icon size={14} style={{ margin: '0 auto 4px', display: 'block', opacity: 0.6 }} />
+                <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{s.value}</div>
+                <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.5 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* Tab Switcher */}
+      <div style={{ display: 'flex', gap: '6px', background: 'var(--color-bg-alt)', borderRadius: '50px', padding: '4px', border: '1px solid var(--color-border)' }}>
+        {[
+          { key: 'users', label: 'Users', icon: Users },
+          { key: 'kiosk', label: 'Kiosk Log', icon: Camera },
+        ].map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              flex: 1, padding: '9px 14px', borderRadius: '50px', border: 'none',
+              background: tab === t.key ? 'var(--color-secondary)' : 'transparent',
+              color: tab === t.key ? 'white' : 'var(--color-text)',
+              fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+              transition: 'all 0.2s',
+            }}
+          >
+            <t.icon size={13} /> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'kiosk' && (
+        <>
+          {/* Kiosk top exercise */}
+          {kioskStats.topExercise && (
+            <div style={{
+              background: '#EDF3F1', borderRadius: '12px', padding: '12px 16px',
+              border: '1px solid #D8E8E3', fontSize: '0.78rem', color: '#4E4E53',
+              display: 'flex', alignItems: 'center', gap: '8px',
+            }}>
+              <Award size={14} color="#708E86" />
+              Most popular: <strong>{kioskStats.topExercise[0]}</strong> ({kioskStats.topExercise[1]} checks)
+            </div>
+          )}
+
+          {/* Refresh */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={loadKiosk} style={{
+              background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+              borderRadius: '12px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '0.72rem', fontWeight: 600, color: 'var(--color-text)', cursor: 'pointer',
+            }}>
+              <RefreshCw size={12} /> Refresh
+            </button>
+          </div>
+
+          {/* Kiosk Session List */}
+          {kioskLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+              Loading kiosk data...
+            </div>
+          ) : kioskSessions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+              <Camera size={32} style={{ margin: '0 auto 8px', display: 'block', color: 'var(--color-border)' }} />
+              No kiosk sessions yet. Set up the iPad in the clinic to start collecting data.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {kioskSessions.map((s, i) => {
+                const scoreColor = s.score >= 80 ? '#4CAF50' : s.score >= 60 ? '#FFC107' : s.score >= 40 ? '#FF9800' : '#F44336';
+                const date = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+                const faultNames = s.faults?.map(f => f.name).join(', ') || 'None';
+                return (
+                  <div key={s.id || i} style={{
+                    background: 'white', borderRadius: '14px',
+                    border: '1px solid var(--color-border)', padding: '14px 16px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '10px',
+                          background: scoreColor + '18', color: scoreColor,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 800, fontSize: '1rem',
+                        }}>
+                          {s.score}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+                            {s.exerciseName}
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--color-text)' }}>
+                            {date.toLocaleDateString('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            {s.duration ? ` \u2022 ${s.duration}s` : ''}
+                            {s.totalFrames ? ` \u2022 ${s.totalFrames} frames` : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase',
+                        letterSpacing: '0.8px', padding: '4px 10px', borderRadius: '50px',
+                        background: scoreColor + '18', color: scoreColor,
+                      }}>
+                        {s.score >= 80 ? 'Excellent' : s.score >= 60 ? 'Good' : s.score >= 40 ? 'Needs Work' : 'Poor'}
+                      </div>
+                    </div>
+                    {/* Score breakdown mini */}
+                    {s.categories && (
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                        {s.categories.map(cat => (
+                          <span key={cat.name} style={{
+                            fontSize: '0.6rem', padding: '2px 8px', borderRadius: '50px',
+                            background: 'var(--color-bg-alt)', color: 'var(--color-text)',
+                          }}>
+                            {cat.icon} {cat.name}: <strong>{cat.score}</strong>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Faults */}
+                    {s.faults?.length > 0 && (
+                      <div style={{ fontSize: '0.7rem', color: 'var(--color-text)' }}>
+                        <span style={{ fontWeight: 600 }}>Issues: </span>
+                        {s.faults.map((f, j) => (
+                          <span key={j} style={{
+                            color: f.severity === 'high' ? '#C62828' : f.severity === 'moderate' ? '#E65100' : '#2E7D32',
+                          }}>
+                            {f.name}{j < s.faults.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'users' && <>
       {/* Search & Filter */}
       <div style={{ display: 'flex', gap: '8px' }}>
         <div style={{ flex: 1, position: 'relative' }}>
@@ -260,6 +443,7 @@ export default function AdminDashboard() {
           })}
         </div>
       )}
+      </>}
     </div>
   );
 }

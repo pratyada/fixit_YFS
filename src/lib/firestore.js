@@ -192,6 +192,21 @@ export async function updateUserRoles(uid, roles) {
   });
 }
 
+// ─── Kiosk Sessions (clinic walk-ins) ───
+
+export async function addKioskSession(data) {
+  return addDoc(collection(db, 'kioskSessions'), {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function getKioskSessions(limitCount = 100) {
+  return queryDocs(
+    query(collection(db, 'kioskSessions'), orderBy('createdAt', 'desc'), limit(limitCount))
+  );
+}
+
 export async function assignPatientToPractitioner(patientId, practitionerId) {
   await updateDoc(doc(db, 'users', patientId), {
     practitionerId,

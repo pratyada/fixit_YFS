@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Camera, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, ChevronRight, RotateCcw, Check, ArrowLeft, Zap } from 'lucide-react';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
+import { addKioskSession } from '../lib/firestore';
 
 const POSE_CONNECTIONS = [
   ['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'],
@@ -135,13 +136,29 @@ export default function ClinicKiosk() {
     }
   };
 
-  const finishAndAnalyze = () => {
+  const finishAndAnalyze = async () => {
     const allFrames = [...(recordedFramesRef.current.front || []), ...(recordedFramesRef.current.side || [])];
     const analysis = analyzeMovement(allFrames);
     setReport(analysis);
     stopCamera();
     setStep('report');
-    // No Firestore save — this is kiosk/demo mode
+
+    // Save to Firestore for admin tracking
+    if (analysis && !analysis.error) {
+      try {
+        await addKioskSession({
+          exerciseId: selectedExercise.id,
+          exerciseName: selectedExercise.name,
+          score: analysis.overall,
+          categories: analysis.categories,
+          faults: analysis.faults?.map(f => ({ name: f.name, severity: f.severity })) || [],
+          duration: analysis.duration,
+          totalFrames: analysis.totalFrames,
+        });
+      } catch (e) {
+        console.error('Failed to save kiosk session:', e);
+      }
+    }
   };
 
   const selectExercise = (ex) => {
