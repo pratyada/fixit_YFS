@@ -4,6 +4,8 @@ import { ArrowLeft, Clock, Repeat, Target, AlertTriangle, CheckCircle2, Camera, 
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { usePatientData } from '../hooks/usePatientData';
+import { addCompletedSession } from '../lib/firestore';
+import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/storage';
 import ExerciseAnimation from '../components/ExerciseAnimation';
 import Exercise3D from '../components/Exercise3D';
@@ -11,6 +13,7 @@ import Exercise3D from '../components/Exercise3D';
 export default function ExerciseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const exercise = FIXIT_EXERCISES.find(e => e.id === id) || EXERCISE_LIBRARY.find(e => e.id === id);
   const [completedSessions, setCompleted] = usePatientData('completed_sessions', []);
   const [currentSet, setCurrentSet] = useState(0);
@@ -66,8 +69,8 @@ export default function ExerciseDetail() {
     }
   };
 
-  const saveSession = () => {
-    const session = {
+  const saveSession = async () => {
+    const sessionData = {
       id: generateId(),
       exerciseId: exercise.id,
       date: new Date().toISOString().split('T')[0],
@@ -78,7 +81,11 @@ export default function ExerciseDetail() {
       painLevel: painDuring,
       notes,
     };
-    setCompleted(prev => [...prev, session]);
+    setCompleted(prev => [...prev, sessionData]);
+    // Persist to Firestore so it shows in Progress
+    if (user?.uid) {
+      try { await addCompletedSession(user.uid, sessionData); } catch (e) { console.error('Failed to save session:', e); }
+    }
     navigate('/exercises');
   };
 

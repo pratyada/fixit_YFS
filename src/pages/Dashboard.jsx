@@ -3,6 +3,10 @@ import { Dumbbell, TrendingUp, Camera, Heart, Calendar, Award, ArrowRight, Flame
 import { usePatientData } from '../hooks/usePatientData';
 import { useAuth } from '../contexts/AuthContext';
 import { EXERCISE_LIBRARY, PAIN_SCALE } from '../data/exercises';
+import { FIXIT_EXERCISES } from '../data/fixit-exercises';
+
+const ALL_EXERCISES = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY];
+function findExercise(id) { return ALL_EXERCISES.find(e => e.id === id); }
 
 export default function Dashboard() {
   const [completedSessions] = usePatientData('completed_sessions', []);
@@ -249,7 +253,7 @@ export default function Dashboard() {
           {completedSessions.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {completedSessions.slice(-4).reverse().map((s, i) => {
-                const ex = EXERCISE_LIBRARY.find(e => e.id === s.exerciseId);
+                const ex = findExercise(s.exerciseId);
                 return (
                   <div key={i} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -427,7 +431,7 @@ function AssignedExercisesSection({ assignedExercises, completedToday }) {
       {/* Exercise list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {assignedExercises.map(a => {
-          const ex = EXERCISE_LIBRARY.find(e => e.id === a.exerciseId);
+          const ex = findExercise(a.exerciseId);
           if (!ex) return null;
           const done = completedToday.has(a.exerciseId);
           return (

@@ -11,10 +11,10 @@ import {
 import { auth } from '../lib/firebase';
 
 const googleProvider = new GoogleAuthProvider();
-import { getUserProfile, setUserProfile, updateUserRole } from '../lib/firestore';
+import { getUserProfile, setUserProfile, updateUserRole, updateUserRoles } from '../lib/firestore';
 
-// Emails that should automatically be set as admin on first login
-const ADMIN_EMAILS = ['musee.initialize@gmail.com'];
+// Emails that should automatically get admin + practitioner roles
+const ADMIN_EMAILS = ['musee.initialize@gmail.com', 'ashimanaval@gmail.com'];
 
 const AuthContext = createContext(null);
 
@@ -22,27 +22,67 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);       // Firebase Auth user
   const [profile, setProfile] = useState(null);  // Firestore user doc
   const [loading, setLoading] = useState(true);
+  const [activeRole, setActiveRole] = useState(null); // which role is currently active
+  const [needsRolePick, setNeedsRolePick] = useState(false); // show role picker?
+
+  // Get the roles array for a profile (backward compat with single `role` field)
+  const getUserRoles = (prof) => {
+    if (prof?.roles && Array.isArray(prof.roles) && prof.roles.length > 0) return prof.roles;
+    return [prof?.role || 'patient'];
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
         let prof = await getUserProfile(firebaseUser.uid);
-        // Auto-fix admin role if needed
         const email = firebaseUser.email?.toLowerCase() || '';
-        if (ADMIN_EMAILS.includes(email) && prof && prof.role !== 'admin') {
-          await updateUserRole(firebaseUser.uid, 'admin');
-          prof = { ...prof, role: 'admin' };
+
+        if (ADMIN_EMAILS.includes(email) && prof) {
+          const currentRoles = getUserRoles(prof);
+          // Ensure admin emails have both admin + practitioner
+          const needed = ['admin', 'practitioner'];
+          const missing = needed.filter(r => !currentRoles.includes(r));
+          if (missing.length > 0) {
+            const newRoles = [...new Set([...currentRoles, ...needed])];
+            await updateUserRoles(firebaseUser.uid, newRoles);
+            prof = { ...prof, roles: newRoles, role: newRoles[0] };
+          }
         }
+
         setProfile(prof);
+
+        // If user has multiple roles, show the role picker
+        const roles = getUserRoles(prof);
+        if (roles.length > 1) {
+          // Restore last picked role from sessionStorage
+          const lastRole = sessionStorage.getItem(`fixit_active_role_${firebaseUser.uid}`);
+          if (lastRole && roles.includes(lastRole)) {
+            setActiveRole(lastRole);
+            setNeedsRolePick(false);
+          } else {
+            setNeedsRolePick(true);
+          }
+        } else {
+          setActiveRole(roles[0]);
+          setNeedsRolePick(false);
+        }
       } else {
         setUser(null);
         setProfile(null);
+        setActiveRole(null);
+        setNeedsRolePick(false);
       }
       setLoading(false);
     });
     return unsub;
   }, []);
+
+  const pickRole = (r) => {
+    setActiveRole(r);
+    setNeedsRolePick(false);
+    if (user) sessionStorage.setItem(`fixit_active_role_${user.uid}`, r);
+  };
 
   const login = async (email, password) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);
@@ -59,6 +99,7 @@ export function AuthProvider({ children }) {
       email,
       condition: condition || '',
       role: 'patient',
+      roles: ['patient'],
       createdAt: new Date().toISOString(),
     };
     await setUserProfile(cred.user.uid, profileData);
@@ -73,21 +114,27 @@ export function AuthProvider({ children }) {
     const isAdminEmail = ADMIN_EMAILS.includes(email);
 
     if (!prof) {
-      // First-time login — create profile
+      const roles = isAdminEmail ? ['admin', 'practitioner'] : ['patient'];
       const profileData = {
         name: cred.user.displayName || '',
         email: cred.user.email,
         photoURL: cred.user.photoURL || '',
         condition: '',
-        role: isAdminEmail ? 'admin' : 'patient',
+        role: roles[0],
+        roles,
         createdAt: new Date().toISOString(),
       };
       await setUserProfile(cred.user.uid, profileData);
       prof = { id: cred.user.uid, ...profileData };
-    } else if (isAdminEmail && prof.role !== 'admin') {
-      // Existing user who should be admin — fix their role
-      await updateUserRole(cred.user.uid, 'admin');
-      prof = { ...prof, role: 'admin' };
+    } else if (isAdminEmail) {
+      const currentRoles = getUserRoles(prof);
+      const needed = ['admin', 'practitioner'];
+      const missing = needed.filter(r => !currentRoles.includes(r));
+      if (missing.length > 0) {
+        const newRoles = [...new Set([...currentRoles, ...needed])];
+        await updateUserRoles(cred.user.uid, newRoles);
+        prof = { ...prof, roles: newRoles, role: newRoles[0] };
+      }
     }
 
     setProfile(prof);
@@ -95,9 +142,12 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    if (user) sessionStorage.removeItem(`fixit_active_role_${user.uid}`);
     await signOut(auth);
     setUser(null);
     setProfile(null);
+    setActiveRole(null);
+    setNeedsRolePick(false);
   };
 
   const refreshProfile = async () => {
@@ -116,10 +166,19 @@ export function AuthProvider({ children }) {
     ...profile,
   } : null;
 
-  const role = profile?.role || 'patient';
+  const allRoles = getUserRoles(profile);
+  const role = activeRole || allRoles[0] || 'patient';
   const isAdmin = role === 'admin';
   const isPractitioner = role === 'practitioner';
   const isPatient = role === 'patient';
+  const hasMultipleRoles = allRoles.length > 1;
+
+  // Switch role (for header toggle)
+  const switchRole = (newRole) => {
+    if (allRoles.includes(newRole)) {
+      pickRole(newRole);
+    }
+  };
 
   return (
     <AuthContext.Provider value={{
@@ -133,9 +192,14 @@ export function AuthProvider({ children }) {
       logout,
       refreshProfile,
       role,
+      allRoles,
       isAdmin,
       isPractitioner,
       isPatient,
+      hasMultipleRoles,
+      switchRole,
+      needsRolePick,
+      pickRole,
       activePatientId: isPatient ? user?.uid : null,
     }}>
       {children}

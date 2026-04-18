@@ -184,6 +184,14 @@ export async function updateUserRole(uid, role) {
   });
 }
 
+export async function updateUserRoles(uid, roles) {
+  await updateDoc(doc(db, 'users', uid), {
+    roles,
+    role: roles[0] || 'patient',
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function assignPatientToPractitioner(patientId, practitionerId) {
   await updateDoc(doc(db, 'users', patientId), {
     practitionerId,

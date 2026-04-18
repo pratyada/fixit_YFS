@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw } from 'lucide-react';
-import { getAllUsers, updateUserRole, assignPatientToPractitioner } from '../lib/firestore';
+import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner } from '../lib/firestore';
 
 const ROLES = ['admin', 'practitioner', 'patient'];
 const ROLE_COLORS = {
@@ -30,23 +30,40 @@ export default function AdminDashboard() {
     setUsers(prev => prev.map(u => u.id === uid ? { ...u, role: newRole } : u));
   };
 
+  const handleToggleRole = async (uid, toggledRole) => {
+    const user = users.find(u => u.id === uid);
+    const currentRoles = user?.roles && Array.isArray(user.roles) ? [...user.roles] : [user?.role || 'patient'];
+    let newRoles;
+    if (currentRoles.includes(toggledRole)) {
+      // Remove role (but must keep at least one)
+      newRoles = currentRoles.filter(r => r !== toggledRole);
+      if (newRoles.length === 0) return; // can't remove last role
+    } else {
+      newRoles = [...currentRoles, toggledRole];
+    }
+    await updateUserRoles(uid, newRoles);
+    setUsers(prev => prev.map(u => u.id === uid ? { ...u, roles: newRoles, role: newRoles[0] } : u));
+  };
+
   const handleAssignPractitioner = async (patientId, practitionerId) => {
     await assignPatientToPractitioner(patientId, practitionerId);
     setUsers(prev => prev.map(u => u.id === patientId ? { ...u, practitionerId } : u));
   };
 
-  const practitioners = users.filter(u => u.role === 'practitioner');
+  const getUserRoles = (u) => (u?.roles && Array.isArray(u.roles) && u.roles.length > 0) ? u.roles : [u?.role || 'patient'];
+  const practitioners = users.filter(u => getUserRoles(u).includes('practitioner'));
   const filtered = users.filter(u => {
     const matchSearch = !search || u.name?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase());
-    const matchRole = filterRole === 'all' || u.role === filterRole;
+    const roles = getUserRoles(u);
+    const matchRole = filterRole === 'all' || roles.includes(filterRole);
     return matchSearch && matchRole;
   });
 
   const counts = {
     total: users.length,
-    admin: users.filter(u => u.role === 'admin').length,
-    practitioner: users.filter(u => u.role === 'practitioner').length,
-    patient: users.filter(u => u.role === 'patient').length,
+    admin: users.filter(u => getUserRoles(u).includes('admin')).length,
+    practitioner: users.filter(u => getUserRoles(u).includes('practitioner')).length,
+    patient: users.filter(u => getUserRoles(u).includes('patient')).length,
   };
 
   return (
@@ -113,7 +130,9 @@ export default function AdminDashboard() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {filtered.map(u => {
-            const rc = ROLE_COLORS[u.role] || ROLE_COLORS.patient;
+            const roles = getUserRoles(u);
+            const primaryRole = roles[0] || 'patient';
+            const rc = ROLE_COLORS[primaryRole] || ROLE_COLORS.patient;
             const RoleIcon = rc.icon;
             const isExpanded = expandedUser === u.id;
             const assignedPract = practitioners.find(p => p.id === u.practitionerId);
@@ -150,41 +169,62 @@ export default function AdminDashboard() {
                       {u.email}
                     </div>
                   </div>
-                  <span style={{
-                    fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px',
-                    padding: '4px 10px', borderRadius: '50px',
-                    background: rc.bg, color: rc.color,
-                  }}>
-                    {u.role || 'patient'}
-                  </span>
+                  <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {roles.map(r => {
+                      const rrc = ROLE_COLORS[r] || ROLE_COLORS.patient;
+                      return (
+                        <span key={r} style={{
+                          fontSize: '0.5rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px',
+                          padding: '3px 7px', borderRadius: '50px',
+                          background: rrc.bg, color: rrc.color,
+                        }}>
+                          {r}
+                        </span>
+                      );
+                    })}
+                  </div>
                   {isExpanded ? <ChevronUp size={14} color="var(--color-text)" /> : <ChevronDown size={14} color="var(--color-text)" />}
                 </button>
 
                 {isExpanded && (
                   <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* Role changer */}
+                    {/* Role changer (multi-select) */}
                     <div>
                       <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', display: 'block', marginBottom: '6px' }}>
-                        Change Role
+                        Roles (select multiple)
                       </label>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        {ROLES.map(r => (
-                          <button
-                            key={r}
-                            onClick={() => handleRoleChange(u.id, r)}
-                            style={{
-                              flex: 1, padding: '8px', borderRadius: '8px',
-                              fontSize: '0.72rem', fontWeight: 600, textTransform: 'capitalize',
-                              border: `1.5px solid ${u.role === r ? ROLE_COLORS[r].color : 'var(--color-border)'}`,
-                              background: u.role === r ? ROLE_COLORS[r].bg : 'white',
-                              color: u.role === r ? ROLE_COLORS[r].color : 'var(--color-text)',
-                              cursor: 'pointer', transition: 'all 0.2s',
-                            }}
-                          >
-                            {r}
-                          </button>
-                        ))}
+                        {ROLES.map(r => {
+                          const isActive = roles.includes(r);
+                          const isLastRole = isActive && roles.length === 1;
+                          return (
+                            <button
+                              key={r}
+                              onClick={() => handleToggleRole(u.id, r)}
+                              disabled={isLastRole}
+                              style={{
+                                flex: 1, padding: '8px', borderRadius: '8px',
+                                fontSize: '0.72rem', fontWeight: 600, textTransform: 'capitalize',
+                                border: `1.5px solid ${isActive ? ROLE_COLORS[r].color : 'var(--color-border)'}`,
+                                background: isActive ? ROLE_COLORS[r].bg : 'white',
+                                color: isActive ? ROLE_COLORS[r].color : 'var(--color-text)',
+                                cursor: isLastRole ? 'not-allowed' : 'pointer',
+                                opacity: isLastRole ? 0.6 : 1,
+                                transition: 'all 0.2s',
+                                position: 'relative',
+                              }}
+                            >
+                              {isActive && <span style={{ marginRight: '2px' }}>&#10003;</span>}
+                              {r}
+                            </button>
+                          );
+                        })}
                       </div>
+                      {roles.length > 1 && (
+                        <div style={{ fontSize: '0.62rem', color: 'var(--color-text)', marginTop: '4px' }}>
+                          This user will choose their view on login
+                        </div>
+                      )}
                     </div>
 
                     {/* Assign to practitioner (for patients) */}

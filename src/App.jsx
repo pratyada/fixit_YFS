@@ -1,5 +1,5 @@
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 import Login from './pages/Login';
@@ -18,6 +18,7 @@ import OutcomeMeasures from './pages/OutcomeMeasures';
 import RecordSession from './pages/RecordSession';
 import AdminDashboard from './pages/AdminDashboard';
 import PractitionerDashboard from './pages/PractitionerDashboard';
+import ClinicKiosk from './pages/ClinicKiosk';
 
 export default function App() {
   return (
@@ -28,9 +29,10 @@ export default function App() {
 }
 
 function AppShell() {
-  const { user, loading } = useAuth();
+  const { user, loading, needsRolePick } = useAuth();
   if (loading) return <SplashScreen />;
   if (!user) return <Login />;
+  if (needsRolePick) return <RolePickerScreen />;
   return <MobileLayout />;
 }
 
@@ -51,20 +53,36 @@ const PRACTITIONER_TABS = [
 const ADMIN_TABS = [
   { to: '/', icon: Shield, label: 'Admin' },
   { to: '/exercises', icon: BookOpen, label: 'Library' },
+  { to: '/kiosk', icon: Camera, label: 'Kiosk' },
 ];
 
+const ROLE_META = {
+  admin: { icon: Shield, color: '#5E35B1', bg: '#EDE7F6', label: 'Admin', desc: 'Manage users, roles & platform settings' },
+  practitioner: { icon: Stethoscope, color: '#2E7D32', bg: '#E8F5E9', label: 'Practitioner', desc: 'Manage patients & assign exercises' },
+  patient: { icon: Home, color: '#1565C0', bg: '#E3F2FD', label: 'Patient', desc: 'Track exercises & recovery progress' },
+};
+
 function MobileLayout() {
-  const { session, logout, role, isAdmin, isPractitioner } = useAuth();
+  const { session, logout, role, isAdmin, isPractitioner, hasMultipleRoles, switchRole, allRoles } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const TABS = isAdmin ? ADMIN_TABS : isPractitioner ? PRACTITIONER_TABS : PATIENT_TABS;
 
   const roleLabel = isAdmin ? 'Admin' : isPractitioner ? 'Practitioner' : (session?.condition || 'Patient');
+  const roleMeta = ROLE_META[role] || ROLE_META.patient;
 
   // Hide tabs on detail/sub-pages
   const showTabs = !(/\/(exercises|programs)\//.test(location.pathname)
-    || ['/measures', '/reports', '/builder', '/plan'].includes(location.pathname));
+    || ['/measures', '/reports', '/builder', '/plan', '/kiosk'].includes(location.pathname));
+
+  // Cycle to next role
+  const cycleRole = () => {
+    const idx = allRoles.indexOf(role);
+    const next = allRoles[(idx + 1) % allRoles.length];
+    switchRole(next);
+    navigate('/');
+  };
 
   return (
     <div style={{
@@ -104,12 +122,28 @@ function MobileLayout() {
             <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
               {session?.name || 'User'}
             </div>
-            <div style={{
-              fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
-              color: isAdmin ? '#5E35B1' : isPractitioner ? '#2E7D32' : 'var(--color-accent)',
-            }}>
-              {roleLabel}
-            </div>
+            {hasMultipleRoles ? (
+              <button
+                onClick={cycleRole}
+                style={{
+                  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                  fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
+                  color: roleMeta.color,
+                  display: 'flex', alignItems: 'center', gap: '3px',
+                }}
+                title={`Switch role (${allRoles.join(' / ')})`}
+              >
+                {roleLabel}
+                <ArrowRightLeft size={8} style={{ opacity: 0.6 }} />
+              </button>
+            ) : (
+              <div style={{
+                fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
+                color: roleMeta.color,
+              }}>
+                {roleLabel}
+              </div>
+            )}
           </div>
           <button onClick={async () => { await logout(); navigate('/'); }} style={{
             width: '30px', height: '30px', borderRadius: '50%',
@@ -135,6 +169,9 @@ function MobileLayout() {
               <Route path="/" element={<AdminDashboard />} />
               <Route path="/exercises" element={<Exercises />} />
               <Route path="/exercises/:id" element={<ExerciseDetail />} />
+              <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
+              <Route path="/pose" element={<PoseChecker />} />
+              <Route path="/kiosk" element={<ClinicKiosk />} />
               <Route path="*" element={<Navigate to="/" />} />
             </>
           ) : isPractitioner ? (
@@ -142,6 +179,8 @@ function MobileLayout() {
               <Route path="/" element={<PractitionerDashboard />} />
               <Route path="/exercises" element={<Exercises />} />
               <Route path="/exercises/:id" element={<ExerciseDetail />} />
+              <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
+              <Route path="/pose" element={<PoseChecker />} />
               <Route path="*" element={<Navigate to="/" />} />
             </>
           ) : (
@@ -215,6 +254,97 @@ function MobileLayout() {
           ))}
         </nav>
       )}
+    </div>
+  );
+}
+
+// ─── Role Picker Screen (shown after login for multi-role users) ───
+function RolePickerScreen() {
+  const { session, allRoles, pickRole, logout } = useAuth();
+
+  return (
+    <div style={{
+      minHeight: '100vh', minHeight: '100dvh',
+      background: 'linear-gradient(135deg, #708E86 0%, #4E4E53 100%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexDirection: 'column', padding: '24px',
+    }}>
+      <div style={{
+        background: 'white', borderRadius: '24px', padding: '36px 28px',
+        maxWidth: '380px', width: '100%', textAlign: 'center',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+      }}>
+        <img
+          src="https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png"
+          alt="YFS"
+          style={{ width: '48px', height: '48px', borderRadius: '50%', marginBottom: '12px' }}
+        />
+        <div style={{
+          fontFamily: "'Tenor Sans', serif", fontSize: '1.3rem',
+          color: 'var(--color-secondary)', marginBottom: '4px',
+        }}>
+          FIXIT
+        </div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--color-text)', marginBottom: '6px' }}>
+          Welcome, <strong>{session?.name || 'User'}</strong>
+        </div>
+        <div style={{
+          fontSize: '0.75rem', color: 'var(--color-text)', marginBottom: '24px',
+        }}>
+          How would you like to continue?
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {allRoles.map(r => {
+            const meta = ROLE_META[r] || ROLE_META.patient;
+            const Icon = meta.icon;
+            return (
+              <button
+                key={r}
+                onClick={() => pickRole(r)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  padding: '16px 18px', borderRadius: '14px',
+                  background: meta.bg, border: `2px solid transparent`,
+                  cursor: 'pointer', textAlign: 'left', width: '100%',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '12px',
+                  background: 'white', color: meta.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                }}>
+                  <Icon size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: meta.color }}>
+                    {meta.label}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text)', marginTop: '2px' }}>
+                    {meta.desc}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={logout}
+          style={{
+            marginTop: '20px', background: 'none', border: 'none',
+            color: 'var(--color-text)', fontSize: '0.72rem', fontWeight: 500,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+            margin: '20px auto 0',
+          }}
+        >
+          <LogOut size={12} /> Sign out
+        </button>
+      </div>
     </div>
   );
 }

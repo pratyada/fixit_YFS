@@ -7,6 +7,10 @@ import {
 import { TrendingUp, Calendar, Award, Target } from 'lucide-react';
 import { usePatientData } from '../hooks/usePatientData';
 import { EXERCISE_LIBRARY } from '../data/exercises';
+import { FIXIT_EXERCISES } from '../data/fixit-exercises';
+
+const ALL_EXERCISES = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY];
+function findExercise(id) { return ALL_EXERCISES.find(e => e.id === id); }
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler);
 
@@ -47,7 +51,7 @@ export default function Progress() {
     const counts = {};
     sessions.forEach(s => { counts[s.exerciseId] = (counts[s.exerciseId] || 0) + 1; });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id, count]) => ({
-      name: EXERCISE_LIBRARY.find(e => e.id === id)?.name || id, count,
+      name: findExercise(id)?.name || id, count,
     }));
   }, [sessions]);
 
@@ -132,12 +136,12 @@ export default function Progress() {
           {sessions.length > 0 ? (
             <div style={{ height: '200px' }}>
               <Doughnut data={{
-                labels: [...new Set(sessions.map(s => EXERCISE_LIBRARY.find(e => e.id === s.exerciseId)?.bodyPart || 'Other'))],
+                labels: [...new Set(sessions.map(s => findExercise(s.exerciseId)?.bodyPart || 'Other'))],
                 datasets: [{
                   data: (() => {
                     const parts = {};
                     sessions.forEach(s => {
-                      const bp = EXERCISE_LIBRARY.find(e => e.id === s.exerciseId)?.bodyPart || 'Other';
+                      const bp = findExercise(s.exerciseId)?.bodyPart || 'Other';
                       parts[bp] = (parts[bp] || 0) + 1;
                     });
                     return Object.values(parts);
