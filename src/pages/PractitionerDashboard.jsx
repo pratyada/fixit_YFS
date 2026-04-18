@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star, ChevronDown, ChevronUp, Send, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getPatientsByPractitioner, getPatientSessions, getPainEntries, addFeedback, updateSession, getFeedbackForSession } from '../lib/firestore';
+import { getPatientsByPractitioner, getPatientSessions, getPainEntries, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner } from '../lib/firestore';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 
 export default function PractitionerDashboard() {
@@ -14,15 +14,40 @@ export default function PractitionerDashboard() {
   const [patientSessions, setPatientSessions] = useState([]);
   const [patientPain, setPatientPain] = useState([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showAddPatient, setShowAddPatient] = useState(false);
+  const [allPatients, setAllPatients] = useState([]);
+  const [addSearch, setAddSearch] = useState('');
+  const [loadingAll, setLoadingAll] = useState(false);
 
-  useEffect(() => {
+  const loadPatients = async () => {
     if (user) {
-      getPatientsByPractitioner(user.uid).then(p => {
-        setPatients(p);
-        setLoading(false);
-      });
+      const p = await getPatientsByPractitioner(user.uid);
+      setPatients(p);
+      setLoading(false);
     }
-  }, [user]);
+  };
+
+  useEffect(() => { loadPatients(); }, [user]);
+
+  const openAddPatient = async () => {
+    setShowAddPatient(true);
+    setLoadingAll(true);
+    const all = await getUsersByRole('patient');
+    setAllPatients(all);
+    setLoadingAll(false);
+  };
+
+  const handleAddPatient = async (patientId) => {
+    await assignPatientToPractitioner(patientId, user.uid);
+    await loadPatients();
+    setAllPatients(prev => prev.map(p => p.id === patientId ? { ...p, practitionerId: user.uid } : p));
+  };
+
+  const handleRemovePatient = async (patientId) => {
+    await assignPatientToPractitioner(patientId, '');
+    await loadPatients();
+    setAllPatients(prev => prev.map(p => p.id === patientId ? { ...p, practitionerId: '' } : p));
+  };
 
   const viewPatient = async (patient) => {
     setSelectedPatient(patient);
@@ -164,11 +189,98 @@ export default function PractitionerDashboard() {
         </p>
       </div>
 
-      {/* Search */}
-      <div style={{ position: 'relative' }}>
-        <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text)' }} />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search patients..." style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
+      {/* Search + Add */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text)' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search patients..." style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
+        </div>
+        <button onClick={openAddPatient} style={{
+          background: 'var(--color-accent)', color: 'white', border: 'none',
+          borderRadius: '12px', padding: '0 16px', fontSize: '0.72rem', fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }}>
+          + Add
+        </button>
       </div>
+
+      {/* Add Patient Panel */}
+      {showAddPatient && (
+        <div style={{
+          background: 'white', borderRadius: '16px', border: '1px solid var(--color-accent)',
+          padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h4>Add Patient</h4>
+            <button onClick={() => setShowAddPatient(false)} style={{
+              background: 'none', border: 'none', color: 'var(--color-text)',
+              fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+            }}>Close</button>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text)' }} />
+            <input value={addSearch} onChange={e => setAddSearch(e.target.value)} placeholder="Search all patients..." style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
+          </div>
+          {loadingAll ? (
+            <div style={{ textAlign: 'center', padding: '16px', color: 'var(--color-text)', fontSize: '0.82rem' }}>Loading...</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '300px', overflow: 'auto' }}>
+              {allPatients
+                .filter(p => !addSearch || p.name?.toLowerCase().includes(addSearch.toLowerCase()) || p.email?.toLowerCase().includes(addSearch.toLowerCase()))
+                .map(p => {
+                  const isMine = p.practitionerId === user.uid;
+                  const isAssigned = p.practitionerId && !isMine;
+                  return (
+                    <div key={p.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '10px 12px', borderRadius: '10px',
+                      background: isMine ? '#E8F5E9' : 'var(--color-bg-alt)',
+                      border: `1px solid ${isMine ? '#C8E6C9' : 'transparent'}`,
+                    }}>
+                      {p.photoURL ? (
+                        <img src={p.photoURL} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0 }} />
+                      ) : (
+                        <div style={{
+                          width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                          background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-accent)',
+                        }}>{p.name?.charAt(0) || '?'}</div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{p.name || 'Unnamed'}</div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.email}
+                          {isAssigned && ' (assigned to another)'}
+                        </div>
+                      </div>
+                      {isMine ? (
+                        <button onClick={() => handleRemovePatient(p.id)} style={{
+                          background: '#FFEBEE', color: '#C62828', border: 'none',
+                          borderRadius: '8px', padding: '6px 12px',
+                          fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase',
+                          letterSpacing: '0.5px', cursor: 'pointer',
+                        }}>Remove</button>
+                      ) : (
+                        <button onClick={() => handleAddPatient(p.id)} disabled={isAssigned} style={{
+                          background: isAssigned ? '#eee' : 'var(--color-accent)', color: isAssigned ? '#aaa' : 'white',
+                          border: 'none', borderRadius: '8px', padding: '6px 12px',
+                          fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase',
+                          letterSpacing: '0.5px', cursor: isAssigned ? 'default' : 'pointer',
+                        }}>Add</button>
+                      )}
+                    </div>
+                  );
+                })}
+              {allPatients.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '16px', color: 'var(--color-text)', fontSize: '0.82rem' }}>
+                  No patients found. Patients need to sign in first.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)' }}>Loading patients...</div>
