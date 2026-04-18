@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star, ChevronDown, ChevronUp, Send, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +9,7 @@ import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { addAssignment } from '../lib/firestore';
 
 export default function PractitionerDashboard() {
+  const { t, i18n } = useTranslation('practitioner');
   const { user, session } = useAuth();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function PractitionerDashboard() {
           background: 'none', border: 'none', color: 'var(--color-accent)',
           fontSize: '0.78rem', fontWeight: 500, padding: 0,
         }}>
-          ← Back to patients
+          {t('backToPatients')}
         </button>
 
         {/* Patient header */}
@@ -98,14 +100,14 @@ export default function PractitionerDashboard() {
             <div>
               <h2 style={{ color: 'white', marginBottom: '2px' }}>{selectedPatient.name}</h2>
               <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>
-                {selectedPatient.condition || 'No condition set'} &bull; {selectedPatient.email}
+                {selectedPatient.condition || t('noConditionSet')} &bull; {selectedPatient.email}
               </div>
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-            <StatBox icon={<Video size={14} />} value={patientSessions.length} label="Sessions" />
-            <StatBox icon={<Heart size={14} />} value={patientPain.length} label="Pain Logs" />
-            <StatBox icon={<Star size={14} />} value={patientSessions.filter(s => s.aiScore).length} label="Analyzed" />
+            <StatBox icon={<Video size={14} />} value={patientSessions.length} label={t('patientDetail.sessions')} />
+            <StatBox icon={<Heart size={14} />} value={patientPain.length} label={t('patientDetail.painLogs')} />
+            <StatBox icon={<Star size={14} />} value={patientSessions.filter(s => s.aiScore).length} label={t('patientDetail.analyzed')} />
           </div>
         </div>
 
@@ -116,7 +118,7 @@ export default function PractitionerDashboard() {
         {!loadingDetail && patientAssignments.length > 0 && (
           <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '16px' }}>
             <h3 style={{ marginBottom: '12px' }}>
-              Assigned Exercises ({patientAssignments.length})
+              {t('assignedExercises', { count: patientAssignments.length })}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {patientAssignments.map(a => {
@@ -157,7 +159,7 @@ export default function PractitionerDashboard() {
                           <div style={{ fontSize: '0.72rem', color: '#9E9E9E' }}>—</div>
                         )}
                         <div style={{ fontSize: '0.58rem', color: 'var(--color-text)' }}>
-                          {bestScore ? 'Best' : 'No score'}
+                          {bestScore ? t('best') : t('noScore')}
                         </div>
                       </div>
                     </div>
@@ -170,11 +172,11 @@ export default function PractitionerDashboard() {
                         color: sessionCount > 0 ? '#2E7D32' : '#F57F17',
                         fontWeight: 600,
                       }}>
-                        {sessionCount} session{sessionCount !== 1 ? 's' : ''}
+                        {t(sessionCount !== 1 ? 'sessionCount_plural' : 'sessionCount', { count: sessionCount })}
                       </span>
                       {latestSession && (
                         <span style={{ color: 'var(--color-text)' }}>
-                          Last: {latestSession.createdAt?.toDate ? latestSession.createdAt.toDate().toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Recent'}
+                          {t('last')} {latestSession.createdAt?.toDate ? latestSession.createdAt.toDate().toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' }) : t('recent')}
                         </span>
                       )}
                       {latestSession?.status === 'REVIEWED' && (
@@ -189,17 +191,17 @@ export default function PractitionerDashboard() {
         )}
 
         {loadingDetail ? (
-          <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text)' }}>Loading...</div>
+          <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text)' }}>{'Loading...'}</div>
         ) : (
           <>
             {/* Sessions with feedback */}
             <div>
               <h3 style={{ marginBottom: '10px' }}>
-                Pose Check Sessions ({patientSessions.length})
+                {t('poseCheckSessions', { count: patientSessions.length })}
               </h3>
               {patientSessions.length === 0 ? (
                 <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '24px', textAlign: 'center', color: 'var(--color-text)', fontSize: '0.85rem' }}>
-                  No recordings yet
+                  {t('noRecordings')}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -217,10 +219,10 @@ export default function PractitionerDashboard() {
 
             {/* Pain entries */}
             <div>
-              <h3 style={{ marginBottom: '10px' }}>Pain Journal</h3>
+              <h3 style={{ marginBottom: '10px' }}>{t('painJournal')}</h3>
               {patientPain.length === 0 ? (
                 <div style={{ background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '24px', textAlign: 'center', color: 'var(--color-text)', fontSize: '0.85rem' }}>
-                  No pain entries yet
+                  {t('noPainEntries')}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -263,13 +265,13 @@ export default function PractitionerDashboard() {
         borderRadius: '20px', padding: '24px', color: 'white',
       }}>
         <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
-          Practitioner
+          {t('roleLabel')}
         </div>
         <h2 style={{ color: 'white', marginBottom: '4px' }}>
-          Welcome, {session?.name}
+          {t('welcome', { name: session?.name })}
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem' }}>
-          {patients.length} patient{patients.length !== 1 ? 's' : ''} assigned to you
+          {t(patients.length !== 1 ? 'patientsAssigned_plural' : 'patientsAssigned', { count: patients.length })}
         </p>
       </div>
 
@@ -277,7 +279,7 @@ export default function PractitionerDashboard() {
       <div style={{ display: 'flex', gap: '8px' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text)' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search patients..." style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('searchPatients')} style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
         </div>
         <button onClick={openAddPatient} style={{
           background: 'var(--color-accent)', color: 'white', border: 'none',
@@ -296,7 +298,7 @@ export default function PractitionerDashboard() {
           padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h4>Add Patient</h4>
+            <h4>{t('addPatient')}</h4>
             <button onClick={() => setShowAddPatient(false)} style={{
               background: 'none', border: 'none', color: 'var(--color-text)',
               fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
@@ -304,7 +306,7 @@ export default function PractitionerDashboard() {
           </div>
           <div style={{ position: 'relative' }}>
             <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text)' }} />
-            <input value={addSearch} onChange={e => setAddSearch(e.target.value)} placeholder="Search all patients..." style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
+            <input value={addSearch} onChange={e => setAddSearch(e.target.value)} placeholder={t('searchAllPatients')} style={{ paddingLeft: '34px', fontSize: '0.82rem' }} />
           </div>
           {loadingAll ? (
             <div style={{ textAlign: 'center', padding: '16px', color: 'var(--color-text)', fontSize: '0.82rem' }}>Loading...</div>
@@ -335,7 +337,7 @@ export default function PractitionerDashboard() {
                         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{p.name || 'Unnamed'}</div>
                         <div style={{ fontSize: '0.65rem', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {p.email}
-                          {isAssigned && ' (assigned to another)'}
+                          {isAssigned && ` ${t('assignedToAnother')}`}
                         </div>
                       </div>
                       {isMine ? (
@@ -358,7 +360,7 @@ export default function PractitionerDashboard() {
                 })}
               {allPatients.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '16px', color: 'var(--color-text)', fontSize: '0.82rem' }}>
-                  No patients found. Patients need to sign in first.
+                  {t('noPatientsFound')}
                 </div>
               )}
             </div>
