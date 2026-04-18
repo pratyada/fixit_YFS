@@ -4,6 +4,8 @@ import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, S
 import { useAuth } from '../contexts/AuthContext';
 import { getPatientsByPractitioner, getPatientSessions, getPainEntries, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner } from '../lib/firestore';
 import { EXERCISE_LIBRARY } from '../data/exercises';
+import { FIXIT_EXERCISES } from '../data/fixit-exercises';
+import { addAssignment } from '../lib/firestore';
 
 export default function PractitionerDashboard() {
   const { user, session } = useAuth();
@@ -103,6 +105,9 @@ export default function PractitionerDashboard() {
             <StatBox icon={<Star size={14} />} value={patientSessions.filter(s => s.aiScore).length} label="Analyzed" />
           </div>
         </div>
+
+        {/* Assign Exercise */}
+        <AssignExercisePanel patient={selectedPatient} practitionerId={user.uid} />
 
         {loadingDetail ? (
           <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text)' }}>Loading...</div>
@@ -332,6 +337,122 @@ export default function PractitionerDashboard() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function AssignExercisePanel({ patient, practitionerId }) {
+  const [showPanel, setShowPanel] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [sets, setSets] = useState(3);
+  const [reps, setReps] = useState(10);
+  const [assigning, setAssigning] = useState(false);
+  const [assigned, setAssigned] = useState([]);
+
+  const handleAssign = async (exercise) => {
+    setAssigning(true);
+    try {
+      await addAssignment(patient.id, {
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        practitionerId,
+        sets,
+        reps,
+        notes: notes.trim() || null,
+        frequency: 'Daily',
+      });
+      setAssigned(prev => [...prev, exercise.id]);
+      setNotes('');
+    } catch (e) {
+      console.error('Failed to assign:', e);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  if (!showPanel) {
+    return (
+      <button onClick={() => setShowPanel(true)} style={{
+        width: '100%', padding: '14px', borderRadius: '14px',
+        background: 'var(--color-accent)', color: 'white',
+        border: 'none', fontSize: '0.75rem', fontWeight: 700,
+        textTransform: 'uppercase', letterSpacing: '1px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+        cursor: 'pointer',
+      }}>
+        <Dumbbell size={16} /> Assign Exercise
+      </button>
+    );
+  }
+
+  return (
+    <div style={{
+      background: 'white', borderRadius: '16px',
+      border: '1px solid var(--color-accent)', padding: '16px',
+      display: 'flex', flexDirection: 'column', gap: '12px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h4>Assign Exercise to {patient.name?.split(' ')[0]}</h4>
+        <button onClick={() => setShowPanel(false)} style={{
+          background: 'none', border: 'none', color: 'var(--color-text)',
+          fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+        }}>Close</button>
+      </div>
+
+      {/* Sets/Reps config */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>Sets</label>
+          <input type="number" value={sets} onChange={e => setSets(Number(e.target.value))} min={1} max={10} style={{ fontSize: '0.82rem' }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>Reps</label>
+          <input type="number" value={reps} onChange={e => setReps(Number(e.target.value))} min={1} max={50} style={{ fontSize: '0.82rem' }} />
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div>
+        <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>Notes (optional)</label>
+        <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g., Focus on depth..." style={{ fontSize: '0.82rem' }} />
+      </div>
+
+      {/* Exercise list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {FIXIT_EXERCISES.map(ex => {
+          const isAssigned = assigned.includes(ex.id);
+          return (
+            <div key={ex.id} style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '10px 12px', borderRadius: '10px',
+              background: isAssigned ? '#E8F5E9' : 'var(--color-bg-alt)',
+              border: `1px solid ${isAssigned ? '#C8E6C9' : 'transparent'}`,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: isAssigned ? '#2E7D32' : 'var(--color-secondary)' }}>
+                  {ex.name}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--color-text)' }}>
+                  {ex.bodyPart} &bull; {ex.difficulty}
+                </div>
+              </div>
+              {isAssigned ? (
+                <CheckCircle2 size={18} color="#4CAF50" />
+              ) : (
+                <button onClick={() => handleAssign(ex)} disabled={assigning} style={{
+                  background: 'var(--color-accent)', color: 'white', border: 'none',
+                  borderRadius: '8px', padding: '6px 14px',
+                  fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.5px', cursor: assigning ? 'default' : 'pointer',
+                  opacity: assigning ? 0.5 : 1,
+                }}>
+                  Assign
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

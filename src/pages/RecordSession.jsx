@@ -6,6 +6,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Upload, CheckCircle2, AlertCircle, Video, Clock, Target } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { EXERCISE_LIBRARY } from '../data/exercises';
+import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import CameraRecorder from '../components/CameraRecorder';
 import { uploadVideo } from '../lib/storage-firebase';
 import { addSession, updateSession } from '../lib/firestore';
@@ -14,7 +15,7 @@ export default function RecordSession() {
   const { exerciseId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const exercise = EXERCISE_LIBRARY.find(e => e.id === exerciseId);
+  const exercise = FIXIT_EXERCISES.find(e => e.id === exerciseId) || EXERCISE_LIBRARY.find(e => e.id === exerciseId);
 
   const [step, setStep] = useState('intro'); // 'intro' | 'recording' | 'uploading' | 'done' | 'error'
   const [uploadProgress, setUploadProgress] = useState(0);

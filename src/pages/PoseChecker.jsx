@@ -3,6 +3,7 @@ import { Camera, CameraOff, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Squar
 import { Line } from 'react-chartjs-2';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
+import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { useAuth } from '../contexts/AuthContext';
 import { addSession } from '../lib/firestore';
 
@@ -265,11 +266,12 @@ export default function PoseChecker() {
   // STEP 1: SELECT EXERCISE
   // ═══════════════════════════════════════════════
   if (step === 'select') {
-    const filtered = EXERCISE_LIBRARY.filter(e => {
+    const filtered = FIXIT_EXERCISES.filter(e => {
       const matchSearch = !search || e.name.toLowerCase().includes(search.toLowerCase());
       const matchBody = filterBody === 'All' || e.bodyPart === filterBody;
       return matchSearch && matchBody;
     });
+    const bodyParts = [...new Set(FIXIT_EXERCISES.map(e => e.bodyPart))];
 
     return (
       <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -286,7 +288,7 @@ export default function PoseChecker() {
 
         {/* Body part filter */}
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {['All', ...BODY_PARTS].map(bp => (
+          {['All', ...bodyParts].map(bp => (
             <button
               key={bp}
               onClick={() => setFilterBody(bp)}

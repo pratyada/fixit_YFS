@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { ArrowLeft, Clock, Repeat, Target, AlertTriangle, CheckCircle2, Camera, Play, Pause, RotateCcw } from 'lucide-react';
 import { EXERCISE_LIBRARY } from '../data/exercises';
+import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { usePatientData } from '../hooks/usePatientData';
 import { generateId } from '../utils/storage';
 import ExerciseAnimation from '../components/ExerciseAnimation';
@@ -10,7 +11,7 @@ import Exercise3D from '../components/Exercise3D';
 export default function ExerciseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const exercise = EXERCISE_LIBRARY.find(e => e.id === id);
+  const exercise = FIXIT_EXERCISES.find(e => e.id === id) || EXERCISE_LIBRARY.find(e => e.id === id);
   const [completedSessions, setCompleted] = usePatientData('completed_sessions', []);
   const [currentSet, setCurrentSet] = useState(0);
   const [currentRep, setCurrentRep] = useState(0);

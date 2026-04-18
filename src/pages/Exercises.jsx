@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Clock, Repeat, ChevronRight, X, Stethoscope } from 'lucide-react';
 import { EXERCISE_LIBRARY, BODY_PARTS, DIFFICULTY, EQUIPMENT, POSITIONS, GOALS, CONDITIONS } from '../data/exercises';
+import { FIXIT_EXERCISES, PHASE_1_IDS, getAllExercisesWithStatus } from '../data/fixit-exercises';
 import ExerciseThumbnail from '../components/ExerciseThumbnail';
 import { useAuth } from '../contexts/AuthContext';
 import { usePatientData } from '../hooks/usePatientData';
@@ -42,11 +43,10 @@ export default function Exercises() {
     return ids;
   }, [isPatientView, assignedExercises, assignedPrograms]);
 
-  // The pool the patient can browse. Practitioners see the full library.
+  // The pool: FIXIT Phase 1 exercises (active) + rest (coming soon)
   const pool = useMemo(() => {
-    if (!allowedExerciseIds) return EXERCISE_LIBRARY;
-    return EXERCISE_LIBRARY.filter(e => allowedExerciseIds.has(e.id));
-  }, [allowedExerciseIds]);
+    return getAllExercisesWithStatus(EXERCISE_LIBRARY);
+  }, []);
 
   // Body parts and levels available based on what's allocated
   const availableBodyParts = useMemo(() => {
@@ -292,46 +292,56 @@ export default function Exercises() {
 }
 
 function ExerciseCard({ exercise: ex }) {
-  return (
-    <Link
-      to={`/exercises/${ex.id}`}
+  const isComingSoon = ex.comingSoon;
+
+  const card = (
+    <div
       style={{
         display: 'flex', flexDirection: 'column',
-        background: 'white', borderRadius: '14px',
-        border: '1px solid var(--color-border)', padding: '16px',
-        textDecoration: 'none', transition: 'all 0.25s ease',
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.borderColor = 'var(--color-accent)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = 'none';
-        e.currentTarget.style.transform = 'none';
-        e.currentTarget.style.borderColor = 'var(--color-border)';
+        background: isComingSoon ? '#F5F5F5' : 'white',
+        borderRadius: '14px',
+        border: `1px solid ${isComingSoon ? '#E0E0E0' : 'var(--color-border)'}`,
+        padding: '16px',
+        textDecoration: 'none',
+        transition: 'all 0.25s ease',
+        opacity: isComingSoon ? 0.55 : 1,
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: isComingSoon ? 'default' : 'pointer',
       }}
     >
+      {isComingSoon && (
+        <div style={{
+          position: 'absolute', top: '10px', right: '-24px',
+          background: '#9E9E9E', color: 'white',
+          padding: '3px 32px', fontSize: '0.52rem', fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '1.5px',
+          transform: 'rotate(35deg)',
+        }}>
+          Coming Soon
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '10px' }}>
         <div style={{
           width: '56px', height: '48px', borderRadius: '10px',
-          background: 'linear-gradient(135deg, #FAFCFB, #EFF6F4)',
+          background: isComingSoon ? '#EEEEEE' : 'linear-gradient(135deg, #FAFCFB, #EFF6F4)',
           overflow: 'hidden', flexShrink: 0,
+          filter: isComingSoon ? 'grayscale(1)' : 'none',
         }}>
           <ExerciseThumbnail exerciseId={ex.id} />
         </div>
         <span style={{
           fontSize: '0.58rem', fontWeight: 600, textTransform: 'uppercase',
           letterSpacing: '0.8px', padding: '3px 8px', borderRadius: '50px',
-          background: DIFF_COLORS[ex.difficulty]?.bg,
-          color: DIFF_COLORS[ex.difficulty]?.text,
+          background: isComingSoon ? '#E0E0E0' : (DIFF_COLORS[ex.difficulty]?.bg || '#E8F5E9'),
+          color: isComingSoon ? '#9E9E9E' : (DIFF_COLORS[ex.difficulty]?.text || '#2E7D32'),
         }}>
           {ex.difficulty}
         </span>
       </div>
-      <h4 style={{ marginBottom: '4px' }}>{ex.name}</h4>
+      <h4 style={{ marginBottom: '4px', color: isComingSoon ? '#9E9E9E' : undefined }}>{ex.name}</h4>
       <p style={{
-        fontSize: '0.75rem', color: 'var(--color-text)', lineHeight: 1.45,
+        fontSize: '0.75rem', color: isComingSoon ? '#BDBDBD' : 'var(--color-text)', lineHeight: 1.45,
         marginBottom: '10px',
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
       }}>
@@ -342,21 +352,25 @@ function ExerciseCard({ exercise: ex }) {
           <span key={g} style={{
             fontSize: '0.58rem', fontWeight: 600, textTransform: 'uppercase',
             letterSpacing: '0.5px', padding: '2px 7px', borderRadius: '50px',
-            background: 'var(--color-bg-alt)', color: 'var(--color-accent)',
+            background: isComingSoon ? '#E0E0E0' : 'var(--color-bg-alt)',
+            color: isComingSoon ? '#9E9E9E' : 'var(--color-accent)',
           }}>{g}</span>
         ))}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.72rem', color: 'var(--color-text)', marginTop: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.72rem', color: isComingSoon ? '#BDBDBD' : 'var(--color-text)', marginTop: 'auto' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <Clock size={12} /> {ex.duration}
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <Repeat size={12} /> {ex.sets}x{ex.reps}
         </span>
-        <ChevronRight size={13} style={{ marginLeft: 'auto', color: 'var(--color-border)' }} />
+        {!isComingSoon && <ChevronRight size={13} style={{ marginLeft: 'auto', color: 'var(--color-border)' }} />}
       </div>
-    </Link>
+    </div>
   );
+
+  if (isComingSoon) return card;
+  return <Link to={`/exercises/${ex.id}`} style={{ textDecoration: 'none' }}>{card}</Link>;
 }
 
 function FilterRow({ label, icon, children }) {
