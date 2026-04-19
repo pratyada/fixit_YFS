@@ -87,7 +87,7 @@ export default function ExerciseDetail() {
   const startTimer = () => {
     if (timerInterval) return;
     setIsActive(true);
-    const interval = setInterval(() => setTimer(t => t + 1), 1000);
+    const interval = setInterval(() => setTimer(prev => prev + 1), 1000);
     setTimerInterval(interval);
   };
 
