@@ -294,6 +294,7 @@ export default function Exercises() {
 }
 
 function ExerciseCard({ exercise: ex }) {
+  const { t } = useTranslation('exercises');
   const isComingSoon = ex.comingSoon;
 
   const card = (
