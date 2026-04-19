@@ -6,7 +6,8 @@ import { analyzeMovement } from '../utils/movementAnalysis';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { useAuth } from '../contexts/AuthContext';
-import { addSession } from '../lib/firestore';
+import { addSession, updateSession } from '../lib/firestore';
+import { uploadVideo } from '../lib/storage-firebase';
 
 const POSE_CONNECTIONS = [
   ['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'],
@@ -60,6 +61,9 @@ export default function PoseChecker() {
   const streamRef = useRef(null);
   const recordedFramesRef = useRef({ front: [], side: [] });
   const timerRef = useRef(null);
+  // Video recording for practitioner review
+  const mediaRecorderRef = useRef(null);
+  const videoChunksRef = useRef({ front: [], side: [] });
 
   const angleName = ANGLES[currentAngle];
 
@@ -106,14 +110,28 @@ export default function PoseChecker() {
 
   const startRecording = () => {
     recordedFramesRef.current[angleName] = [];
+    videoChunksRef.current[angleName] = [];
     setRecording(true);
     setRecordTimer(0);
-    timerRef.current = setInterval(() => setRecordTimer(t => t + 1), 1000);
+    timerRef.current = setInterval(() => setRecordTimer(prev => prev + 1), 1000);
+    // Start video recording for practitioner review
+    if (streamRef.current) {
+      try {
+        const mr = new MediaRecorder(streamRef.current, { mimeType: 'video/webm' });
+        mr.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current[angleName].push(e.data); };
+        mr.start();
+        mediaRecorderRef.current = mr;
+      } catch (e) { /* MediaRecorder not supported — skip video capture */ }
+    }
   };
 
   const stopRecording = () => {
     setRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
     setAngleRecorded(prev => ({ ...prev, [angleName]: true }));
   };
 
@@ -140,7 +158,7 @@ export default function PoseChecker() {
     // Save to Firestore so practitioner can see it
     if (user && selectedExercise && analysis && !analysis.error) {
       try {
-        await addSession(user.uid, {
+        const sessionRef = await addSession(user.uid, {
           exerciseId: selectedExercise.id,
           exerciseName: selectedExercise.name,
           type: 'pose_check',
@@ -159,6 +177,27 @@ export default function PoseChecker() {
           aiModelVersion: 'movenet-lightning-v1',
           angles: ['front', 'side'],
         });
+
+        // Upload recorded videos so practitioner can review
+        const sid = sessionRef.id;
+        const videoUpdates = {};
+        const frontChunks = videoChunksRef.current.front;
+        const sideChunks = videoChunksRef.current.side;
+        if (frontChunks.length > 0) {
+          const frontBlob = new Blob(frontChunks, { type: 'video/webm' });
+          const frontResult = await uploadVideo(user.uid, sid, 'front', frontBlob);
+          videoUpdates.frontVideoKey = frontResult.path;
+          videoUpdates.frontVideoUrl = frontResult.url;
+        }
+        if (sideChunks.length > 0) {
+          const sideBlob = new Blob(sideChunks, { type: 'video/webm' });
+          const sideResult = await uploadVideo(user.uid, sid, 'side', sideBlob);
+          videoUpdates.sideVideoKey = sideResult.path;
+          videoUpdates.sideVideoUrl = sideResult.url;
+        }
+        if (Object.keys(videoUpdates).length > 0) {
+          await updateSession(user.uid, sid, videoUpdates);
+        }
       } catch (e) {
         console.error('Failed to save pose check to Firestore:', e);
       }
