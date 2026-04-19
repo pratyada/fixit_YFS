@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Camera, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, ChevronRight, RotateCcw, Check, ArrowLeft, Zap } from 'lucide-react';
+import { Camera, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, ChevronRight, RotateCcw, Check, ArrowLeft, Zap, X } from 'lucide-react';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { addKioskSession } from '../lib/firestore';
@@ -31,6 +32,7 @@ const BODY_ICONS = { 'Lower Body': '🦵', 'Upper Body': '💪', Core: '🎯' };
 
 export default function ClinicKiosk() {
   const { t } = useTranslation('kiosk');
+  const navigate = useNavigate();
   const [step, setStep] = useState('select'); // select | camera | report
   const [selectedExercise, setSelectedExercise] = useState(null);
 
@@ -272,7 +274,7 @@ export default function ClinicKiosk() {
       overflow: 'hidden',
     }} onClick={resetIdle}>
 
-      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} t={t} />}
+      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} onExit={() => navigate('/')} t={t} />}
 
       {step === 'camera' && (
         <CameraScreen
@@ -358,12 +360,30 @@ function kioskBtn(bg, size = 'normal') {
 // ═══════════════════════════════════════════════
 // EXERCISE SELECT SCREEN (iPad-optimized grid)
 // ═══════════════════════════════════════════════
-function SelectScreen({ exercises, onSelect, t }) {
+function SelectScreen({ exercises, onSelect, onExit, t }) {
   return (
     <div className="kiosk-fade" style={{
       flex: 1, display: 'flex', flexDirection: 'column',
       overflow: 'auto', padding: '40px',
+      position: 'relative',
     }}>
+      {/* Exit button */}
+      <button
+        onClick={onExit}
+        style={{
+          position: 'absolute', top: '20px', right: '20px',
+          background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+          color: 'rgba(255,255,255,0.5)', borderRadius: '50px',
+          padding: '8px 16px', fontSize: '0.72rem', fontWeight: 600,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+          transition: 'all 0.2s', zIndex: 5,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'white'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
+      >
+        <X size={14} /> Exit Kiosk
+      </button>
+
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <div style={{
