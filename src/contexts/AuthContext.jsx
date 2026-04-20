@@ -39,9 +39,32 @@ export function AuthProvider({ children }) {
         let prof = await getUserProfile(firebaseUser.uid);
         const email = firebaseUser.email?.toLowerCase() || '';
 
+        // New user — profile doesn't exist yet.
+        // loginWithGoogle will create it, so wait briefly and retry.
+        if (!prof) {
+          await new Promise(r => setTimeout(r, 1500));
+          prof = await getUserProfile(firebaseUser.uid);
+        }
+
+        // Still no profile — create a default one
+        if (!prof) {
+          const isAdminEmail = ADMIN_EMAILS.includes(email);
+          const roles = isAdminEmail ? ['admin', 'practitioner'] : ['patient'];
+          const profileData = {
+            name: firebaseUser.displayName || '',
+            email: firebaseUser.email,
+            photoURL: firebaseUser.photoURL || '',
+            condition: '',
+            role: roles[0],
+            roles,
+            createdAt: new Date().toISOString(),
+          };
+          await setUserProfile(firebaseUser.uid, profileData);
+          prof = { id: firebaseUser.uid, ...profileData };
+        }
+
         if (ADMIN_EMAILS.includes(email) && prof) {
           const currentRoles = getUserRoles(prof);
-          // Ensure admin emails have both admin + practitioner
           const needed = ['admin', 'practitioner'];
           const missing = needed.filter(r => !currentRoles.includes(r));
           if (missing.length > 0) {
@@ -61,7 +84,6 @@ export function AuthProvider({ children }) {
         // If user has multiple roles, show the role picker
         const roles = getUserRoles(prof);
         if (roles.length > 1) {
-          // Restore last picked role from sessionStorage
           const lastRole = sessionStorage.getItem(`fixit_active_role_${firebaseUser.uid}`);
           if (lastRole && roles.includes(lastRole)) {
             setActiveRole(lastRole);

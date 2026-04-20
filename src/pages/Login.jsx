@@ -18,8 +18,13 @@ export default function Login() {
       await loginWithGoogle();
       navigate('/');
     } catch (err) {
-      if (err.code !== 'auth/popup-closed-by-user') {
-        setError(err.message || t('signInFailed'));
+      // Ignore common popup errors — user can just try again
+      const ignoreCodes = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/popup-blocked'];
+      if (!ignoreCodes.includes(err.code)) {
+        console.error('[FIXIT] Login error:', err.code, err.message);
+        setError(err.code === 'auth/network-request-failed'
+          ? 'Network error. Please check your connection and try again.'
+          : (err.message || t('signInFailed')));
       }
     } finally {
       setLoading(false);
