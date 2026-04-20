@@ -826,9 +826,33 @@ export default function PoseChecker() {
           </div>
         </div>
 
+        {/* Submitted to practitioner notice */}
+        <div style={{
+          background: '#EDF3F1', borderRadius: '16px', padding: '20px',
+          border: '1px solid #D8E8E3',
+          display: 'flex', alignItems: 'flex-start', gap: '14px',
+        }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '12px',
+            background: '#708E86', color: 'white',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <CheckCircle2 size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '4px' }}>
+              Submitted to Your Practitioner
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--color-text)', lineHeight: 1.5, margin: 0 }}>
+              Your session video and AI score have been sent to your practitioner for review. They will verify the analysis and correct any inaccuracies — helping improve your feedback over time.
+            </p>
+          </div>
+        </div>
+
         {/* Actions */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-          <button onClick={() => { setStep('camera'); setCurrentAngle(0); setAngleRecorded({ front: false, side: false }); recordedFramesRef.current = { front: [], side: [] }; setReport(null); startCamera(); }} style={{
+          <button onClick={() => { setStep('camera'); setCurrentAngle(0); setAngleRecorded({ front: false, side: false }); recordedFramesRef.current = { front: [], side: [] }; videoChunksRef.current = { front: [], side: [] }; setReport(null); startCamera(); }} style={{
             display: 'flex', alignItems: 'center', gap: '6px',
             background: 'var(--color-secondary)', color: 'white',
             padding: '12px 24px', borderRadius: '50px', border: 'none',
@@ -842,7 +866,7 @@ export default function PoseChecker() {
             border: '1px solid var(--color-border)',
             fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.2px', cursor: 'pointer',
           }}>
-            {t('poseChecker.newExercise')}
+            Done
           </button>
         </div>
       </div>
