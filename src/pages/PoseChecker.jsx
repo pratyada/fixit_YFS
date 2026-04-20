@@ -115,25 +115,31 @@ export default function PoseChecker() {
     setRecordTimer(0);
     timerRef.current = setInterval(() => setRecordTimer(prev => prev + 1), 1000);
     // Start video recording for practitioner review
+    console.log('[FIXIT] startRecording called, angle:', angleName, 'stream:', !!streamRef.current);
     if (streamRef.current) {
       try {
         const captureAngle = angleName;
-        // Try webm first, fall back to whatever the browser supports
         const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm'
           : MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
+        console.log('[FIXIT] MediaRecorder mimeType:', mimeType || 'default');
         const mr = mimeType
           ? new MediaRecorder(streamRef.current, { mimeType })
           : new MediaRecorder(streamRef.current);
         mr.ondataavailable = (e) => {
           if (e.data && e.data.size > 0) {
             videoChunksRef.current[captureAngle].push(e.data);
+            console.log('[FIXIT] Video chunk received:', captureAngle, (e.data.size / 1024).toFixed(0) + 'KB', 'total chunks:', videoChunksRef.current[captureAngle].length);
           }
         };
+        mr.onerror = (e) => console.error('[FIXIT] MediaRecorder error:', e);
         mr.start(1000);
+        console.log('[FIXIT] MediaRecorder started, state:', mr.state);
         mediaRecorderRef.current = mr;
       } catch (e) {
-        console.warn('MediaRecorder not available:', e);
+        console.error('[FIXIT] MediaRecorder failed to start:', e);
       }
+    } else {
+      console.warn('[FIXIT] No stream available for video recording');
     }
   };
 
