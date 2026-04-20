@@ -129,6 +129,8 @@ export default function PoseChecker() {
     setRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
     if (mediaRecorderRef.current?.state === 'recording') {
+      // Request final data chunk before stopping
+      mediaRecorderRef.current.requestData();
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current = null;
     }
@@ -137,6 +139,7 @@ export default function PoseChecker() {
 
   const retakeAngle = () => {
     recordedFramesRef.current[angleName] = [];
+    videoChunksRef.current[angleName] = [];
     setAngleRecorded(prev => ({ ...prev, [angleName]: false }));
   };
 

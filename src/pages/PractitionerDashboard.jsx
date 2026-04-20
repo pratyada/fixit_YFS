@@ -549,9 +549,10 @@ function SessionCard({ session: s, patient, practitionerId, t, i18n }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(s.status === 'REVIEWED');
   const [existingFeedback, setExistingFeedback] = useState(null);
-  // AI retraining: per-fault corrections + score override
+  // AI retraining: per-fault corrections + score override + per-category ratings
   const [faultCorrections, setFaultCorrections] = useState({});
   const [scoreOverride, setScoreOverride] = useState(null);
+  const [categoryRatings, setCategoryRatings] = useState({});
 
   const ex = EXERCISE_LIBRARY.find(e => e.id === s.exerciseId);
   const analysis = s.aiAnalysis;
@@ -595,6 +596,7 @@ function SessionCard({ session: s, patient, practitionerId, t, i18n }) {
         aiModelVersionSnapshot: s.aiModelVersion || 'movenet-lightning-v1',
         // AI retraining data
         faultCorrections: corrections,
+        categoryRatings: Object.entries(categoryRatings).map(([name, score]) => ({ name, practitionerScore: score, aiScore: analysis?.categories?.find(c => c.name === name)?.score })),
         aiCategories: analysis?.categories || [],
         aiFaults: analysis?.faults || [],
         aiAngles: analysis?.angles || null,
@@ -602,7 +604,7 @@ function SessionCard({ session: s, patient, practitionerId, t, i18n }) {
       await updateSession(patient.id, s.id, { status: 'REVIEWED' });
       setSubmitted(true);
       setFeedbackMode(false);
-      setExistingFeedback({ rating, whatWasGood: whatGood, whatNeedsImproving: whatImprove, faultCorrections: corrections, practitionerScore: scoreOverride });
+      setExistingFeedback({ rating, whatWasGood: whatGood, whatNeedsImproving: whatImprove, faultCorrections: corrections, practitionerScore: scoreOverride, categoryRatings });
     } catch (e) {
       console.error('Failed to submit feedback:', e);
     } finally {
@@ -657,23 +659,64 @@ function SessionCard({ session: s, patient, practitionerId, t, i18n }) {
           {/* Analysis details */}
           {analysis && (
             <>
-              {/* Categories */}
+              {/* Categories — AI vs Practitioner comparison */}
               {analysis.categories && (
                 <div>
                   <div style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', marginBottom: '8px' }}>
-                    {t('analysis.scoreBreakdown')}
+                    {t('analysis.scoreBreakdown')} {feedbackMode && ' — Rate each category'}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {analysis.categories.map(cat => (
-                      <div key={cat.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.85rem' }}>{cat.icon}</span>
-                        <span style={{ fontSize: '0.78rem', flex: 1, color: 'var(--color-secondary)' }}>{cat.name}</span>
-                        <div style={{ width: '60px', height: '6px', background: 'var(--color-bg-alt)', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${cat.score}%`, background: scoreColor(cat.score), borderRadius: '3px' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: feedbackMode ? '10px' : '6px' }}>
+                    {analysis.categories.map(cat => {
+                      const practScore = categoryRatings[cat.name];
+                      const existingCatRating = existingFeedback?.categoryRatings?.[cat.name];
+                      const showPractitioner = feedbackMode || existingCatRating != null;
+                      return (
+                        <div key={cat.name} style={{
+                          padding: feedbackMode ? '10px 12px' : '0',
+                          background: feedbackMode ? 'white' : 'transparent',
+                          borderRadius: feedbackMode ? '10px' : '0',
+                          border: feedbackMode ? '1px solid var(--color-border)' : 'none',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: feedbackMode ? '6px' : '0' }}>
+                            <span style={{ fontSize: '0.85rem' }}>{cat.icon}</span>
+                            <span style={{ fontSize: '0.78rem', flex: 1, color: 'var(--color-secondary)', fontWeight: 600 }}>{cat.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '0.6rem', color: 'var(--color-text)', fontWeight: 600 }}>AI</span>
+                              <div style={{ width: '50px', height: '6px', background: 'var(--color-bg-alt)', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${cat.score}%`, background: scoreColor(cat.score), borderRadius: '3px' }} />
+                              </div>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: scoreColor(cat.score), width: '28px', textAlign: 'right' }}>{cat.score}</span>
+                            </div>
+                          </div>
+                          {feedbackMode && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                              <span style={{ fontSize: '0.6rem', color: '#5E35B1', fontWeight: 600, minWidth: '28px' }}>You</span>
+                              <input
+                                type="range" min="0" max="100"
+                                value={practScore ?? cat.score}
+                                onChange={e => setCategoryRatings(prev => ({ ...prev, [cat.name]: Number(e.target.value) }))}
+                                style={{ flex: 1, accentColor: '#5E35B1', height: '4px' }}
+                              />
+                              <span style={{
+                                fontSize: '0.75rem', fontWeight: 700, width: '28px', textAlign: 'right',
+                                color: scoreColor(practScore ?? cat.score),
+                              }}>
+                                {practScore ?? cat.score}
+                              </span>
+                            </div>
+                          )}
+                          {!feedbackMode && existingCatRating != null && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                              <span style={{ fontSize: '0.6rem', color: '#5E35B1', fontWeight: 600, minWidth: '28px' }}>You</span>
+                              <div style={{ width: '50px', height: '6px', background: 'var(--color-bg-alt)', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${existingCatRating}%`, background: '#5E35B1', borderRadius: '3px' }} />
+                              </div>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#5E35B1', width: '28px', textAlign: 'right' }}>{existingCatRating}</span>
+                            </div>
+                          )}
                         </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: scoreColor(cat.score), width: '28px', textAlign: 'right' }}>{cat.score}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

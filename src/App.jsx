@@ -102,6 +102,8 @@ function MobileLayout() {
     navigate('/');
   };
 
+  const isWideLayout = isPractitioner || isAdmin;
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -109,7 +111,7 @@ function MobileLayout() {
       display: 'flex',
       flexDirection: 'column',
       background: 'var(--color-bg-alt)',
-      maxWidth: '480px',
+      maxWidth: isWideLayout ? '1200px' : '480px',
       margin: '0 auto',
       position: 'relative',
       boxShadow: '0 0 40px rgba(0,0,0,0.06)',
@@ -232,7 +234,7 @@ function MobileLayout() {
           left: '50%',
           transform: 'translateX(-50%)',
           width: '100%',
-          maxWidth: '480px',
+          maxWidth: isWideLayout ? '1200px' : '480px',
           background: 'white',
           borderTop: '1px solid var(--color-border)',
           display: 'flex',
