@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Camera, CameraOff, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, Search, ChevronRight, FlipHorizontal, RotateCcw, Check } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
@@ -31,6 +32,8 @@ export default function PoseChecker() {
   const { t } = useTranslation('exercises');
   const { t: tKiosk } = useTranslation('kiosk');
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const goBack = () => navigate('/');
 
   // Check for pre-selected exercise from URL (?exercise=fixit-squats)
   const urlExerciseId = new URLSearchParams(window.location.hash.split('?')[1] || '').get('exercise');
@@ -468,7 +471,7 @@ export default function PoseChecker() {
           zIndex: 10,
           flexShrink: 0,
         }}>
-          <button onClick={() => { stopCamera(); setStep('select'); }} style={{
+          <button onClick={() => { stopCamera(); preSelectedExercise ? goBack() : setStep('select'); }} style={{
             background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white',
             padding: '8px 16px', borderRadius: '50px', fontSize: '0.72rem', fontWeight: 600,
           }}>
@@ -833,7 +836,7 @@ export default function PoseChecker() {
           }}>
             <Camera size={14} /> {t('poseChecker.recordAgain')}
           </button>
-          <button onClick={() => { setStep('select'); setReport(null); }} style={{
+          <button onClick={() => { preSelectedExercise ? goBack() : (setStep('select'), setReport(null)); }} style={{
             background: 'white', color: 'var(--color-text)',
             padding: '12px 24px', borderRadius: '50px',
             border: '1px solid var(--color-border)',
@@ -853,7 +856,7 @@ export default function PoseChecker() {
         <AlertCircle size={40} color="var(--color-danger)" style={{ margin: '0 auto 12px' }} />
         <h3>{t('poseChecker.analysisFailed')}</h3>
         <p style={{ fontSize: '0.85rem', color: 'var(--color-text)', marginTop: '8px' }}>{report.error}</p>
-        <button onClick={() => setStep('select')} style={{
+        <button onClick={() => preSelectedExercise ? goBack() : setStep('select')} style={{
           marginTop: '16px', background: 'var(--color-secondary)', color: 'white',
           padding: '12px 24px', borderRadius: '50px', border: 'none',
           fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', cursor: 'pointer',

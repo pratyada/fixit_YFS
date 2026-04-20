@@ -77,7 +77,7 @@ export default function ExerciseDetail() {
     return (
       <div style={{ textAlign: 'center', padding: '64px 0' }}>
         <p>{t('detail.exerciseNotFound')}</p>
-        <Link to="/exercises" style={{ color: 'var(--color-accent)', marginTop: '8px', display: 'inline-block' }}>{t('detail.backToExercises')}</Link>
+        <Link to="/" style={{ color: 'var(--color-accent)', marginTop: '8px', display: 'inline-block' }}>{t('detail.backToExercises')}</Link>
       </div>
     );
   }
@@ -134,7 +134,7 @@ export default function ExerciseDetail() {
     if (user?.uid) {
       try { await addCompletedSession(user.uid, sessionData); } catch (e) { console.error('Failed to save session:', e); }
     }
-    navigate('/exercises');
+    navigate('/');
   };
 
   const formatTime = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
@@ -153,7 +153,7 @@ export default function ExerciseDetail() {
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '700px', margin: '0 auto' }}>
       {/* Back */}
-      <Link to="/exercises" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.82rem', color: 'var(--color-accent)', textDecoration: 'none' }}>
+      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.82rem', color: 'var(--color-accent)', textDecoration: 'none' }}>
         <ArrowLeft size={15} /> {t('detail.backToExercises')}
       </Link>
 
