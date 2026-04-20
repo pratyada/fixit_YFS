@@ -4,6 +4,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   updateProfile,
@@ -33,6 +35,9 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
+    // Handle redirect result (for incognito/popup-blocked browsers)
+    getRedirectResult(auth).catch(() => {});
+
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
@@ -136,7 +141,19 @@ export function AuthProvider({ children }) {
   };
 
   const loginWithGoogle = async () => {
-    const cred = await signInWithPopup(auth, googleProvider);
+    let cred;
+    try {
+      cred = await signInWithPopup(auth, googleProvider);
+    } catch (popupErr) {
+      // Popup blocked or sessionStorage issue (incognito) — fallback to redirect
+      if (popupErr.code === 'auth/popup-blocked' ||
+          popupErr.code === 'auth/internal-error' ||
+          popupErr.message?.includes('sessionStorage')) {
+        await signInWithRedirect(auth, googleProvider);
+        return; // redirect will reload the page
+      }
+      throw popupErr;
+    }
     let prof = await getUserProfile(cred.user.uid);
     const email = cred.user.email?.toLowerCase() || '';
     const isAdminEmail = ADMIN_EMAILS.includes(email);
