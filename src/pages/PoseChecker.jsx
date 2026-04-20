@@ -117,12 +117,23 @@ export default function PoseChecker() {
     // Start video recording for practitioner review
     if (streamRef.current) {
       try {
-        const captureAngle = angleName; // capture current angle by value
-        const mr = new MediaRecorder(streamRef.current, { mimeType: 'video/webm' });
-        mr.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current[captureAngle].push(e.data); };
-        mr.start(1000); // get chunks every 1s so data is available before stop
+        const captureAngle = angleName;
+        // Try webm first, fall back to whatever the browser supports
+        const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm'
+          : MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
+        const mr = mimeType
+          ? new MediaRecorder(streamRef.current, { mimeType })
+          : new MediaRecorder(streamRef.current);
+        mr.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            videoChunksRef.current[captureAngle].push(e.data);
+          }
+        };
+        mr.start(1000);
         mediaRecorderRef.current = mr;
-      } catch (e) { /* MediaRecorder not supported — skip video capture */ }
+      } catch (e) {
+        console.warn('MediaRecorder not available:', e);
+      }
     }
   };
 
@@ -187,25 +198,31 @@ export default function PoseChecker() {
         // Upload recorded videos so practitioner can review
         const sid = sessionRef.id;
         const videoUpdates = {};
-        const frontChunks = videoChunksRef.current.front;
-        const sideChunks = videoChunksRef.current.side;
+        const frontChunks = videoChunksRef.current.front || [];
+        const sideChunks = videoChunksRef.current.side || [];
+        console.log(`[FIXIT] Video chunks — front: ${frontChunks.length}, side: ${sideChunks.length}`);
         if (frontChunks.length > 0) {
           const frontBlob = new Blob(frontChunks, { type: 'video/webm' });
+          console.log(`[FIXIT] Uploading front video: ${(frontBlob.size / 1024).toFixed(0)}KB`);
           const frontResult = await uploadVideo(user.uid, sid, 'front', frontBlob);
           videoUpdates.frontVideoKey = frontResult.path;
           videoUpdates.frontVideoUrl = frontResult.url;
         }
         if (sideChunks.length > 0) {
           const sideBlob = new Blob(sideChunks, { type: 'video/webm' });
+          console.log(`[FIXIT] Uploading side video: ${(sideBlob.size / 1024).toFixed(0)}KB`);
           const sideResult = await uploadVideo(user.uid, sid, 'side', sideBlob);
           videoUpdates.sideVideoKey = sideResult.path;
           videoUpdates.sideVideoUrl = sideResult.url;
         }
         if (Object.keys(videoUpdates).length > 0) {
           await updateSession(user.uid, sid, videoUpdates);
+          console.log('[FIXIT] Video URLs saved to session:', sid);
+        } else {
+          console.warn('[FIXIT] No video chunks captured — MediaRecorder may not be supported');
         }
       } catch (e) {
-        console.error('Failed to save pose check to Firestore:', e);
+        console.error('[FIXIT] Failed to save pose check:', e);
       }
     }
   };
