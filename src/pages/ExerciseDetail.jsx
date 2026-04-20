@@ -9,8 +9,6 @@ import { addCompletedSession, getExercise, setExercise } from '../lib/firestore'
 import { uploadDemoVideo } from '../lib/storage-firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/storage';
-import ExerciseAnimation from '../components/ExerciseAnimation';
-import Exercise3D from '../components/Exercise3D';
 
 export default function ExerciseDetail() {
   const { t } = useTranslation('exercises');
@@ -276,9 +274,6 @@ export default function ExerciseDetail() {
         </div>
       ) : null}
 
-      {/* Exercise Visual — 2D/3D toggle */}
-      <ViewToggleAnimation exerciseId={exercise.id} />
-
       {/* Workout Tracker */}
       <div style={{
         background: 'linear-gradient(135deg, #708E86 0%, #4E4E53 100%)',
@@ -359,26 +354,6 @@ export default function ExerciseDetail() {
         )}
       </div>
 
-      {/* Record & Pose Check CTAs */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <Link to={`/exercises/${id}/record`} style={{
-          display: 'block', background: 'linear-gradient(135deg, #708E86 0%, #5A7A72 100%)', borderRadius: '14px',
-          padding: '20px', textDecoration: 'none', textAlign: 'center',
-          border: 'none', transition: 'all 0.2s', color: 'white',
-        }}>
-          <Camera size={22} style={{ margin: '0 auto 6px', display: 'block' }} />
-          <h4 style={{ color: 'white' }}>{t('detail.recordSession')}</h4>
-          <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>{t('detail.recordSessionDesc')}</p>
-        </Link>
-        <Link to="/pose" style={{
-          display: 'block', background: 'var(--color-bg-alt)', borderRadius: '14px',
-          padding: '16px', textDecoration: 'none', textAlign: 'center',
-          border: '1px solid var(--color-border)', transition: 'all 0.2s',
-        }}>
-          <h4>{t('detail.livePoseCheck')}</h4>
-          <p style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>{t('detail.livePoseCheckDesc')}</p>
-        </Link>
-      </div>
 
       {/* Instructions */}
       <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
@@ -452,41 +427,3 @@ export default function ExerciseDetail() {
   );
 }
 
-function ViewToggleAnimation({ exerciseId }) {
-  const { t } = useTranslation('exercises');
-  const [mode, setMode] = useState('2d');
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{
-        display: 'flex', gap: '6px', padding: '4px',
-        background: 'var(--color-bg-alt)', borderRadius: '50px',
-        alignSelf: 'center', border: '1px solid var(--color-border)',
-      }}>
-        {[
-          { k: '2d', l: t('detail.view2D') },
-          { k: '3d', l: t('detail.view3D') },
-        ].map(opt => (
-          <button
-            key={opt.k}
-            onClick={() => setMode(opt.k)}
-            style={{
-              padding: '7px 18px', borderRadius: '50px', border: 'none',
-              background: mode === opt.k ? 'var(--color-secondary)' : 'transparent',
-              color: mode === opt.k ? 'white' : 'var(--color-text)',
-              fontSize: '0.65rem', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '1.2px',
-              cursor: 'pointer', transition: 'all 0.2s',
-            }}
-          >
-            {opt.l}
-          </button>
-        ))}
-      </div>
-      {mode === '2d' ? (
-        <ExerciseAnimation exerciseId={exerciseId} />
-      ) : (
-        <Exercise3D exerciseId={exerciseId} />
-      )}
-    </div>
-  );
-}
