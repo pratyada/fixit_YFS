@@ -64,6 +64,8 @@ export default function PoseChecker() {
   // Video recording for practitioner review
   const mediaRecorderRef = useRef(null);
   const videoChunksRef = useRef({ front: [], side: [] });
+  const maxRecordRef = useRef(null); // auto-stop timer
+  const MAX_RECORD_SECONDS = 30;
 
   const angleName = ANGLES[currentAngle];
 
@@ -73,7 +75,7 @@ export default function PoseChecker() {
     try {
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } }
+        video: { facingMode, width: { ideal: 480 }, height: { ideal: 360 } }
       });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -122,9 +124,9 @@ export default function PoseChecker() {
         const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm'
           : MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
         console.log('[FIXIT] MediaRecorder mimeType:', mimeType || 'default');
-        const mr = mimeType
-          ? new MediaRecorder(streamRef.current, { mimeType })
-          : new MediaRecorder(streamRef.current);
+        const opts = { videoBitsPerSecond: 500000 }; // 500kbps — compact but clear
+        if (mimeType) opts.mimeType = mimeType;
+        const mr = new MediaRecorder(streamRef.current, opts);
         mr.ondataavailable = (e) => {
           if (e.data && e.data.size > 0) {
             videoChunksRef.current[captureAngle].push(e.data);
@@ -141,11 +143,16 @@ export default function PoseChecker() {
     } else {
       console.warn('[FIXIT] No stream available for video recording');
     }
+    // Auto-stop after MAX_RECORD_SECONDS
+    maxRecordRef.current = setTimeout(() => {
+      stopRecording();
+    }, MAX_RECORD_SECONDS * 1000);
   };
 
   const stopRecording = () => {
     setRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
+    if (maxRecordRef.current) { clearTimeout(maxRecordRef.current); maxRecordRef.current = null; }
     if (mediaRecorderRef.current?.state === 'recording') {
       // Request final data chunk before stopping
       mediaRecorderRef.current.requestData();
