@@ -790,24 +790,24 @@ function SessionCard({ session: s, patient, practitionerId, t, i18n }) {
               </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {s.frontVideoUrl && (
-                  <div style={{ flex: 1, minWidth: '140px' }}>
+                  <div style={{ flex: 1, minWidth: '250px' }}>
                     <div style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                       {t('analysis.frontVideo')}
                     </div>
                     <video src={s.frontVideoUrl} controls playsInline preload="metadata" style={{
                       width: '100%', borderRadius: '8px', background: '#000',
-                      maxHeight: '200px',
+                      maxHeight: '480px',
                     }} />
                   </div>
                 )}
                 {s.sideVideoUrl && (
-                  <div style={{ flex: 1, minWidth: '140px' }}>
+                  <div style={{ flex: 1, minWidth: '250px' }}>
                     <div style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                       {t('analysis.sideVideo')}
                     </div>
                     <video src={s.sideVideoUrl} controls playsInline preload="metadata" style={{
                       width: '100%', borderRadius: '8px', background: '#000',
-                      maxHeight: '200px',
+                      maxHeight: '480px',
                     }} />
                   </div>
                 )}
