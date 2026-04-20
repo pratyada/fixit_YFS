@@ -32,11 +32,28 @@ export default function PoseChecker() {
   const { t: tKiosk } = useTranslation('kiosk');
   const { user } = useAuth();
 
+  // Check for pre-selected exercise from URL (?exercise=fixit-squats)
+  const urlExerciseId = new URLSearchParams(window.location.hash.split('?')[1] || '').get('exercise');
+  const preSelectedExercise = urlExerciseId ? FIXIT_EXERCISES.find(e => e.id === urlExerciseId) : null;
+
   // Flow: 'select' → 'camera' → 'report'
-  const [step, setStep] = useState('select');
-  const [selectedExercise, setSelectedExercise] = useState(null);
+  const [step, setStep] = useState(preSelectedExercise ? 'camera' : 'select');
+  const [selectedExercise, setSelectedExercise] = useState(preSelectedExercise);
   const [search, setSearch] = useState('');
   const [filterBody, setFilterBody] = useState('All');
+
+  // Auto-start camera if pre-selected
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (preSelectedExercise && !autoStarted.current) {
+      autoStarted.current = true;
+      setCurrentAngle(0);
+      setAngleRecorded({ front: false, side: false });
+      recordedFramesRef.current = { front: [], side: [] };
+      videoChunksRef.current = { front: [], side: [] };
+      setTimeout(() => startCamera(), 200);
+    }
+  }, []);
 
   // Camera state
   const videoRef = useRef(null);

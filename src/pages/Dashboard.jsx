@@ -107,66 +107,19 @@ export default function Dashboard() {
         />
       )}
 
-      {/* ── Quick Actions ── */}
-      <div>
-        <h3 style={{ marginBottom: '12px' }}>{t('quickActions.title')}</h3>
+      {/* No exercises assigned — show empty state */}
+      {assignedExercises.length === 0 && (
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap: '12px',
+          background: '#FFF8E1', borderRadius: '16px', padding: '24px',
+          border: '1px solid #FFE082', textAlign: 'center',
         }}>
-          {quickActions.map(({ to, icon: Icon, label, desc, color, bg }) => (
-            <Link
-              key={to}
-              to={to}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                background: 'white',
-                borderRadius: '14px',
-                padding: '18px 16px',
-                border: '1px solid var(--color-border)',
-                textDecoration: 'none',
-                transition: 'all 0.25s ease',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-              className="group"
-              onMouseEnter={e => {
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.07)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.borderColor = color;
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.borderColor = 'var(--color-border)';
-              }}
-            >
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '12px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: bg, color: color, marginBottom: '12px',
-              }}>
-                <Icon size={19} />
-              </div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-secondary)', marginBottom: '2px' }}>
-                {label}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text)', lineHeight: '1.4' }}>
-                {desc}
-              </div>
-              <ChevronRight
-                size={14}
-                style={{
-                  position: 'absolute', bottom: '16px', right: '14px',
-                  color: 'var(--color-border)', transition: 'color 0.25s',
-                }}
-              />
-            </Link>
-          ))}
+          <Stethoscope size={32} style={{ color: '#F57F17', margin: '0 auto 8px', display: 'block' }} />
+          <h4 style={{ marginBottom: '4px' }}>No exercises assigned yet</h4>
+          <p style={{ fontSize: '0.82rem', color: 'var(--color-text)' }}>
+            Your practitioner will assign exercises for you. Check back soon.
+          </p>
         </div>
-      </div>
+      )}
 
       {/* ── Pain & Activity Row ── */}
       <div style={{
@@ -287,63 +240,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Features Showcase ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '12px',
-      }}>
-        <FeatureCard
-          to="/pose"
-          icon={<Camera size={20} />}
-          title={t('features.aiPoseAnalysis')}
-          desc={t('features.aiPoseAnalysisDesc')}
-          gradient="linear-gradient(135deg, #EDF3F1, #D8E8E3)"
-          iconColor="#708E86"
-        />
-        <FeatureCard
-          to="/progress"
-          icon={<TrendingUp size={20} />}
-          title={t('features.trackProgress')}
-          desc={t('features.trackProgressDesc')}
-          gradient="linear-gradient(135deg, #F5F0EB, #E8DFD4)"
-          iconColor="#8B7355"
-        />
-        <FeatureCard
-          to="/reports"
-          icon={<Sparkles size={20} />}
-          title={t('features.uploadReports')}
-          desc={t('features.uploadReportsDesc')}
-          gradient="linear-gradient(135deg, #EEF1F6, #DDE3ED)"
-          iconColor="#6B7FA3"
-        />
-      </div>
-
-      {/* ── Motivational ── */}
-      <div style={{
-        background: 'white',
-        borderRadius: '14px',
-        border: '1px solid var(--color-border)',
-        padding: '24px',
-        textAlign: 'center',
-      }}>
-        <p style={{
-          fontFamily: "'Tenor Sans', serif",
-          color: 'var(--color-secondary)',
-          fontSize: '1.05rem',
-          fontStyle: 'italic',
-          lineHeight: 1.5,
-        }}>
-          {t('quote.text')}
-        </p>
-        <p style={{
-          fontSize: '0.7rem', marginTop: '8px',
-          color: 'var(--color-accent)', fontWeight: 500,
-          textTransform: 'uppercase', letterSpacing: '1.5px',
-        }}>
-          {t('quote.author')}
-        </p>
-      </div>
     </div>
   );
 }
@@ -382,39 +278,26 @@ function AssignedExercisesSection({ assignedExercises, completedToday }) {
   const pct = totalAssigned ? Math.round((doneCount / totalAssigned) * 100) : 0;
 
   return (
-    <div style={{
-      background: 'white',
-      borderRadius: '16px',
-      border: '1px solid var(--color-border)',
-      padding: '20px',
-    }}>
+    <div>
+      {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '4px', flexWrap: 'wrap', gap: '8px',
+        marginBottom: '12px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '32px', height: '32px', borderRadius: '10px',
-            background: '#EDF3F1', color: '#708E86',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Stethoscope size={16} />
-          </div>
-          <div>
-            <h3 style={{ marginBottom: '2px' }}>{t('assigned.title')}</h3>
-            <div style={{ fontSize: '0.7rem', color: 'var(--color-text)' }}>
-              {t('assigned.completedToday', { done: doneCount, total: totalAssigned })}
-            </div>
+        <div>
+          <h2 style={{ marginBottom: '2px' }}>Your Exercises</h2>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text)' }}>
+            {doneCount} of {totalAssigned} done today
           </div>
         </div>
         {allDone && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '5px',
             background: '#E8F5E9', color: '#2E7D32',
-            padding: '5px 12px', borderRadius: '50px',
-            fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
+            padding: '6px 14px', borderRadius: '50px',
+            fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
           }}>
-            <CheckCircle2 size={11} /> {t('assigned.allDone')}
+            <CheckCircle2 size={12} /> All Done
           </div>
         )}
       </div>
@@ -422,7 +305,7 @@ function AssignedExercisesSection({ assignedExercises, completedToday }) {
       {/* Progress bar */}
       <div style={{
         height: '6px', background: 'var(--color-bg-alt)',
-        borderRadius: '3px', overflow: 'hidden', margin: '12px 0 14px',
+        borderRadius: '3px', overflow: 'hidden', marginBottom: '16px',
       }}>
         <div style={{
           height: '100%', width: `${pct}%`,
@@ -431,66 +314,88 @@ function AssignedExercisesSection({ assignedExercises, completedToday }) {
         }} />
       </div>
 
-      {/* Exercise list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {/* Exercise cards with direct actions */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {assignedExercises.map(a => {
           const ex = findExercise(a.exerciseId);
           if (!ex) return null;
           const done = completedToday.has(a.exerciseId);
           return (
-            <Link
+            <div
               key={a.id}
-              to={`/exercises/${a.exerciseId}`}
               style={{
-                display: 'flex', alignItems: 'center', gap: '12px',
-                padding: '12px 14px', borderRadius: '10px',
-                background: done ? '#F0F9F0' : 'var(--color-bg-alt)',
-                border: `1px solid ${done ? '#C8E6C9' : 'transparent'}`,
-                textDecoration: 'none',
+                background: done ? '#F0F9F0' : 'white',
+                borderRadius: '16px',
+                border: `1px solid ${done ? '#C8E6C9' : 'var(--color-border)'}`,
+                padding: '16px',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateX(3px)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'none';
-              }}
             >
-              {done ? (
-                <CheckCircle2 size={20} style={{ color: '#4CAF50', flexShrink: 0 }} />
-              ) : (
-                <Play size={20} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: '0.88rem',
-                  fontWeight: 600,
-                  color: done ? '#388E3C' : 'var(--color-secondary)',
-                  textDecoration: done ? 'line-through' : 'none',
-                }}>
-                  {ex.name}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--color-text)' }}>
-                  {a.sets} × {a.reps}
-                  {a.holdSeconds ? ` × ${a.holdSeconds}s hold` : ''} • {a.frequency}
-                </div>
-                {a.notes && (
-                  <div style={{ fontSize: '0.68rem', color: 'var(--color-accent)', fontStyle: 'italic', marginTop: '3px' }}>
-                    💬 {a.notes}
-                  </div>
+              {/* Exercise info */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+                {done ? (
+                  <CheckCircle2 size={22} style={{ color: '#4CAF50', flexShrink: 0, marginTop: '2px' }} />
+                ) : (
+                  <Dumbbell size={22} style={{ color: 'var(--color-accent)', flexShrink: 0, marginTop: '2px' }} />
                 )}
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontSize: '1rem', fontWeight: 700,
+                    color: done ? '#388E3C' : 'var(--color-secondary)',
+                  }}>
+                    {ex.name}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text)', marginTop: '2px' }}>
+                    {a.sets} × {a.reps}{a.holdSeconds ? ` × ${a.holdSeconds}s hold` : ''} • {a.frequency}
+                  </div>
+                  {a.notes && (
+                    <div style={{ fontSize: '0.7rem', color: 'var(--color-accent)', fontStyle: 'italic', marginTop: '4px' }}>
+                      {a.notes}
+                    </div>
+                  )}
+                </div>
+                <span style={{
+                  fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px',
+                  padding: '3px 8px', borderRadius: '50px',
+                  background: ex.difficulty === 'Beginner' ? '#E8F5E9' : ex.difficulty === 'Intermediate' ? '#FFF8E1' : '#FFEBEE',
+                  color: ex.difficulty === 'Beginner' ? '#2E7D32' : ex.difficulty === 'Intermediate' ? '#F57F17' : '#C62828',
+                  flexShrink: 0,
+                }}>
+                  {ex.difficulty}
+                </span>
               </div>
-              <div style={{
-                fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px',
-                padding: '3px 8px', borderRadius: '50px',
-                background: ex.difficulty === 'Beginner' ? '#E8F5E9' : ex.difficulty === 'Intermediate' ? '#FFF8E1' : '#FFEBEE',
-                color: ex.difficulty === 'Beginner' ? '#2E7D32' : ex.difficulty === 'Intermediate' ? '#F57F17' : '#C62828',
-                flexShrink: 0,
-              }}>
-                {ex.difficulty}
+
+              {/* Direct action buttons */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Link
+                  to={`/exercises/${a.exerciseId}`}
+                  style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    padding: '11px 14px', borderRadius: '10px',
+                    background: done ? '#C8E6C9' : 'var(--color-secondary)',
+                    color: done ? '#2E7D32' : 'white',
+                    textDecoration: 'none',
+                    fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
+                  }}
+                >
+                  <Play size={14} /> {done ? 'Done' : 'Start Reps'}
+                </Link>
+                <Link
+                  to={`/pose?exercise=${a.exerciseId}`}
+                  style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    padding: '11px 14px', borderRadius: '10px',
+                    background: '#EEF1F6',
+                    color: '#6B7FA3',
+                    textDecoration: 'none',
+                    fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
+                    border: '1px solid #DDE3ED',
+                  }}
+                >
+                  <Camera size={14} /> Pose Check
+                </Link>
               </div>
-              <ChevronRight size={16} color="var(--color-border)" style={{ flexShrink: 0 }} />
-            </Link>
+            </div>
           );
         })}
       </div>

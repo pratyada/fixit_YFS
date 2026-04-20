@@ -56,8 +56,6 @@ function AppShell() {
 // ─── Tab configs per role ───
 const PATIENT_TABS = [
   { to: '/', icon: Home, labelKey: 'nav:tabs.home' },
-  { to: '/exercises', icon: Dumbbell, labelKey: 'nav:tabs.exercises' },
-  { to: '/pose', icon: Camera, labelKey: 'nav:tabs.pose' },
   { to: '/progress', icon: BarChart3, labelKey: 'nav:tabs.progress' },
   { to: '/pain', icon: Heart, labelKey: 'nav:tabs.pain' },
 ];
