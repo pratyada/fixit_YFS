@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw, Camera, TrendingUp, Award, Calendar, Brain, Download, Star } from 'lucide-react';
-import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner, getKioskSessions, getAllFeedback } from '../lib/firestore';
+import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner, setPatientPractitioners, getKioskSessions, getAllFeedback } from '../lib/firestore';
 
 const ROLES = ['admin', 'practitioner', 'patient'];
 const ROLE_COLORS = {
@@ -75,6 +75,16 @@ export default function AdminDashboard() {
   const handleAssignPractitioner = async (patientId, practitionerId) => {
     await assignPatientToPractitioner(patientId, practitionerId);
     setUsers(prev => prev.map(u => u.id === patientId ? { ...u, practitionerId } : u));
+  };
+
+  const handleTogglePractitioner = async (patientId, practId) => {
+    const user = users.find(u => u.id === patientId);
+    const current = user?.practitionerIds || (user?.practitionerId ? [user.practitionerId] : []);
+    const newIds = current.includes(practId)
+      ? current.filter(id => id !== practId)
+      : [...current, practId];
+    await setPatientPractitioners(patientId, newIds);
+    setUsers(prev => prev.map(u => u.id === patientId ? { ...u, practitionerIds: newIds, practitionerId: newIds[0] || null } : u));
   };
 
   const getUserRoles = (u) => (u?.roles && Array.isArray(u.roles) && u.roles.length > 0) ? u.roles : [u?.role || 'patient'];
@@ -621,22 +631,50 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                    {/* Assign to practitioner (for patients) */}
-                    {u.role === 'patient' && practitioners.length > 0 && (
+                    {/* Assign practitioners (multi-select for patients) */}
+                    {roles.includes('patient') && practitioners.length > 0 && (
                       <div>
                         <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', display: 'block', marginBottom: '6px' }}>
-                          {t('assignedPractitioner')}
+                          Practitioners (select multiple)
                         </label>
-                        <select
-                          value={u.practitionerId || ''}
-                          onChange={e => handleAssignPractitioner(u.id, e.target.value)}
-                          style={{ fontSize: '0.82rem' }}
-                        >
-                          <option value="">{t('unassigned')}</option>
-                          {practitioners.map(p => (
-                            <option key={p.id} value={p.id}>{p.name} ({p.email})</option>
-                          ))}
-                        </select>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {practitioners.map(p => {
+                            const assignedIds = u.practitionerIds || (u.practitionerId ? [u.practitionerId] : []);
+                            const isAssigned = assignedIds.includes(p.id);
+                            return (
+                              <button
+                                key={p.id}
+                                onClick={() => handleTogglePractitioner(u.id, p.id)}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '8px',
+                                  padding: '8px 12px', borderRadius: '8px',
+                                  border: `1.5px solid ${isAssigned ? '#2E7D32' : 'var(--color-border)'}`,
+                                  background: isAssigned ? '#E8F5E9' : 'white',
+                                  cursor: 'pointer', textAlign: 'left',
+                                  transition: 'all 0.2s',
+                                }}
+                              >
+                                <div style={{
+                                  width: '18px', height: '18px', borderRadius: '4px',
+                                  border: `2px solid ${isAssigned ? '#2E7D32' : '#ccc'}`,
+                                  background: isAssigned ? '#2E7D32' : 'white',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  color: 'white', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0,
+                                }}>
+                                  {isAssigned && '✓'}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: isAssigned ? '#2E7D32' : 'var(--color-secondary)' }}>
+                                    {p.name || p.email}
+                                  </div>
+                                  <div style={{ fontSize: '0.62rem', color: 'var(--color-text)' }}>
+                                    {p.email}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
 
@@ -644,7 +682,13 @@ export default function AdminDashboard() {
                     <div style={{ fontSize: '0.7rem', color: 'var(--color-text)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                       <div><strong>{t('uid')}</strong> {u.id}</div>
                       {u.condition && <div><strong>{t('condition')}</strong> {u.condition}</div>}
-                      {assignedPract && <div><strong>{t('practitioner')}</strong> {assignedPract.name}</div>}
+                      {(() => {
+                        const assignedIds = u.practitionerIds || (u.practitionerId ? [u.practitionerId] : []);
+                        const assignedNames = assignedIds.map(id => practitioners.find(p => p.id === id)?.name).filter(Boolean);
+                        return assignedNames.length > 0 && (
+                          <div><strong>Practitioners:</strong> {assignedNames.join(', ')}</div>
+                        );
+                      })()}
                       {u.createdAt && <div><strong>{t('joined')}</strong> {new Date(u.createdAt).toLocaleDateString(i18n.language)}</div>}
                     </div>
                   </div>

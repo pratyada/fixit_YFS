@@ -209,8 +209,17 @@ export async function getKioskSessions(limitCount = 100) {
 }
 
 export async function assignPatientToPractitioner(patientId, practitionerId) {
+  // Backward compat: also set single practitionerId
   await updateDoc(doc(db, 'users', patientId), {
     practitionerId,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function setPatientPractitioners(patientId, practitionerIds) {
+  await updateDoc(doc(db, 'users', patientId), {
+    practitionerIds,
+    practitionerId: practitionerIds[0] || null, // backward compat
     updatedAt: serverTimestamp(),
   });
 }
@@ -218,9 +227,18 @@ export async function assignPatientToPractitioner(patientId, practitionerId) {
 // ─── Practitioner: get their patients ───
 
 export async function getPatientsByPractitioner(practitionerId) {
-  return queryDocs(
-    query(collection(db, 'users'), where('practitionerId', '==', practitionerId), where('role', '==', 'patient'))
-  );
+  // Query both old single field and new array field
+  const [oldResults, newResults] = await Promise.all([
+    queryDocs(query(collection(db, 'users'), where('practitionerId', '==', practitionerId))),
+    queryDocs(query(collection(db, 'users'), where('practitionerIds', 'array-contains', practitionerId))),
+  ]);
+  // Merge and deduplicate
+  const map = {};
+  [...oldResults, ...newResults].forEach(u => { map[u.id] = u; });
+  return Object.values(map).filter(u => {
+    const roles = u.roles || [u.role];
+    return roles.includes('patient');
+  });
 }
 
 // ─── Practitioner: get all sessions for a patient ───
