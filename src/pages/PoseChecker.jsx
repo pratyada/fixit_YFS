@@ -639,8 +639,14 @@ export default function PoseChecker() {
                   padding: '14px 28px', borderRadius: '50px',
                   display: 'flex', alignItems: 'center', gap: '6px',
                   fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
+                  flexDirection: 'column',
                 }}>
-                  <Check size={16} /> {tKiosk('camera.analyzeForm')}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Check size={16} /> Submit & Analyze
+                  </div>
+                  <div style={{ fontSize: '0.55rem', fontWeight: 400, opacity: 0.8, letterSpacing: '0.5px', textTransform: 'none' }}>
+                    Score + send to practitioner
+                  </div>
                 </button>
               ) : null}
             </>
@@ -826,28 +832,15 @@ export default function PoseChecker() {
           </div>
         </div>
 
-        {/* Submitted to practitioner notice */}
+        {/* Practitioner review notice — small inline */}
         <div style={{
-          background: '#EDF3F1', borderRadius: '16px', padding: '20px',
+          background: '#EDF3F1', borderRadius: '12px', padding: '12px 16px',
           border: '1px solid #D8E8E3',
-          display: 'flex', alignItems: 'flex-start', gap: '14px',
+          fontSize: '0.78rem', color: '#4E4E53',
+          display: 'flex', alignItems: 'center', gap: '8px',
         }}>
-          <div style={{
-            width: '40px', height: '40px', borderRadius: '12px',
-            background: '#708E86', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            <CheckCircle2 size={20} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '4px' }}>
-              Submitted to Your Practitioner
-            </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--color-text)', lineHeight: 1.5, margin: 0 }}>
-              Your session video and AI score have been sent to your practitioner for review. They will verify the analysis and correct any inaccuracies — helping improve your feedback over time.
-            </p>
-          </div>
+          <CheckCircle2 size={16} color="#4CAF50" style={{ flexShrink: 0 }} />
+          Submitted to your practitioner for review
         </div>
 
         {/* Actions */}
