@@ -642,6 +642,16 @@ function SessionCard({ session: s, patient, practitionerId, t, i18n }) {
             {submitted && ` • ${t('feedback.reviewed')}`}
           </div>
         </div>
+        {(s.frontVideoUrl || s.sideVideoUrl) && (
+          <div title="Has video" style={{
+            width: '24px', height: '24px', borderRadius: '6px',
+            background: '#EDE7F6', color: '#5E35B1',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <Video size={12} />
+          </div>
+        )}
         {submitted && <CheckCircle2 size={16} color="#4CAF50" />}
         {expanded ? <ChevronUp size={14} color="var(--color-text)" /> : <ChevronDown size={14} color="var(--color-text)" />}
       </button>
@@ -763,6 +773,16 @@ function SessionCard({ session: s, patient, practitionerId, t, i18n }) {
           )}
 
           {/* Inline Video Players */}
+          {!(s.frontVideoUrl || s.sideVideoUrl) && (
+            <div style={{
+              background: '#FFF8E1', borderRadius: '10px', padding: '12px 14px',
+              border: '1px solid #FFE082', fontSize: '0.78rem', color: '#F57F17',
+              display: 'flex', alignItems: 'center', gap: '8px',
+            }}>
+              <Video size={14} />
+              No video recorded for this session. Ask the patient to use the Pose Checker — new sessions will include video.
+            </div>
+          )}
           {(s.frontVideoUrl || s.sideVideoUrl) && (
             <div>
               <div style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', marginBottom: '8px' }}>

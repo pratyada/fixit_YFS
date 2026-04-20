@@ -117,9 +117,10 @@ export default function PoseChecker() {
     // Start video recording for practitioner review
     if (streamRef.current) {
       try {
+        const captureAngle = angleName; // capture current angle by value
         const mr = new MediaRecorder(streamRef.current, { mimeType: 'video/webm' });
-        mr.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current[angleName].push(e.data); };
-        mr.start();
+        mr.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current[captureAngle].push(e.data); };
+        mr.start(1000); // get chunks every 1s so data is available before stop
         mediaRecorderRef.current = mr;
       } catch (e) { /* MediaRecorder not supported — skip video capture */ }
     }
@@ -155,8 +156,10 @@ export default function PoseChecker() {
     const allFrames = [...(recordedFramesRef.current.front || []), ...(recordedFramesRef.current.side || [])];
     const analysis = analyzeMovement(allFrames);
     setReport(analysis);
-    stopCamera();
     setStep('report');
+    // Small delay to let last MediaRecorder chunks flush
+    await new Promise(r => setTimeout(r, 500));
+    stopCamera();
 
     // Save to Firestore so practitioner can see it
     if (user && selectedExercise && analysis && !analysis.error) {
