@@ -8,6 +8,7 @@ import { db } from './firebase';
 export const DEFAULT_CLINIC = {
   id: 'fixit',
   name: 'FIXIT',
+  productName: 'FIXIT',
   slug: 'fixit',
   domain: 'localhost',
   logo: 'https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png',
@@ -23,6 +24,17 @@ export const DEFAULT_CLINIC = {
   location: { city: 'Toronto', region: 'Ontario', country: 'CA' },
   analyticsId: '',
   adminEmails: ['musee.initialize@gmail.com'],
+  // Customizable role labels per clinic
+  roleLabels: {
+    admin: 'Admin',
+    practitioner: 'Practitioner',
+    patient: 'Patient',
+  },
+  roleDescriptions: {
+    admin: 'Manage users, roles & platform settings',
+    practitioner: 'Manage clients & assign exercises',
+    patient: 'Track exercises & recovery progress',
+  },
 };
 
 // Platform super admin (can manage all clinics)

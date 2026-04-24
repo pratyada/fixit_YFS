@@ -89,7 +89,9 @@ function MobileLayout() {
 
   const TABS = isAdmin ? ADMIN_TABS : isPractitioner ? PRACTITIONER_TABS : PATIENT_TABS;
 
-  const roleLabel = isAdmin ? t('roles.admin.label') : isPractitioner ? t('roles.practitioner.label') : (session?.condition || t('roles.patient.label'));
+  // Use clinic's custom role labels if available, otherwise fall back to i18n
+  const getRoleLabel = (r) => clinic.roleLabels?.[r] || t(`roles.${r}.label`);
+  const roleLabel = getRoleLabel(role);
   const roleMeta = ROLE_META[role] || ROLE_META.patient;
 
   // Hide tabs on detail/sub-pages
@@ -135,7 +137,7 @@ function MobileLayout() {
           />
           <div style={{ lineHeight: 1.1 }}>
             <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '0.92rem', color: 'var(--color-secondary)', letterSpacing: '-0.3px' }}>
-              {t('auth:brandName')}
+              {clinic.productName || t('auth:brandName')}
             </div>
           </div>
         </div>
@@ -309,7 +311,7 @@ function RolePickerScreen() {
           fontFamily: "'Tenor Sans', serif", fontSize: '1.3rem',
           color: 'var(--color-secondary)', marginBottom: '4px',
         }}>
-          {t('auth:brandName')}
+          {clinic.productName || t('auth:brandName')}
         </div>
         <div style={{ fontSize: '0.85rem', color: 'var(--color-text)', marginBottom: '6px' }}>
           {t('rolePicker.welcome', { name: session?.name || 'User' })}
@@ -348,10 +350,10 @@ function RolePickerScreen() {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.95rem', fontWeight: 700, color: meta.color }}>
-                    {t(meta.labelKey)}
+                    {clinic.roleLabels?.[r] || t(meta.labelKey)}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--color-text)', marginTop: '2px' }}>
-                    {t(meta.descKey)}
+                    {clinic.roleDescriptions?.[r] || t(meta.descKey)}
                   </div>
                 </div>
               </button>

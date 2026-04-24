@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw, Camera, TrendingUp, Award, Calendar, Brain, Download, Star } from 'lucide-react';
+import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw, Camera, TrendingUp, Award, Calendar, Brain, Download, Star, Building2, Plus, Save, Palette } from 'lucide-react';
 import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner, setPatientPractitioners, getKioskSessions, getAllFeedback } from '../lib/firestore';
+import { getAllClinics, createClinic, updateClinic, SUPER_ADMIN_EMAIL } from '../lib/clinicConfig';
+import { useAuth } from '../contexts/AuthContext';
 
 const ROLES = ['admin', 'practitioner', 'patient'];
 const ROLE_COLORS = {
@@ -12,7 +14,9 @@ const ROLE_COLORS = {
 
 export default function AdminDashboard() {
   const { t, i18n } = useTranslation('admin');
-  const [tab, setTab] = useState('users'); // 'users' | 'kiosk' | 'aiTraining'
+  const { session } = useAuth();
+  const isSuperAdmin = session?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+  const [tab, setTab] = useState('users'); // 'users' | 'kiosk' | 'aiTraining' | 'clinics'
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -26,6 +30,12 @@ export default function AdminDashboard() {
   // AI Training state
   const [feedbackData, setFeedbackData] = useState([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+
+  // Clinics state (super admin only)
+  const [clinics, setClinics] = useState([]);
+  const [clinicsLoading, setClinicsLoading] = useState(false);
+  const [editingClinic, setEditingClinic] = useState(null); // null or clinic object
+  const [clinicForm, setClinicForm] = useState({});
 
   const loadUsers = async () => {
     setLoading(true);
@@ -48,9 +58,17 @@ export default function AdminDashboard() {
     setFeedbackLoading(false);
   };
 
+  const loadClinics = async () => {
+    setClinicsLoading(true);
+    const data = await getAllClinics();
+    setClinics(data);
+    setClinicsLoading(false);
+  };
+
   useEffect(() => { loadUsers(); }, []);
   useEffect(() => { if (tab === 'kiosk' && kioskSessions.length === 0) loadKiosk(); }, [tab]);
   useEffect(() => { if (tab === 'aiTraining' && feedbackData.length === 0) loadFeedback(); }, [tab]);
+  useEffect(() => { if (tab === 'clinics' && clinics.length === 0) loadClinics(); }, [tab]);
 
   const handleRoleChange = async (uid, newRole) => {
     await updateUserRole(uid, newRole);
@@ -171,9 +189,26 @@ export default function AdminDashboard() {
           {t('adminPanel')}
         </div>
         <h2 style={{ color: 'white', marginBottom: '16px' }}>
-          {tab === 'users' ? t('userManagement') : tab === 'kiosk' ? t('clinicKioskLog') : 'AI Training Data'}
+          {tab === 'users' ? t('userManagement') : tab === 'kiosk' ? t('clinicKioskLog') : tab === 'clinics' ? 'Manage Clinics' : 'AI Training Data'}
         </h2>
-        {tab === 'aiTraining' ? (
+        {tab === 'clinics' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            {[
+              { label: 'Clinics', value: clinics.length, icon: Building2 },
+              { label: 'Total Users', value: users.length, icon: Users },
+              { label: 'Platform', value: 'FIXIT', icon: Shield },
+            ].map(s => (
+              <div key={s.label} style={{
+                background: 'rgba(255,255,255,0.12)', borderRadius: '12px',
+                padding: '12px 8px', textAlign: 'center',
+              }}>
+                <s.icon size={14} style={{ margin: '0 auto 4px', display: 'block', opacity: 0.6 }} />
+                <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{s.value}</div>
+                <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.5 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        ) : tab === 'aiTraining' ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
             {[
               { label: 'Feedback', value: aiStats.total, icon: Star },
@@ -236,6 +271,7 @@ export default function AdminDashboard() {
           { key: 'users', label: t('tabs.users'), icon: Users },
           { key: 'kiosk', label: t('tabs.kioskLog'), icon: Camera },
           { key: 'aiTraining', label: 'AI Training', icon: Brain },
+          ...(isSuperAdmin ? [{ key: 'clinics', label: 'Clinics', icon: Building2 }] : []),
         ].map(tb => (
           <button
             key={tb.key}
@@ -494,6 +530,293 @@ export default function AdminDashboard() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Clinics Management (Super Admin) ── */}
+      {tab === 'clinics' && isSuperAdmin && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--color-text)' }}>
+              {clinics.length} clinic{clinics.length !== 1 ? 's' : ''} registered
+            </div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button onClick={() => {
+                setEditingClinic('new');
+                setClinicForm({
+                  name: '', productName: '', slug: '', domain: '',
+                  logo: '', favicon: '', tagline: '', contactEmail: '',
+                  analyticsId: '',
+                  colors: { primary: '#B0C4BB', secondary: '#4E4E53', accent: '#708E86' },
+                  location: { city: 'Toronto', region: 'Ontario', country: 'CA' },
+                  adminEmails: [],
+                  roleLabels: { admin: 'Admin', practitioner: 'Practitioner', patient: 'Patient' },
+                  roleDescriptions: { admin: 'Manage users & settings', practitioner: 'Manage clients & assign exercises', patient: 'Track exercises & progress' },
+                });
+              }} style={{
+                background: '#5E35B1', color: 'white', border: 'none',
+                borderRadius: '10px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px',
+                fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+              }}>
+                <Plus size={13} /> New Clinic
+              </button>
+              <button onClick={loadClinics} style={{
+                background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+                borderRadius: '10px', width: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              }}>
+                <RefreshCw size={13} color="var(--color-text)" />
+              </button>
+            </div>
+          </div>
+
+          {/* Clinic Form (create/edit) */}
+          {editingClinic && (
+            <div style={{
+              background: 'white', borderRadius: '16px',
+              border: '2px solid #5E35B1', padding: '20px',
+              display: 'flex', flexDirection: 'column', gap: '14px',
+            }}>
+              <h4 style={{ margin: 0, color: '#5E35B1' }}>
+                {editingClinic === 'new' ? 'Create New Clinic' : `Edit: ${editingClinic.name}`}
+              </h4>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    Clinic Name *
+                  </label>
+                  <input value={clinicForm.name || ''} onChange={e => setClinicForm(p => ({ ...p, name: e.target.value }))} placeholder="Fit Factory" style={{ fontSize: '0.82rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    Product Name *
+                  </label>
+                  <input value={clinicForm.productName || ''} onChange={e => setClinicForm(p => ({ ...p, productName: e.target.value }))} placeholder="Brand Fitness" style={{ fontSize: '0.82rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    Slug (URL identifier) *
+                  </label>
+                  <input value={clinicForm.slug || ''} onChange={e => setClinicForm(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))} placeholder="fitfactory" style={{ fontSize: '0.82rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    Domain *
+                  </label>
+                  <input value={clinicForm.domain || ''} onChange={e => setClinicForm(p => ({ ...p, domain: e.target.value }))} placeholder="brandfitness.fitfactory.com" style={{ fontSize: '0.82rem' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    Logo URL
+                  </label>
+                  <input value={clinicForm.logo || ''} onChange={e => setClinicForm(p => ({ ...p, logo: e.target.value }))} placeholder="https://..." style={{ fontSize: '0.82rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    Tagline
+                  </label>
+                  <input value={clinicForm.tagline || ''} onChange={e => setClinicForm(p => ({ ...p, tagline: e.target.value }))} placeholder="Train Smarter with AI" style={{ fontSize: '0.82rem' }} />
+                </div>
+              </div>
+
+              {/* Colors */}
+              <div>
+                <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '6px' }}>
+                  <Palette size={12} style={{ marginRight: '4px' }} /> Brand Colors
+                </label>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  {['primary', 'secondary', 'accent'].map(key => (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input type="color" value={clinicForm.colors?.[key] || '#000000'}
+                        onChange={e => setClinicForm(p => ({ ...p, colors: { ...p.colors, [key]: e.target.value } }))}
+                        style={{ width: '32px', height: '32px', border: 'none', cursor: 'pointer', borderRadius: '6px', padding: 0 }}
+                      />
+                      <span style={{ fontSize: '0.65rem', fontWeight: 600, textTransform: 'capitalize', color: 'var(--color-text)' }}>{key}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Role Labels */}
+              <div>
+                <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '6px' }}>
+                  Custom Role Labels
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  {['admin', 'practitioner', 'patient'].map(role => (
+                    <div key={role}>
+                      <div style={{ fontSize: '0.55rem', color: 'var(--color-text)', marginBottom: '2px', textTransform: 'capitalize' }}>{role} label:</div>
+                      <input value={clinicForm.roleLabels?.[role] || ''} onChange={e => setClinicForm(p => ({
+                        ...p, roleLabels: { ...p.roleLabels, [role]: e.target.value }
+                      }))} placeholder={role === 'practitioner' ? 'Trainer' : role === 'patient' ? 'Trainee' : 'Admin'}
+                        style={{ fontSize: '0.78rem' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    Contact Email
+                  </label>
+                  <input value={clinicForm.contactEmail || ''} onChange={e => setClinicForm(p => ({ ...p, contactEmail: e.target.value }))} placeholder="info@clinic.com" style={{ fontSize: '0.82rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    Admin Emails (comma-separated)
+                  </label>
+                  <input value={(clinicForm.adminEmails || []).join(', ')} onChange={e => setClinicForm(p => ({
+                    ...p, adminEmails: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                  }))} placeholder="owner@clinic.com, manager@clinic.com" style={{ fontSize: '0.82rem' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    Google Analytics ID
+                  </label>
+                  <input value={clinicForm.analyticsId || ''} onChange={e => setClinicForm(p => ({ ...p, analyticsId: e.target.value }))} placeholder="G-XXXXXXXXXX" style={{ fontSize: '0.82rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>
+                    City
+                  </label>
+                  <input value={clinicForm.location?.city || ''} onChange={e => setClinicForm(p => ({
+                    ...p, location: { ...p.location, city: e.target.value }
+                  }))} placeholder="Toronto" style={{ fontSize: '0.82rem' }} />
+                </div>
+              </div>
+
+              {/* Preview */}
+              {clinicForm.name && (
+                <div style={{
+                  background: 'var(--color-bg-alt)', borderRadius: '12px', padding: '14px',
+                  border: '1px solid var(--color-border)',
+                }}>
+                  <div style={{ fontSize: '0.55rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text)', marginBottom: '8px' }}>Preview</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {clinicForm.logo && <img src={clinicForm.logo} alt="" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />}
+                    <div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: clinicForm.colors?.secondary || '#333' }}>
+                        {clinicForm.productName || clinicForm.name}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: clinicForm.colors?.accent || '#666' }}>
+                        {clinicForm.tagline || `by ${clinicForm.name}`}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                    {['primary', 'secondary', 'accent'].map(k => (
+                      <div key={k} style={{
+                        width: '40px', height: '20px', borderRadius: '4px',
+                        background: clinicForm.colors?.[k] || '#ccc',
+                      }} />
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--color-text)', marginTop: '6px' }}>
+                    Roles: {clinicForm.roleLabels?.admin || 'Admin'} / {clinicForm.roleLabels?.practitioner || 'Practitioner'} / {clinicForm.roleLabels?.patient || 'Patient'}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={async () => {
+                  if (!clinicForm.slug || !clinicForm.name) return;
+                  try {
+                    if (editingClinic === 'new') {
+                      await createClinic(clinicForm.slug, clinicForm);
+                    } else {
+                      await updateClinic(editingClinic.slug || editingClinic.id, clinicForm);
+                    }
+                    setEditingClinic(null);
+                    loadClinics();
+                  } catch (e) { console.error('Failed to save clinic:', e); }
+                }} style={{
+                  flex: 1, padding: '10px', borderRadius: '10px',
+                  background: '#5E35B1', color: 'white', border: 'none',
+                  fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer',
+                }}>
+                  <Save size={13} /> {editingClinic === 'new' ? 'Create Clinic' : 'Save Changes'}
+                </button>
+                <button onClick={() => setEditingClinic(null)} style={{
+                  padding: '10px 20px', borderRadius: '10px',
+                  background: 'white', color: 'var(--color-text)',
+                  border: '1px solid var(--color-border)',
+                  fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Clinic List */}
+          {clinicsLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+              Loading clinics...
+            </div>
+          ) : clinics.length === 0 && !editingClinic ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+              <Building2 size={32} style={{ margin: '0 auto 8px', display: 'block', color: 'var(--color-border)' }} />
+              No clinics configured. Create your first clinic to get started.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {clinics.map(c => (
+                <div key={c.id} style={{
+                  background: 'white', borderRadius: '14px',
+                  border: '1px solid var(--color-border)', padding: '16px',
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                }}>
+                  {c.logo ? (
+                    <img src={c.logo} alt={c.name} style={{ width: '44px', height: '44px', borderRadius: '10px', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '10px', flexShrink: 0,
+                      background: c.colors?.accent || 'var(--color-accent)', color: 'white',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1rem', fontWeight: 700,
+                    }}>
+                      {(c.name || '?')[0]}
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--color-secondary)' }}>
+                      {c.productName || c.name}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--color-text)' }}>
+                      {c.name} &bull; {c.domain || c.slug}
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                      {['primary', 'secondary', 'accent'].map(k => (
+                        <div key={k} style={{ width: '16px', height: '16px', borderRadius: '3px', background: c.colors?.[k] || '#ccc' }} />
+                      ))}
+                      <span style={{ fontSize: '0.6rem', color: 'var(--color-text)', marginLeft: '4px' }}>
+                        {c.roleLabels?.practitioner || 'Practitioner'} / {c.roleLabels?.patient || 'Patient'}
+                      </span>
+                    </div>
+                  </div>
+                  <button onClick={() => {
+                    setEditingClinic(c);
+                    setClinicForm({ ...c });
+                  }} style={{
+                    background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+                    borderRadius: '8px', padding: '8px 14px',
+                    fontSize: '0.68rem', fontWeight: 600, color: 'var(--color-text)', cursor: 'pointer',
+                  }}>
+                    Edit
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </>
