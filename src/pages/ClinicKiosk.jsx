@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Camera, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, ChevronRight, RotateCcw, Check, ArrowLeft, Zap, X } from 'lucide-react';
+import { useClinic } from '../contexts/ClinicContext';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { addKioskSession } from '../lib/firestore';
@@ -33,6 +34,7 @@ const BODY_ICONS = { 'Lower Body': '🦵', 'Upper Body': '💪', Core: '🎯' };
 export default function ClinicKiosk() {
   const { t } = useTranslation('kiosk');
   const navigate = useNavigate();
+  const clinic = useClinic();
   const [step, setStep] = useState('select'); // select | camera | report
   const [selectedExercise, setSelectedExercise] = useState(null);
 
@@ -274,7 +276,7 @@ export default function ClinicKiosk() {
       overflow: 'hidden',
     }} onClick={resetIdle}>
 
-      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} onExit={() => navigate('/')} t={t} />}
+      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} onExit={() => navigate('/')} t={t} clinic={clinic} />}
 
       {step === 'camera' && (
         <CameraScreen
@@ -360,7 +362,7 @@ function kioskBtn(bg, size = 'normal') {
 // ═══════════════════════════════════════════════
 // EXERCISE SELECT SCREEN (iPad-optimized grid)
 // ═══════════════════════════════════════════════
-function SelectScreen({ exercises, onSelect, onExit, t }) {
+function SelectScreen({ exercises, onSelect, onExit, t, clinic }) {
   return (
     <div className="kiosk-fade" style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -390,19 +392,37 @@ function SelectScreen({ exercises, onSelect, onExit, t }) {
           display: 'inline-flex', alignItems: 'center', gap: '12px',
           marginBottom: '16px',
         }}>
-          <div style={{
-            width: '48px', height: '48px', borderRadius: '14px',
-            background: 'linear-gradient(135deg, #863bff, #7e14ff)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Zap size={24} color="white" />
+          {clinic?.logo ? (
+            <img
+              src={clinic.logo}
+              alt={clinic.name}
+              style={{ width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover' }}
+            />
+          ) : (
+            <div style={{
+              width: '48px', height: '48px', borderRadius: '14px',
+              background: 'linear-gradient(135deg, #863bff, #7e14ff)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Zap size={24} color="white" />
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <span style={{
+              fontSize: '2rem', fontWeight: 800, color: 'white',
+              letterSpacing: '3px',
+            }}>
+              FIXIT
+            </span>
+            {clinic?.name && (
+              <span style={{
+                fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)',
+                letterSpacing: '1px', textTransform: 'uppercase',
+              }}>
+                by {clinic.name}
+              </span>
+            )}
           </div>
-          <span style={{
-            fontSize: '2rem', fontWeight: 800, color: 'white',
-            letterSpacing: '3px',
-          }}>
-            FIXIT
-          </span>
         </div>
         <h1 style={{
           color: 'white', fontSize: '1.8rem', fontWeight: 300,

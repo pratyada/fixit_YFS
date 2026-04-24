@@ -2,6 +2,7 @@ import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'reac
 import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ClinicProvider, useClinic } from './contexts/ClinicContext';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import ConsentBanner from './components/ConsentBanner';
 
@@ -26,9 +27,11 @@ import ClinicKiosk from './pages/ClinicKiosk';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
+    <ClinicProvider>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
+    </ClinicProvider>
   );
 }
 
@@ -79,6 +82,7 @@ const ROLE_META = {
 
 function MobileLayout() {
   const { t } = useTranslation('nav');
+  const clinic = useClinic();
   const { session, logout, role, isAdmin, isPractitioner, hasMultipleRoles, switchRole, allRoles } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -125,8 +129,8 @@ function MobileLayout() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img
-            src="https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png"
-            alt="YFS"
+            src={clinic.logo}
+            alt={clinic.name}
             style={{ width: '28px', height: '28px', borderRadius: '50%' }}
           />
           <div style={{ lineHeight: 1.1 }}>
@@ -281,6 +285,7 @@ function MobileLayout() {
 // ─── Role Picker Screen (shown after login for multi-role users) ───
 function RolePickerScreen() {
   const { t } = useTranslation('nav');
+  const clinic = useClinic();
   const { session, allRoles, pickRole, logout } = useAuth();
 
   return (
@@ -296,8 +301,8 @@ function RolePickerScreen() {
         boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
       }}>
         <img
-          src="https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png"
-          alt="YFS"
+          src={clinic.logo}
+          alt={clinic.name}
           style={{ width: '48px', height: '48px', borderRadius: '50%', marginBottom: '12px' }}
         />
         <div style={{
@@ -372,6 +377,7 @@ function RolePickerScreen() {
 
 function SplashScreen() {
   const { t } = useTranslation('auth');
+  const clinic = useClinic();
   return (
     <div style={{
       minHeight: '100vh', minHeight: '100dvh',
@@ -380,8 +386,8 @@ function SplashScreen() {
       flexDirection: 'column', gap: '16px',
     }}>
       <img
-        src="https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png"
-        alt="YFS"
+        src={clinic.logo}
+        alt={clinic.name}
         style={{ width: '64px', height: '64px', borderRadius: '50%' }}
       />
       <div style={{

@@ -166,10 +166,10 @@ export async function addCompletedSession(uid, data) {
 
 // ─── Admin: User Management ───
 
-export async function getAllUsers() {
-  return queryDocs(
-    query(collection(db, 'users'), orderBy('createdAt', 'desc'))
-  );
+export async function getAllUsers(clinicId = null) {
+  const constraints = [orderBy('createdAt', 'desc')];
+  if (clinicId) constraints.unshift(where('clinicId', '==', clinicId));
+  return queryDocs(query(collection(db, 'users'), ...constraints));
 }
 
 export async function getUsersByRole(role) {
@@ -265,10 +265,10 @@ export async function addFeedback(data) {
   });
 }
 
-export async function getAllFeedback(limitCount = 500) {
-  return queryDocs(
-    query(collection(db, 'feedback'), orderBy('createdAt', 'desc'), limit(limitCount))
-  );
+export async function getAllFeedback(limitCount = 500, clinicId = null) {
+  const constraints = [orderBy('createdAt', 'desc'), limit(limitCount)];
+  if (clinicId) constraints.unshift(where('clinicId', '==', clinicId));
+  return queryDocs(query(collection(db, 'feedback'), ...constraints));
 }
 
 // ─── Real-time listeners ───

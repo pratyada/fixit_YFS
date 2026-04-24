@@ -14,10 +14,8 @@ import { auth } from '../lib/firebase';
 
 const googleProvider = new GoogleAuthProvider();
 import { getUserProfile, setUserProfile, updateUserRole, updateUserRoles, deleteUserData } from '../lib/firestore';
+import { SUPER_ADMIN_EMAIL, getClinicSlugFromHostname } from '../lib/clinicConfig';
 import i18n from '../i18n';
-
-// Emails that should automatically get admin + practitioner roles
-const ADMIN_EMAILS = ['musee.initialize@gmail.com', 'ashimanaval@gmail.com'];
 
 const AuthContext = createContext(null);
 
@@ -53,8 +51,9 @@ export function AuthProvider({ children }) {
 
         // Still no profile — create a default one
         if (!prof) {
-          const isAdminEmail = ADMIN_EMAILS.includes(email);
-          const roles = isAdminEmail ? ['admin', 'practitioner'] : ['patient'];
+          const isSuperAdmin = email === SUPER_ADMIN_EMAIL;
+          const roles = isSuperAdmin ? ['admin', 'practitioner'] : ['patient'];
+          const clinicId = getClinicSlugFromHostname(window.location.hostname) || 'fixit';
           const profileData = {
             name: firebaseUser.displayName || '',
             email: firebaseUser.email,
@@ -62,13 +61,15 @@ export function AuthProvider({ children }) {
             condition: '',
             role: roles[0],
             roles,
+            clinicId,
             createdAt: new Date().toISOString(),
           };
           await setUserProfile(firebaseUser.uid, profileData);
           prof = { id: firebaseUser.uid, ...profileData };
         }
 
-        if (ADMIN_EMAILS.includes(email) && prof) {
+        // Auto-elevate super admin to admin + practitioner roles
+        if (email === SUPER_ADMIN_EMAIL && prof) {
           const currentRoles = getUserRoles(prof);
           const needed = ['admin', 'practitioner'];
           const missing = needed.filter(r => !currentRoles.includes(r));
@@ -127,12 +128,14 @@ export function AuthProvider({ children }) {
   const signup = async (email, password, name, condition) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
+    const clinicId = getClinicSlugFromHostname(window.location.hostname) || 'fixit';
     const profileData = {
       name,
       email,
       condition: condition || '',
       role: 'patient',
       roles: ['patient'],
+      clinicId,
       createdAt: new Date().toISOString(),
     };
     await setUserProfile(cred.user.uid, profileData);
@@ -156,10 +159,11 @@ export function AuthProvider({ children }) {
     }
     let prof = await getUserProfile(cred.user.uid);
     const email = cred.user.email?.toLowerCase() || '';
-    const isAdminEmail = ADMIN_EMAILS.includes(email);
+    const isSuperAdmin = email === SUPER_ADMIN_EMAIL;
 
     if (!prof) {
-      const roles = isAdminEmail ? ['admin', 'practitioner'] : ['patient'];
+      const roles = isSuperAdmin ? ['admin', 'practitioner'] : ['patient'];
+      const clinicId = getClinicSlugFromHostname(window.location.hostname) || 'fixit';
       const profileData = {
         name: cred.user.displayName || '',
         email: cred.user.email,
@@ -167,11 +171,12 @@ export function AuthProvider({ children }) {
         condition: '',
         role: roles[0],
         roles,
+        clinicId,
         createdAt: new Date().toISOString(),
       };
       await setUserProfile(cred.user.uid, profileData);
       prof = { id: cred.user.uid, ...profileData };
-    } else if (isAdminEmail) {
+    } else if (isSuperAdmin) {
       const currentRoles = getUserRoles(prof);
       const needed = ['admin', 'practitioner'];
       const missing = needed.filter(r => !currentRoles.includes(r));

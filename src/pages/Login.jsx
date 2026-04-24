@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
+import { useClinic } from '../contexts/ClinicContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function Login() {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { loginWithGoogle } = useAuth();
+  const clinic = useClinic();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -47,8 +49,8 @@ export default function Login() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <img
-            src="https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png"
-            alt="YFS"
+            src={clinic.logo}
+            alt={clinic.name}
             style={{ width: '64px', height: '64px', borderRadius: '50%', margin: '0 auto 14px' }}
           />
           <div style={{
@@ -62,7 +64,7 @@ export default function Login() {
             textTransform: 'uppercase', letterSpacing: '2px',
             color: 'var(--color-accent)', marginTop: '4px',
           }}>
-            {t('byLine')}
+            {clinic.tagline || clinic.name}
           </div>
         </div>
 
