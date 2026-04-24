@@ -6,6 +6,8 @@ import { Line } from 'react-chartjs-2';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
+import { GYM_EXERCISES } from '../data/gym-exercises';
+const ALL_POSE_EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES];
 import { useAuth } from '../contexts/AuthContext';
 import { addSession, updateSession } from '../lib/firestore';
 import { uploadVideo } from '../lib/storage-firebase';
@@ -37,7 +39,7 @@ export default function PoseChecker() {
 
   // Check for pre-selected exercise from URL (?exercise=fixit-squats)
   const urlExerciseId = new URLSearchParams(window.location.hash.split('?')[1] || '').get('exercise');
-  const preSelectedExercise = urlExerciseId ? FIXIT_EXERCISES.find(e => e.id === urlExerciseId) : null;
+  const preSelectedExercise = urlExerciseId ? ALL_POSE_EXERCISES.find(e => e.id === urlExerciseId) : null;
 
   // Flow: 'select' → 'camera' → 'report'
   const [step, setStep] = useState(preSelectedExercise ? 'camera' : 'select');
@@ -364,12 +366,12 @@ export default function PoseChecker() {
   // STEP 1: SELECT EXERCISE
   // ═══════════════════════════════════════════════
   if (step === 'select') {
-    const filtered = FIXIT_EXERCISES.filter(e => {
+    const filtered = ALL_POSE_EXERCISES.filter(e => {
       const matchSearch = !search || e.name.toLowerCase().includes(search.toLowerCase());
       const matchBody = filterBody === 'All' || e.bodyPart === filterBody;
       return matchSearch && matchBody;
     });
-    const bodyParts = [...new Set(FIXIT_EXERCISES.map(e => e.bodyPart))];
+    const bodyParts = [...new Set(ALL_POSE_EXERCISES.map(e => e.bodyPart))];
 
     return (
       <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

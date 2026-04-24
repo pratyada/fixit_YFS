@@ -218,14 +218,18 @@ export function isPhase1Active(exerciseId) {
 }
 
 // Get all FIXIT exercises + remaining library exercises marked as coming soon
-export function getAllExercisesWithStatus(libraryExercises) {
+export function getAllExercisesWithStatus(libraryExercises, extraExercises = []) {
   // Phase 1 exercises first
   const active = FIXIT_EXERCISES.map(e => ({ ...e, isActive: true }));
 
+  // Extra exercises (e.g. gym exercises) as active
+  const extra = extraExercises.map(e => ({ ...e, isActive: true }));
+
   // All other library exercises as coming soon
+  const activeIds = new Set([...PHASE_1_IDS, ...extraExercises.map(e => e.id)]);
   const comingSoon = libraryExercises
-    .filter(e => !PHASE_1_IDS.includes(e.id))
+    .filter(e => !activeIds.has(e.id))
     .map(e => ({ ...e, isActive: false, comingSoon: true }));
 
-  return [...active, ...comingSoon];
+  return [...active, ...extra, ...comingSoon];
 }

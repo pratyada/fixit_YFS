@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Search, Filter, Clock, Repeat, ChevronRight, X, Stethoscope } from 'lucide-react';
 import { EXERCISE_LIBRARY, BODY_PARTS, DIFFICULTY, EQUIPMENT, POSITIONS, GOALS, CONDITIONS } from '../data/exercises';
 import { FIXIT_EXERCISES, PHASE_1_IDS, getAllExercisesWithStatus } from '../data/fixit-exercises';
+import { GYM_EXERCISES } from '../data/gym-exercises';
 import ExerciseThumbnail from '../components/ExerciseThumbnail';
 import { useAuth } from '../contexts/AuthContext';
 import { usePatientData } from '../hooks/usePatientData';
@@ -47,7 +48,7 @@ export default function Exercises() {
 
   // The pool: FIXIT Phase 1 exercises (active) + rest (coming soon)
   const pool = useMemo(() => {
-    return getAllExercisesWithStatus(EXERCISE_LIBRARY);
+    return getAllExercisesWithStatus(EXERCISE_LIBRARY, GYM_EXERCISES);
   }, []);
 
   // Body parts and levels available based on what's allocated

@@ -6,7 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { EXERCISE_LIBRARY, PAIN_SCALE } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 
-const ALL_EXERCISES = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY];
+import { GYM_EXERCISES } from '../data/gym-exercises';
+const ALL_EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES, ...EXERCISE_LIBRARY];
 function findExercise(id) { return ALL_EXERCISES.find(e => e.id === id); }
 
 export default function Dashboard() {

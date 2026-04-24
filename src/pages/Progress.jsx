@@ -9,8 +9,9 @@ import { TrendingUp, Calendar, Award, Target } from 'lucide-react';
 import { usePatientData } from '../hooks/usePatientData';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
+import { GYM_EXERCISES } from '../data/gym-exercises';
 
-const ALL_EXERCISES = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY];
+const ALL_EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES, ...EXERCISE_LIBRARY];
 function findExercise(id) { return ALL_EXERCISES.find(e => e.id === id); }
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler);
