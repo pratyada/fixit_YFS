@@ -1,8 +1,9 @@
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClinicProvider, useClinic } from './contexts/ClinicContext';
+import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import ConsentBanner from './components/ConsentBanner';
 
@@ -24,19 +25,26 @@ import RecordSession from './pages/RecordSession';
 import AdminDashboard from './pages/AdminDashboard';
 import PractitionerDashboard from './pages/PractitionerDashboard';
 import ClinicKiosk from './pages/ClinicKiosk';
+import Subscription from './pages/Subscription';
+import Settings from './pages/Settings';
+import Onboarding from './pages/Onboarding';
+import Landing from './pages/Landing';
+import FeatureGate from './components/FeatureGate';
 
 export default function App() {
   return (
     <ClinicProvider>
       <AuthProvider>
-        <AppShell />
+        <SubscriptionProvider>
+          <AppShell />
+        </SubscriptionProvider>
       </AuthProvider>
     </ClinicProvider>
   );
 }
 
 function AppShell() {
-  const { user, loading, needsRolePick } = useAuth();
+  const { user, loading, needsRolePick, needsOnboarding } = useAuth();
   const location = useLocation();
 
   if (loading) return <SplashScreen />;
@@ -51,14 +59,20 @@ function AppShell() {
     );
   }
 
-  if (!user) return <><Login /><ConsentBanner /></>;
+  // Pre-auth: show landing page, with /login as a route
+  if (!user) {
+    if (location.pathname === '/login') return <><Login /><ConsentBanner /></>;
+    return <><Landing /><ConsentBanner /></>;
+  }
   if (needsRolePick) return <RolePickerScreen />;
+  if (needsOnboarding) return <Onboarding />;
   return <><MobileLayout /><ConsentBanner /></>;
 }
 
 // ─── Tab configs per role ───
 const PATIENT_TABS = [
   { to: '/', icon: Home, labelKey: 'nav:tabs.home' },
+  { to: '/exercises', icon: Dumbbell, labelKey: 'nav:tabs.exercises' },
   { to: '/progress', icon: BarChart3, labelKey: 'nav:tabs.progress' },
   { to: '/pain', icon: Heart, labelKey: 'nav:tabs.pain' },
 ];
@@ -170,6 +184,14 @@ function MobileLayout() {
             )}
           </div>
           <LanguageSwitcher />
+          <button onClick={() => navigate('/settings')} style={{
+            width: '30px', height: '30px', borderRadius: '50%',
+            background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+            color: 'var(--color-text)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <SettingsIcon size={12} />
+          </button>
           <button onClick={async () => { await logout(); navigate('/'); }} style={{
             width: '30px', height: '30px', borderRadius: '50%',
             background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
@@ -212,17 +234,19 @@ function MobileLayout() {
             <>
               <Route path="/" element={<Dashboard />} />
               <Route path="/plan" element={<MyPlan />} />
-              <Route path="/programs" element={<Programs />} />
-              <Route path="/programs/:id" element={<ProgramDetail />} />
-              <Route path="/builder" element={<ProgramBuilder />} />
+              <Route path="/programs" element={<FeatureGate feature="programs"><Programs /></FeatureGate>} />
+              <Route path="/programs/:id" element={<FeatureGate feature="programs"><ProgramDetail /></FeatureGate>} />
+              <Route path="/builder" element={<FeatureGate feature="programs"><ProgramBuilder /></FeatureGate>} />
               <Route path="/exercises" element={<Exercises />} />
               <Route path="/exercises/:id" element={<ExerciseDetail />} />
-              <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
-              <Route path="/pose" element={<PoseChecker />} />
+              <Route path="/exercises/:exerciseId/record" element={<FeatureGate feature="videoRecording"><RecordSession /></FeatureGate>} />
+              <Route path="/pose" element={<FeatureGate feature="poseChecker"><PoseChecker /></FeatureGate>} />
               <Route path="/progress" element={<Progress />} />
-              <Route path="/measures" element={<OutcomeMeasures />} />
+              <Route path="/measures" element={<FeatureGate feature="outcomeMeasures"><OutcomeMeasures /></FeatureGate>} />
               <Route path="/pain" element={<PainJournal />} />
-              <Route path="/reports" element={<Reports />} />
+              <Route path="/reports" element={<FeatureGate feature="reports"><Reports /></FeatureGate>} />
+              <Route path="/subscription" element={<Subscription />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" />} />
             </>
           )}

@@ -5,6 +5,7 @@ import { OUTCOME_MEASURES, getMeasureById } from '../data/outcomeMeasures';
 import { usePatientData } from '../hooks/usePatientData';
 import { generateId } from '../utils/storage';
 import { Line } from 'react-chartjs-2';
+import FeatureGate from '../components/FeatureGate';
 
 export default function OutcomeMeasures() {
   const { t } = useTranslation('progress');

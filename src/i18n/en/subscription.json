@@ -1,0 +1,33 @@
+{
+  "title": "Subscription",
+  "currentPlan": "Current Plan",
+  "freePlan": "Free",
+  "basicPlan": "Basic",
+  "proPlan": "Pro",
+  "upgrade": "Upgrade",
+  "manage": "Manage Subscription",
+  "features": {
+    "exerciseBrowse": "Browse exercises",
+    "painJournal": "Pain journal",
+    "basicStats": "Basic stats",
+    "fullLibrary": "Full exercise library",
+    "unlimitedSessions": "Unlimited sessions",
+    "progressCharts": "Full progress charts",
+    "outcomeMeasures": "Outcome measures",
+    "poseChecker": "AI pose scoring",
+    "videoRecording": "Video recording",
+    "exercise3D": "3D visualizations",
+    "programs": "Programs & protocols",
+    "reports": "Reports"
+  },
+  "sessionLimit": {
+    "title": "Session limit reached",
+    "desc": "You've used {{used}} of {{max}} free sessions this week.",
+    "remaining": "{{count}} session remaining this week",
+    "remaining_plural": "{{count}} sessions remaining this week"
+  },
+  "exerciseLimit": {
+    "title": "Exercise limit reached",
+    "desc": "Free plan includes 5 exercises. Upgrade to unlock the full library."
+  }
+}

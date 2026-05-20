@@ -1,0 +1,40 @@
+{
+  "title": "Personnalisons votre expérience",
+  "goals": {
+    "title": "Qu'est-ce qui vous amène ici?",
+    "subtitle": "Sélectionnez un ou plusieurs objectifs",
+    "rehab": "Réhabilitation",
+    "rehabDesc": "Récupération après une blessure ou une chirurgie",
+    "fitness": "Fitness et Force",
+    "fitnessDesc": "Développer la force et améliorer la forme",
+    "pain": "Gestion de la douleur",
+    "painDesc": "Gérer la douleur chronique et la mobilité",
+    "wellness": "Bien-être général",
+    "wellnessDesc": "Rester actif et suivre sa santé"
+  },
+  "bodyAreas": {
+    "title": "Zones de focus",
+    "subtitle": "Sélectionnez les zones du corps à travailler"
+  },
+  "conditions": {
+    "title": "Des conditions particulières?",
+    "subtitle": "Optionnel — aide à personnaliser les recommandations",
+    "skip": "Passer cette étape"
+  },
+  "experience": {
+    "title": "Votre niveau d'expérience",
+    "subtitle": "Cela nous aide à choisir les bons exercices",
+    "beginner": "Débutant",
+    "beginnerDesc": "Nouveau dans l'exercice ou de retour après une pause",
+    "intermediate": "Intermédiaire",
+    "intermediateDesc": "À l'aise avec les exercices de base",
+    "advanced": "Avancé",
+    "advancedDesc": "Expérimenté avec l'entraînement structuré"
+  },
+  "actions": {
+    "back": "Retour",
+    "continue": "Continuer",
+    "getStarted": "Commencer",
+    "saving": "Enregistrement..."
+  }
+}

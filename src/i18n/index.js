@@ -16,6 +16,8 @@ import practitionerEN from './en/practitioner.json';
 import adminEN from './en/admin.json';
 import kioskEN from './en/kiosk.json';
 import complianceEN from './en/compliance.json';
+import onboardingEN from './en/onboarding.json';
+import subscriptionEN from './en/subscription.json';
 
 // French
 import commonFR from './fr/common.json';
@@ -31,14 +33,16 @@ import practitionerFR from './fr/practitioner.json';
 import adminFR from './fr/admin.json';
 import kioskFR from './fr/kiosk.json';
 import complianceFR from './fr/compliance.json';
+import onboardingFR from './fr/onboarding.json';
+import subscriptionFR from './fr/subscription.json';
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
-      en: { common: commonEN, auth: authEN, nav: navEN, dashboard: dashboardEN, exercises: exercisesEN, exerciseData: exerciseDataEN, pain: painEN, progress: progressEN, plan: planEN, practitioner: practitionerEN, admin: adminEN, kiosk: kioskEN, compliance: complianceEN },
-      fr: { common: commonFR, auth: authFR, nav: navFR, dashboard: dashboardFR, exercises: exercisesFR, exerciseData: exerciseDataFR, pain: painFR, progress: progressFR, plan: planFR, practitioner: practitionerFR, admin: adminFR, kiosk: kioskFR, compliance: complianceFR },
+      en: { common: commonEN, auth: authEN, nav: navEN, dashboard: dashboardEN, exercises: exercisesEN, exerciseData: exerciseDataEN, pain: painEN, progress: progressEN, plan: planEN, practitioner: practitionerEN, admin: adminEN, kiosk: kioskEN, compliance: complianceEN, onboarding: onboardingEN, subscription: subscriptionEN },
+      fr: { common: commonFR, auth: authFR, nav: navFR, dashboard: dashboardFR, exercises: exercisesFR, exerciseData: exerciseDataFR, pain: painFR, progress: progressFR, plan: planFR, practitioner: practitionerFR, admin: adminFR, kiosk: kioskFR, compliance: complianceFR, onboarding: onboardingFR, subscription: subscriptionFR },
     },
     fallbackLng: 'en',
     supportedLngs: ['en', 'fr'],

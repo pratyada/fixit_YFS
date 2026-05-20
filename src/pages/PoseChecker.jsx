@@ -11,6 +11,7 @@ const ALL_POSE_EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES];
 import { useAuth } from '../contexts/AuthContext';
 import { addSession, updateSession } from '../lib/firestore';
 import { uploadVideo } from '../lib/storage-firebase';
+import FeatureGate from '../components/FeatureGate';
 
 const POSE_CONNECTIONS = [
   ['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'],

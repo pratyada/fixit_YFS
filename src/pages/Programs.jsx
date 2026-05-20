@@ -6,6 +6,7 @@ import { PROTOCOLS } from '../data/protocols';
 import { BODY_PARTS } from '../data/exercises';
 import { useLocalState } from '../hooks/useLocalState';
 import { usePatientData } from '../hooks/usePatientData';
+import FeatureGate from '../components/FeatureGate';
 
 export default function Programs() {
   const { t } = useTranslation('plan');

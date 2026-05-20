@@ -909,6 +909,16 @@ export default function AdminDashboard() {
                         </span>
                       );
                     })}
+                    {u.subscriptionTier && u.subscriptionTier !== 'free' && (
+                      <span style={{
+                        fontSize: '0.5rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px',
+                        padding: '3px 7px', borderRadius: '50px',
+                        background: u.subscriptionTier === 'pro' ? '#FFF3E0' : '#E3F2FD',
+                        color: u.subscriptionTier === 'pro' ? '#F57C00' : '#1565C0',
+                      }}>
+                        {u.subscriptionTier}
+                      </span>
+                    )}
                   </div>
                   {isExpanded ? <ChevronUp size={14} color="var(--color-text)" /> : <ChevronDown size={14} color="var(--color-text)" />}
                 </button>

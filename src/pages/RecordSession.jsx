@@ -11,6 +11,7 @@ import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import CameraRecorder from '../components/CameraRecorder';
 import { uploadVideo } from '../lib/storage-firebase';
 import { addSession, updateSession } from '../lib/firestore';
+import FeatureGate from '../components/FeatureGate';
 
 export default function RecordSession() {
   const { t } = useTranslation('exercises');

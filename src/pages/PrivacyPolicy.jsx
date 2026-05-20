@@ -24,7 +24,7 @@ export default function PrivacyPolicy() {
 
   const sections = [
     'introduction', 'whatWeCollect', 'whyWeCollect', 'howWeStore',
-    'whoHasAccess', 'dataRetention', 'yourRights', 'howToDelete', 'contact',
+    'whoHasAccess', 'dataRetention', 'paymentData', 'yourRights', 'howToDelete', 'contact',
   ];
 
   return (

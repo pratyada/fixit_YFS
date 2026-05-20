@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, Filter, Clock, Repeat, ChevronRight, X, Stethoscope } from 'lucide-react';
+import { Search, Filter, Clock, Repeat, ChevronRight, X, Lock, Dumbbell as DumbbellIcon, Stethoscope } from 'lucide-react';
 import { EXERCISE_LIBRARY, BODY_PARTS, DIFFICULTY, EQUIPMENT, POSITIONS, GOALS, CONDITIONS } from '../data/exercises';
 import { FIXIT_EXERCISES, PHASE_1_IDS, getAllExercisesWithStatus } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
@@ -9,6 +9,7 @@ import ExerciseThumbnail from '../components/ExerciseThumbnail';
 import { useAuth } from '../contexts/AuthContext';
 import { usePatientData } from '../hooks/usePatientData';
 import { PROTOCOLS } from '../data/protocols';
+import { useSubscription } from '../hooks/useSubscription';
 
 const BODY_PART_ICONS = {
   Knee: '🦵', Shoulder: '💪', Back: '🔙', Hip: '🦴',
@@ -30,8 +31,12 @@ export default function Exercises() {
   const [assignedExercises] = usePatientData('assigned_exercises', []);
   const [assignedPrograms] = usePatientData('assigned_programs', []);
 
+  const { canUseFeature } = useSubscription();
+  const hasFullLibrary = canUseFeature('fullLibrary');
+
   // Compute the universe of exercises this patient is allowed to see.
-  // Includes: directly assigned exercises + exercises inside their assigned programs.
+  // Consumers (no practitioner assignments) see full library.
+  // Practitioner-assigned patients see assigned + program exercises.
   const allowedExerciseIds = useMemo(() => {
     if (!isPatientView) return null; // null = no filter (practitioner sees all)
     const ids = new Set(assignedExercises.map(a => a.exerciseId));
@@ -43,8 +48,13 @@ export default function Exercises() {
         });
       }
     });
+    // Consumer mode: no assignments = open library
+    if (ids.size === 0) return null;
     return ids;
   }, [isPatientView, assignedExercises, assignedPrograms]);
+
+  // For free tier: track how many exercises user has accessed
+  const FREE_EXERCISE_LIMIT = 5;
 
   // The pool: FIXIT Phase 1 exercises (active) + rest (coming soon)
   const pool = useMemo(() => {
@@ -128,14 +138,26 @@ export default function Exercises() {
 
       {isPatientView && pool.length === 0 && (
         <div style={{
-          background: '#FFF8E1', borderRadius: '14px', padding: '20px',
-          border: '1px solid #FFE082', textAlign: 'center',
+          background: '#EDF3F1', borderRadius: '14px', padding: '20px',
+          border: '1px solid var(--color-border)', textAlign: 'center',
         }}>
-          <Stethoscope size={32} style={{ color: '#F57F17', margin: '0 auto 8px', display: 'block' }} />
-          <h4 style={{ marginBottom: '4px' }}>{t('noExercisesYet')}</h4>
+          <DumbbellIcon size={32} style={{ color: 'var(--color-accent)', margin: '0 auto 8px', display: 'block' }} />
+          <h4 style={{ marginBottom: '4px' }}>Explore exercises</h4>
           <p style={{ fontSize: '0.82rem' }}>
-            {t('noExercisesDesc')}
+            Browse our library and find exercises that match your goals.
           </p>
+        </div>
+      )}
+
+      {/* Free tier limit banner */}
+      {isPatientView && !hasFullLibrary && pool.length > 0 && (
+        <div style={{
+          background: '#E3F2FD', borderRadius: '12px', padding: '12px 16px',
+          border: '1px solid #90CAF9', display: 'flex', alignItems: 'center', gap: '10px',
+          fontSize: '0.8rem', color: '#1565C0',
+        }}>
+          <Lock size={14} />
+          <span>Free plan: access {FREE_EXERCISE_LIMIT} exercises. <Link to="/subscription" style={{ fontWeight: 700, color: '#1565C0' }}>Upgrade</Link> for the full library.</span>
         </div>
       )}
 

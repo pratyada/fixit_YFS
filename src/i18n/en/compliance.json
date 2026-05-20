@@ -1,6 +1,6 @@
 {
   "consentBanner": {
-    "message": "We collect and process your data to provide physiotherapy exercise tracking and AI-powered form analysis. Your data is stored securely in Toronto, Canada.",
+    "message": "We collect and process your data to provide health tracking and AI-powered exercise analysis. Your data is stored securely in Toronto, Canada.",
     "accept": "I Accept",
     "learnMore": "Learn More"
   },
@@ -84,7 +84,11 @@
       },
       "howToDelete": {
         "title": "How to Delete Your Data",
-        "content": "You can delete your account and all associated data at any time through the app settings. Alternatively, you can contact us at the email below to request complete data deletion. All personal data will be permanently removed within 30 days of your request."
+        "content": "You can delete your account and all associated data at any time through the app settings. Alternatively, you can contact us at the email below to request complete data deletion. All personal data will be permanently removed within 30 days of your request. If you have an active subscription, it will be canceled and your Stripe customer record deleted."
+      },
+      "paymentData": {
+        "title": "Payment & Subscription Data",
+        "content": "Subscription payments are processed by Stripe, Inc. We do not store your credit card details — they are handled entirely by Stripe under PCI DSS Level 1 compliance. We store your Stripe customer ID, subscription status, and billing period in our database to manage your account tier. When you delete your account, your Stripe customer record is also deleted."
       },
       "contact": {
         "title": "Contact Us",

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Upload, FileText, Trash2, Eye, X, Download, Image, File } from 'lucide-react';
 import { usePatientData } from '../hooks/usePatientData';
 import { generateId } from '../utils/storage';
+import FeatureGate from '../components/FeatureGate';
 
 export default function Reports() {
   const { t } = useTranslation('progress');

@@ -301,6 +301,28 @@ export function onCompletedSessions(uid, callback) {
   );
 }
 
+// ─── Subscription Management ───
+
+export async function updateSubscription(uid, data) {
+  await updateDoc(doc(db, 'users', uid), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function getSubscriptionStatus(uid) {
+  const snap = await getDoc(doc(db, 'users', uid));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    subscriptionTier: data.subscriptionTier || 'free',
+    subscriptionStatus: data.subscriptionStatus || null,
+    stripeCustomerId: data.stripeCustomerId || null,
+    stripeSubscriptionId: data.stripeSubscriptionId || null,
+    currentPeriodEnd: data.currentPeriodEnd ? toDate(data.currentPeriodEnd) : null,
+  };
+}
+
 // ─── Account Deletion (PIPEDA compliance) ───
 
 async function deleteSubcollection(uid, subcollection) {

@@ -1,0 +1,33 @@
+{
+  "title": "Abonnement",
+  "currentPlan": "Plan actuel",
+  "freePlan": "Gratuit",
+  "basicPlan": "Basique",
+  "proPlan": "Pro",
+  "upgrade": "Mettre à niveau",
+  "manage": "Gérer l'abonnement",
+  "features": {
+    "exerciseBrowse": "Parcourir les exercices",
+    "painJournal": "Journal de douleur",
+    "basicStats": "Statistiques de base",
+    "fullLibrary": "Bibliothèque complète",
+    "unlimitedSessions": "Sessions illimitées",
+    "progressCharts": "Graphiques de progrès complets",
+    "outcomeMeasures": "Mesures de résultats",
+    "poseChecker": "Score de posture IA",
+    "videoRecording": "Enregistrement vidéo",
+    "exercise3D": "Visualisations 3D",
+    "programs": "Programmes et protocoles",
+    "reports": "Rapports"
+  },
+  "sessionLimit": {
+    "title": "Limite de sessions atteinte",
+    "desc": "Vous avez utilisé {{used}} sur {{max}} sessions gratuites cette semaine.",
+    "remaining": "{{count}} session restante cette semaine",
+    "remaining_plural": "{{count}} sessions restantes cette semaine"
+  },
+  "exerciseLimit": {
+    "title": "Limite d'exercices atteinte",
+    "desc": "Le plan gratuit inclut 5 exercices. Mettez à niveau pour débloquer la bibliothèque complète."
+  }
+}

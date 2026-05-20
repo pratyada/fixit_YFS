@@ -1,0 +1,40 @@
+{
+  "title": "Let's personalize your experience",
+  "goals": {
+    "title": "What brings you here?",
+    "subtitle": "Select one or more goals",
+    "rehab": "Rehabilitation",
+    "rehabDesc": "Recovering from injury or surgery",
+    "fitness": "Fitness & Strength",
+    "fitnessDesc": "Build strength and improve form",
+    "pain": "Pain Management",
+    "painDesc": "Manage chronic pain and mobility",
+    "wellness": "General Wellness",
+    "wellnessDesc": "Stay active and track health"
+  },
+  "bodyAreas": {
+    "title": "Areas of focus",
+    "subtitle": "Select the body areas you want to work on"
+  },
+  "conditions": {
+    "title": "Any conditions?",
+    "subtitle": "Optional — helps us tailor recommendations",
+    "skip": "Skip this step"
+  },
+  "experience": {
+    "title": "Your experience level",
+    "subtitle": "This helps us pick the right exercises",
+    "beginner": "Beginner",
+    "beginnerDesc": "New to exercise or returning after a break",
+    "intermediate": "Intermediate",
+    "intermediateDesc": "Comfortable with basic exercises",
+    "advanced": "Advanced",
+    "advancedDesc": "Experienced with structured training"
+  },
+  "actions": {
+    "back": "Back",
+    "continue": "Continue",
+    "getStarted": "Get Started",
+    "saving": "Saving..."
+  }
+}

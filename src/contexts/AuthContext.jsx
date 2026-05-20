@@ -260,6 +260,7 @@ export function AuthProvider({ children }) {
       switchRole,
       deleteAccount,
       needsRolePick,
+      needsOnboarding: isPatient && profile && !profile.onboardingComplete,
       pickRole,
       activePatientId: isPatient ? user?.uid : null,
     }}>

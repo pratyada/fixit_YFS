@@ -18,7 +18,7 @@ export const DEFAULT_CLINIC = {
     secondary: '#4E4E53',
     accent: '#708E86',
   },
-  tagline: 'AI-Powered Physio Rehab',
+  tagline: 'AI Health Tracker',
   byLine: 'Powered by FIXIT',
   contactEmail: 'info@fixit.ca',
   location: { city: 'Toronto', region: 'Ontario', country: 'CA' },

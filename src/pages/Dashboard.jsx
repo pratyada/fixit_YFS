@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Dumbbell, TrendingUp, Camera, Heart, Calendar, Award, ArrowRight, Flame, Target, ChevronRight, Sparkles, Play, CheckCircle2, Stethoscope } from 'lucide-react';
+import { Dumbbell, TrendingUp, Camera, Heart, Calendar, Award, ArrowRight, Flame, Target, ChevronRight, Sparkles, Play, CheckCircle2, Stethoscope, Star } from 'lucide-react';
 import { usePatientData } from '../hooks/usePatientData';
 import { useAuth } from '../contexts/AuthContext';
 import { EXERCISE_LIBRARY, PAIN_SCALE } from '../data/exercises';
@@ -108,18 +108,9 @@ export default function Dashboard() {
         />
       )}
 
-      {/* No exercises assigned — show empty state */}
+      {/* No exercises assigned — show recommended exercises */}
       {assignedExercises.length === 0 && (
-        <div style={{
-          background: '#FFF8E1', borderRadius: '16px', padding: '24px',
-          border: '1px solid #FFE082', textAlign: 'center',
-        }}>
-          <Stethoscope size={32} style={{ color: '#F57F17', margin: '0 auto 8px', display: 'block' }} />
-          <h4 style={{ marginBottom: '4px' }}>No exercises assigned yet</h4>
-          <p style={{ fontSize: '0.82rem', color: 'var(--color-text)' }}>
-            Your practitioner will assign exercises for you. Check back soon.
-          </p>
-        </div>
+        <RecommendedSection profile={profile} completedSessions={completedSessions} />
       )}
 
       {/* ── Pain & Activity Row ── */}
@@ -399,6 +390,93 @@ function AssignedExercisesSection({ assignedExercises, completedToday }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function RecommendedSection({ profile, completedSessions }) {
+  // Build recommendations based on user's onboarding preferences
+  const userBodyAreas = profile?.bodyAreas || [];
+  const userGoals = profile?.goals || [];
+  const userLevel = profile?.experienceLevel || 'beginner';
+  const completedIds = new Set(completedSessions.map(s => s.exerciseId));
+
+  const difficultyMap = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
+  const targetDifficulty = difficultyMap[userLevel] || 'Beginner';
+
+  // Filter exercises matching user preferences
+  let recommended = ALL_EXERCISES.filter(ex => {
+    // Match body area or goals
+    const bodyMatch = userBodyAreas.length === 0 || userBodyAreas.includes(ex.bodyPart);
+    const goalMatch = userGoals.length === 0 || ex.goals?.some(g => {
+      const goalMap = { rehab: ['Pain Relief', 'Mobility'], fitness: ['Strength', 'Endurance'], pain: ['Pain Relief', 'Flexibility'], wellness: ['Balance', 'Stability', 'Proprioception'] };
+      return userGoals.some(ug => goalMap[ug]?.includes(g));
+    });
+    // Prefer matching difficulty
+    const diffMatch = ex.difficulty === targetDifficulty;
+    return bodyMatch && (goalMatch || diffMatch);
+  });
+
+  // Prioritize exercises not yet completed
+  recommended.sort((a, b) => {
+    const aDone = completedIds.has(a.id) ? 1 : 0;
+    const bDone = completedIds.has(b.id) ? 1 : 0;
+    return aDone - bDone;
+  });
+
+  // Take top 4
+  recommended = recommended.slice(0, 4);
+
+  // Fallback if no matches
+  if (recommended.length === 0) {
+    recommended = ALL_EXERCISES.filter(e => e.difficulty === 'Beginner').slice(0, 4);
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Star size={18} style={{ color: '#F57C00' }} />
+          <h2 style={{ margin: 0 }}>Recommended for You</h2>
+        </div>
+        <Link to="/exercises" style={{
+          fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase',
+          letterSpacing: '1px', color: 'var(--color-accent)', textDecoration: 'none',
+          display: 'flex', alignItems: 'center', gap: '4px',
+        }}>
+          View All <ArrowRight size={11} />
+        </Link>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {recommended.map(ex => (
+          <Link
+            key={ex.id}
+            to={`/exercises/${ex.id}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '14px',
+              padding: '14px 16px', borderRadius: '14px',
+              background: 'white', border: '1px solid var(--color-border)',
+              textDecoration: 'none', transition: 'all 0.2s',
+            }}
+          >
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '10px',
+              background: '#EDF3F1', color: 'var(--color-accent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Dumbbell size={18} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{ex.name}</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--color-text)', marginTop: '2px' }}>
+                {ex.bodyPart} &bull; {ex.difficulty}
+                {ex.sets && ` &bull; ${ex.sets}×${ex.reps}`}
+              </div>
+            </div>
+            <ChevronRight size={16} style={{ color: 'var(--color-text)', opacity: 0.4, flexShrink: 0 }} />
+          </Link>
+        ))}
       </div>
     </div>
   );
