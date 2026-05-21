@@ -1,7 +1,7 @@
 {
-  "name": "YFS Rehab — Your Form Sux",
-  "short_name": "YFS Rehab",
-  "description": "Physiotherapy exercise tracker with AI pose analysis",
+  "name": "FIXIT — AI Health Tracker",
+  "short_name": "FIXIT",
+  "description": "AI-powered health tracking — exercises, form analysis, pain journal, and progress",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

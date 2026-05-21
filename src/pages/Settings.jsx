@@ -39,7 +39,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '640px' }}>
       <div>
         <h1 style={{ marginBottom: '4px' }}>Settings</h1>
         <p style={{ fontSize: '0.85rem' }}>Manage your account and preferences</p>

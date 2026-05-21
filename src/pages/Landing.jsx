@@ -33,14 +33,16 @@ export default function Landing() {
       {/* ── Nav ── */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 24px', maxWidth: '960px', margin: '0 auto',
+        padding: '16px 24px', maxWidth: '1100px', margin: '0 auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img src={clinic.logo} alt="FIXIT" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
           <span style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1.1rem', color: 'var(--color-secondary)' }}>FIXIT</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <a href="#pricing" style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Pricing</a>
+          <a href="#features" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Features</a>
+          <a href="#pricing" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Pricing</a>
+          <Link to="/guides" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Guides</Link>
           <Link to="/login" style={{
             padding: '8px 20px', borderRadius: '8px',
             background: 'var(--color-secondary)', color: 'white',
@@ -53,8 +55,8 @@ export default function Landing() {
 
       {/* ── Hero ── */}
       <section style={{
-        textAlign: 'center', padding: '60px 24px 40px',
-        maxWidth: '640px', margin: '0 auto',
+        textAlign: 'center', padding: '80px 24px 50px',
+        maxWidth: '720px', margin: '0 auto',
       }}>
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -123,7 +125,7 @@ export default function Landing() {
 
       {/* ── Features ── */}
       <section id="features" style={{
-        padding: '60px 24px', maxWidth: '960px', margin: '0 auto',
+        padding: '60px 24px', maxWidth: '1100px', margin: '0 auto',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-secondary)', marginBottom: '8px' }}>
@@ -170,7 +172,7 @@ export default function Landing() {
       <section id="pricing" style={{
         padding: '60px 24px', background: 'var(--color-bg-alt)',
       }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-secondary)', marginBottom: '8px' }}>
               Simple, transparent pricing
@@ -282,6 +284,7 @@ export default function Landing() {
             . Built in Toronto, Canada.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', fontSize: '0.72rem' }}>
+            <Link to="/guides" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Guides</Link>
             <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Privacy Policy</Link>
             <a href="https://yourformsux.com" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>YourFormSux.com</a>
           </div>

@@ -67,6 +67,19 @@
   h3 { font-size: 1.1rem; }
   h4 { font-size: 0.95rem; }
 
+  /* Responsive typography */
+  @media (min-width: 768px) {
+    body { font-size: 16px; }
+    h1 { font-size: 1.85rem; }
+    h2 { font-size: 1.5rem; }
+    h3 { font-size: 1.2rem; }
+    h4 { font-size: 1.05rem; }
+  }
+  @media (min-width: 1024px) {
+    h1 { font-size: 2.1rem; }
+    h2 { font-size: 1.65rem; }
+  }
+
   h6 {
     font-family: 'Public Sans', sans-serif;
     font-size: 0.62rem;
@@ -132,4 +145,20 @@
 }
 
 /* Hide scrollbar on mobile for cleaner look */
-::-webkit-scrollbar { width: 0; height: 0; }
+@media (max-width: 767px) {
+  ::-webkit-scrollbar { width: 0; height: 0; }
+}
+
+/* Desktop: show scrollbar */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+}
+
+/* Desktop: allow wider content, hide mobile-only bottom nav padding */
+@media (min-width: 768px) {
+  input, textarea, select {
+    max-width: 480px;
+  }
+}

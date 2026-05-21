@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClinicProvider, useClinic } from './contexts/ClinicContext';
@@ -27,6 +28,8 @@ import PractitionerDashboard from './pages/PractitionerDashboard';
 import ClinicKiosk from './pages/ClinicKiosk';
 import Subscription from './pages/Subscription';
 import Settings from './pages/Settings';
+import Guides from './pages/Guides';
+import GuideDetail from './pages/GuideDetail';
 import Onboarding from './pages/Onboarding';
 import Landing from './pages/Landing';
 import FeatureGate from './components/FeatureGate';
@@ -52,21 +55,41 @@ function AppShell() {
   // Privacy policy accessible without login
   if (location.pathname === '/privacy' && !user) {
     return (
-      <div style={{ maxWidth: '480px', margin: '0 auto', padding: '16px' }}>
+      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '16px 24px' }}>
         <PrivacyPolicy />
         <ConsentBanner />
       </div>
     );
   }
 
-  // Pre-auth: show landing page, with /login as a route
+  // Pre-auth: show landing page, with /login and /guides as routes
   if (!user) {
     if (location.pathname === '/login') return <><Login /><ConsentBanner /></>;
+    if (location.pathname === '/guides' || location.pathname.startsWith('/guides/')) {
+      return (
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+              <img src="/favicon.ico" alt="FIXIT" style={{ width: '28px', height: '28px', borderRadius: '50%' }} onError={e => e.target.style.display = 'none'} />
+              <span style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1.1rem', color: 'var(--color-secondary)' }}>FIXIT</span>
+            </Link>
+            <Link to="/login" style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--color-secondary)', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>
+              Sign In
+            </Link>
+          </div>
+          <Routes>
+            <Route path="/guides" element={<Guides />} />
+            <Route path="/guides/:slug" element={<GuideDetail />} />
+          </Routes>
+          <ConsentBanner />
+        </div>
+      );
+    }
     return <><Landing /><ConsentBanner /></>;
   }
   if (needsRolePick) return <RolePickerScreen />;
   if (needsOnboarding) return <Onboarding />;
-  return <><MobileLayout /><ConsentBanner /></>;
+  return <><AppLayout /><ConsentBanner /></>;
 }
 
 // ─── Tab configs per role ───
@@ -74,6 +97,7 @@ const PATIENT_TABS = [
   { to: '/', icon: Home, labelKey: 'nav:tabs.home' },
   { to: '/exercises', icon: Dumbbell, labelKey: 'nav:tabs.exercises' },
   { to: '/progress', icon: BarChart3, labelKey: 'nav:tabs.progress' },
+  { to: '/guides', icon: Compass, labelKey: 'nav:tabs.guides' },
   { to: '/pain', icon: Heart, labelKey: 'nav:tabs.pain' },
 ];
 
@@ -94,25 +118,34 @@ const ROLE_META = {
   patient: { icon: Home, color: '#1565C0', bg: '#E3F2FD', labelKey: 'nav:roles.patient.label', descKey: 'nav:roles.patient.desc' },
 };
 
-function MobileLayout() {
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isDesktop;
+}
+
+function AppLayout() {
   const { t } = useTranslation('nav');
   const clinic = useClinic();
   const { session, logout, role, isAdmin, isPractitioner, hasMultipleRoles, switchRole, allRoles } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isDesktop = useIsDesktop();
 
   const TABS = isAdmin ? ADMIN_TABS : isPractitioner ? PRACTITIONER_TABS : PATIENT_TABS;
 
-  // Use clinic's custom role labels if available, otherwise fall back to i18n
   const getRoleLabel = (r) => clinic.roleLabels?.[r] || t(`roles.${r}.label`);
   const roleLabel = getRoleLabel(role);
   const roleMeta = ROLE_META[role] || ROLE_META.patient;
 
-  // Hide tabs on detail/sub-pages
   const showTabs = !(/\/(exercises|programs)\//.test(location.pathname)
     || ['/measures', '/reports', '/builder', '/plan', '/kiosk'].includes(location.pathname));
 
-  // Cycle to next role
   const cycleRole = () => {
     const idx = allRoles.indexOf(role);
     const next = allRoles[(idx + 1) % allRoles.length];
@@ -120,149 +153,228 @@ function MobileLayout() {
     navigate('/');
   };
 
-  const isWideLayout = isPractitioner || isAdmin;
-
   return (
     <div style={{
       minHeight: '100vh',
       minHeight: '100dvh',
       display: 'flex',
-      flexDirection: 'column',
+      flexDirection: isDesktop ? 'row' : 'column',
       background: 'var(--color-bg-alt)',
-      maxWidth: isWideLayout ? '1200px' : '480px',
-      margin: '0 auto',
-      position: 'relative',
-      boxShadow: '0 0 40px rgba(0,0,0,0.06)',
     }}>
-      {/* ── Top bar ── */}
-      <header style={{
-        background: 'white',
-        borderBottom: '1px solid var(--color-border)',
-        padding: 'env(safe-area-inset-top, 0px) 16px 0',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        height: '52px',
-        flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img
-            src={clinic.logo}
-            alt={clinic.name}
-            style={{ width: '28px', height: '28px', borderRadius: '50%' }}
-          />
-          <div style={{ lineHeight: 1.1 }}>
-            <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '0.92rem', color: 'var(--color-secondary)', letterSpacing: '-0.3px' }}>
-              {clinic.productName || t('auth:brandName')}
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ textAlign: 'right', lineHeight: 1.15 }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
-              {session?.name || 'User'}
-            </div>
-            {hasMultipleRoles ? (
-              <button
-                onClick={cycleRole}
-                style={{
-                  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                  fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
-                  color: roleMeta.color,
-                  display: 'flex', alignItems: 'center', gap: '3px',
-                }}
-                title={t('header.switchRole', { roles: allRoles.join(' / ') })}
-              >
-                {roleLabel}
-                <ArrowRightLeft size={8} style={{ opacity: 0.6 }} />
-              </button>
-            ) : (
-              <div style={{
-                fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
-                color: roleMeta.color,
-              }}>
+      {/* ── Desktop Sidebar ── */}
+      {isDesktop && (
+        <aside style={{
+          width: '220px',
+          background: 'white',
+          borderRight: '1px solid var(--color-border)',
+          display: 'flex',
+          flexDirection: 'column',
+          flexShrink: 0,
+          height: '100vh',
+          height: '100dvh',
+          position: 'sticky',
+          top: 0,
+        }}>
+          {/* Sidebar header */}
+          <div style={{
+            padding: '20px 18px 16px',
+            borderBottom: '1px solid var(--color-border)',
+            display: 'flex', alignItems: 'center', gap: '10px',
+          }}>
+            <img src={clinic.logo} alt={clinic.name}
+              style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+            <div style={{ lineHeight: 1.1 }}>
+              <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1rem', color: 'var(--color-secondary)', letterSpacing: '-0.3px' }}>
+                {clinic.productName || t('auth:brandName')}
+              </div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: roleMeta.color, marginTop: '2px' }}>
                 {roleLabel}
               </div>
-            )}
+            </div>
           </div>
-          <LanguageSwitcher />
-          <button onClick={() => navigate('/settings')} style={{
-            width: '30px', height: '30px', borderRadius: '50%',
-            background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
-            color: 'var(--color-text)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <SettingsIcon size={12} />
-          </button>
-          <button onClick={async () => { await logout(); navigate('/'); }} style={{
-            width: '30px', height: '30px', borderRadius: '50%',
-            background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
-            color: 'var(--color-text)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <LogOut size={12} />
-          </button>
-        </div>
-      </header>
 
-      {/* ── Main scrollable content ── */}
-      <main style={{
-        flex: 1,
-        overflow: 'auto',
-        padding: '16px 16px 100px',
-        WebkitOverflowScrolling: 'touch',
-      }}>
-        <Routes>
-          {isAdmin ? (
-            <>
-              <Route path="/" element={<AdminDashboard />} />
-              <Route path="/exercises" element={<Exercises />} />
-              <Route path="/exercises/:id" element={<ExerciseDetail />} />
-              <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
-              <Route path="/pose" element={<PoseChecker />} />
-              <Route path="/kiosk" element={<ClinicKiosk />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </>
-          ) : isPractitioner ? (
-            <>
-              <Route path="/" element={<PractitionerDashboard />} />
-              <Route path="/exercises" element={<Exercises />} />
-              <Route path="/exercises/:id" element={<ExerciseDetail />} />
-              <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
-              <Route path="/pose" element={<PoseChecker />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </>
-          ) : (
-            <>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/plan" element={<MyPlan />} />
-              <Route path="/programs" element={<FeatureGate feature="programs"><Programs /></FeatureGate>} />
-              <Route path="/programs/:id" element={<FeatureGate feature="programs"><ProgramDetail /></FeatureGate>} />
-              <Route path="/builder" element={<FeatureGate feature="programs"><ProgramBuilder /></FeatureGate>} />
-              <Route path="/exercises" element={<Exercises />} />
-              <Route path="/exercises/:id" element={<ExerciseDetail />} />
-              <Route path="/exercises/:exerciseId/record" element={<FeatureGate feature="videoRecording"><RecordSession /></FeatureGate>} />
-              <Route path="/pose" element={<FeatureGate feature="poseChecker"><PoseChecker /></FeatureGate>} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="/measures" element={<FeatureGate feature="outcomeMeasures"><OutcomeMeasures /></FeatureGate>} />
-              <Route path="/pain" element={<PainJournal />} />
-              <Route path="/reports" element={<FeatureGate feature="reports"><Reports /></FeatureGate>} />
-              <Route path="/subscription" element={<Subscription />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </>
-          )}
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-        </Routes>
-      </main>
+          {/* Nav links */}
+          <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {TABS.map(({ to, icon: Icon, labelKey }) => (
+              <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none' }}>
+                {({ isActive }) => (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '10px 14px', borderRadius: '10px',
+                    background: isActive ? 'var(--color-accent)' : 'transparent',
+                    color: isActive ? 'white' : 'var(--color-text)',
+                    transition: 'all 0.15s',
+                    fontSize: '0.85rem', fontWeight: isActive ? 600 : 500,
+                  }}>
+                    <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
+                    {t(labelKey)}
+                  </div>
+                )}
+              </NavLink>
+            ))}
+          </nav>
 
-      {/* ── Bottom Tab Bar ── */}
-      {showTabs && (
+          {/* Sidebar footer */}
+          <div style={{
+            padding: '14px 18px',
+            borderTop: '1px solid var(--color-border)',
+            display: 'flex', flexDirection: 'column', gap: '8px',
+          }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+              {session?.name || 'User'}
+            </div>
+            {hasMultipleRoles && (
+              <button onClick={cycleRole} style={{
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
+                color: roleMeta.color, display: 'flex', alignItems: 'center', gap: '4px',
+              }}>
+                <ArrowRightLeft size={10} /> Switch Role
+              </button>
+            )}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <LanguageSwitcher />
+              <button onClick={() => navigate('/settings')} style={{
+                width: '32px', height: '32px', borderRadius: '8px',
+                background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+                color: 'var(--color-text)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <SettingsIcon size={14} />
+              </button>
+              <button onClick={async () => { await logout(); navigate('/'); }} style={{
+                width: '32px', height: '32px', borderRadius: '8px',
+                background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+                color: 'var(--color-text)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <LogOut size={14} />
+              </button>
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {/* ── Main content area ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* ── Mobile Top bar (hidden on desktop) ── */}
+        {!isDesktop && (
+          <header style={{
+            background: 'white',
+            borderBottom: '1px solid var(--color-border)',
+            padding: 'env(safe-area-inset-top, 0px) 16px 0',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            height: '52px',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <img src={clinic.logo} alt={clinic.name}
+                style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+              <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '0.92rem', color: 'var(--color-secondary)', letterSpacing: '-0.3px' }}>
+                {clinic.productName || t('auth:brandName')}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ textAlign: 'right', lineHeight: 1.15 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+                  {session?.name || 'User'}
+                </div>
+                {hasMultipleRoles ? (
+                  <button onClick={cycleRole} style={{
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px',
+                    color: roleMeta.color, display: 'flex', alignItems: 'center', gap: '3px',
+                  }}>
+                    {roleLabel}
+                    <ArrowRightLeft size={8} style={{ opacity: 0.6 }} />
+                  </button>
+                ) : (
+                  <div style={{ fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: roleMeta.color }}>
+                    {roleLabel}
+                  </div>
+                )}
+              </div>
+              <LanguageSwitcher />
+              <button onClick={() => navigate('/settings')} style={{
+                width: '30px', height: '30px', borderRadius: '50%',
+                background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+                color: 'var(--color-text)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <SettingsIcon size={12} />
+              </button>
+              <button onClick={async () => { await logout(); navigate('/'); }} style={{
+                width: '30px', height: '30px', borderRadius: '50%',
+                background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)',
+                color: 'var(--color-text)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <LogOut size={12} />
+              </button>
+            </div>
+          </header>
+        )}
+
+        {/* ── Main scrollable content ── */}
+        <main style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: isDesktop ? '24px 32px 32px' : '16px 16px 100px',
+          maxWidth: isDesktop ? '1100px' : undefined,
+          WebkitOverflowScrolling: 'touch',
+        }}>
+          <Routes>
+            {isAdmin ? (
+              <>
+                <Route path="/" element={<AdminDashboard />} />
+                <Route path="/exercises" element={<Exercises />} />
+                <Route path="/exercises/:id" element={<ExerciseDetail />} />
+                <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
+                <Route path="/pose" element={<PoseChecker />} />
+                <Route path="/kiosk" element={<ClinicKiosk />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </>
+            ) : isPractitioner ? (
+              <>
+                <Route path="/" element={<PractitionerDashboard />} />
+                <Route path="/exercises" element={<Exercises />} />
+                <Route path="/exercises/:id" element={<ExerciseDetail />} />
+                <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
+                <Route path="/pose" element={<PoseChecker />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </>
+            ) : (
+              <>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/plan" element={<MyPlan />} />
+                <Route path="/programs" element={<FeatureGate feature="programs"><Programs /></FeatureGate>} />
+                <Route path="/programs/:id" element={<FeatureGate feature="programs"><ProgramDetail /></FeatureGate>} />
+                <Route path="/builder" element={<FeatureGate feature="programs"><ProgramBuilder /></FeatureGate>} />
+                <Route path="/exercises" element={<Exercises />} />
+                <Route path="/exercises/:id" element={<ExerciseDetail />} />
+                <Route path="/exercises/:exerciseId/record" element={<FeatureGate feature="videoRecording"><RecordSession /></FeatureGate>} />
+                <Route path="/pose" element={<FeatureGate feature="poseChecker"><PoseChecker /></FeatureGate>} />
+                <Route path="/progress" element={<Progress />} />
+                <Route path="/measures" element={<FeatureGate feature="outcomeMeasures"><OutcomeMeasures /></FeatureGate>} />
+                <Route path="/pain" element={<PainJournal />} />
+                <Route path="/reports" element={<FeatureGate feature="reports"><Reports /></FeatureGate>} />
+                <Route path="/guides" element={<Guides />} />
+                <Route path="/guides/:slug" element={<GuideDetail />} />
+                <Route path="/subscription" element={<Subscription />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </>
+            )}
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+          </Routes>
+        </main>
+      </div>
+
+      {/* ── Mobile Bottom Tab Bar (hidden on desktop) ── */}
+      {!isDesktop && showTabs && (
         <nav style={{
           position: 'fixed',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '100%',
-          maxWidth: isWideLayout ? '1200px' : '480px',
+          bottom: 0, left: 0, right: 0,
           background: 'white',
           borderTop: '1px solid var(--color-border)',
           display: 'flex',
@@ -271,12 +383,7 @@ function MobileLayout() {
           boxShadow: '0 -2px 12px rgba(0,0,0,0.04)',
         }}>
           {TABS.map(({ to, icon: Icon, labelKey }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              style={{ textDecoration: 'none', flex: 1 }}
-            >
+            <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none', flex: 1 }}>
               {({ isActive }) => (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -323,7 +430,7 @@ function RolePickerScreen() {
     }}>
       <div style={{
         background: 'white', borderRadius: '24px', padding: '36px 28px',
-        maxWidth: '380px', width: '100%', textAlign: 'center',
+        maxWidth: '440px', width: '100%', textAlign: 'center',
         boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
       }}>
         <img

@@ -8,7 +8,8 @@
     "patients": "Patients",
     "library": "Library",
     "admin": "Admin",
-    "kiosk": "Kiosk"
+    "kiosk": "Kiosk",
+    "guides": "Guides"
   },
   "roles": {
     "admin": {
