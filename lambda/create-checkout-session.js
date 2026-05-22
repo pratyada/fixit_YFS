@@ -31,8 +31,8 @@ export const handler = async (event) => {
       payment_method_types: ['card'],
       customer_email: email,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/#/subscription?success=true`,
-      cancel_url: `${origin}/#/subscription?canceled=true`,
+      success_url: `${origin}/subscription?success=true`,
+      cancel_url: `${origin}/subscription?canceled=true`,
       metadata: { firebaseUid: uid },
       subscription_data: {
         metadata: { firebaseUid: uid },

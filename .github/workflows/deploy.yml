@@ -68,7 +68,31 @@ jobs:
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/index.html" "/manifest.json"
+            --paths "/*"
+
+      - name: Submit to IndexNow for search indexing
+        run: |
+          curl -s -X POST "https://api.indexnow.org/IndexNow" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "host": "fixit.yourformsux.com",
+              "key": "fixit2026indexnow",
+              "urlList": [
+                "https://fixit.yourformsux.com/",
+                "https://fixit.yourformsux.com/guides",
+                "https://fixit.yourformsux.com/guides/hyrox-training-guide-toronto",
+                "https://fixit.yourformsux.com/guides/marathon-training-guide-gta-toronto",
+                "https://fixit.yourformsux.com/guides/ironman-triathlon-training-ontario",
+                "https://fixit.yourformsux.com/guides/learn-handstand-complete-guide",
+                "https://fixit.yourformsux.com/guides/learn-backflip-progressive-guide",
+                "https://fixit.yourformsux.com/guides/crossfit-beginners-guide-toronto",
+                "https://fixit.yourformsux.com/guides/muscle-up-progression-guide",
+                "https://fixit.yourformsux.com/guides/exercise-pain-management-guide-toronto",
+                "https://fixit.yourformsux.com/guides/home-gym-setup-guide-toronto",
+                "https://fixit.yourformsux.com/guides/ai-fitness-tracker-vs-personal-trainer"
+              ]
+            }'
+          echo "IndexNow submitted"
 
   deploy-lambda:
     name: Deploy Lambda Functions

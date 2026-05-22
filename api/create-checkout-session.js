@@ -20,8 +20,8 @@ export default async function handler(req, res) {
       payment_method_types: ['card'],
       customer_email: email,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${returnUrl || req.headers.origin}/#/subscription?success=true`,
-      cancel_url: `${returnUrl || req.headers.origin}/#/subscription?canceled=true`,
+      success_url: `${returnUrl || req.headers.origin}/subscription?success=true`,
+      cancel_url: `${returnUrl || req.headers.origin}/subscription?canceled=true`,
       metadata: { firebaseUid: uid },
       subscription_data: {
         metadata: { firebaseUid: uid },
