@@ -50,10 +50,37 @@ function AppShell() {
   const { user, loading, needsRolePick, needsOnboarding } = useAuth();
   const location = useLocation();
 
-  if (loading) return <SplashScreen />;
+  // Guides — always accessible, logged in or not, no auth wait
+  const isGuidesPage = location.pathname === '/guides' || location.pathname.startsWith('/guides/');
+  if (isGuidesPage) {
+    return (
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+            <img src="/favicon.ico" alt="FIXIT" style={{ width: '28px', height: '28px', borderRadius: '50%' }} onError={e => e.target.style.display = 'none'} />
+            <span style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1.1rem', color: 'var(--color-secondary)' }}>FIXIT</span>
+          </Link>
+          {user ? (
+            <Link to="/" style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--color-secondary)', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>
+              Dashboard
+            </Link>
+          ) : (
+            <Link to="/login" style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--color-secondary)', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>
+              Sign In
+            </Link>
+          )}
+        </div>
+        <Routes>
+          <Route path="/guides" element={<Guides />} />
+          <Route path="/guides/:slug" element={<GuideDetail />} />
+        </Routes>
+        <ConsentBanner />
+      </div>
+    );
+  }
 
-  // Privacy policy accessible without login
-  if (location.pathname === '/privacy' && !user) {
+  // Public pages — no auth wait
+  if (!user && location.pathname === '/privacy') {
     return (
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '16px 24px' }}>
         <PrivacyPolicy />
@@ -62,29 +89,12 @@ function AppShell() {
     );
   }
 
-  // Pre-auth: show landing page, with /login and /guides as routes
+  // Show splash while auth loads
+  if (loading) return <SplashScreen />;
+
+  // Pre-auth: landing page or login
   if (!user) {
     if (location.pathname === '/login') return <><Login /><ConsentBanner /></>;
-    if (location.pathname === '/guides' || location.pathname.startsWith('/guides/')) {
-      return (
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-              <img src="/favicon.ico" alt="FIXIT" style={{ width: '28px', height: '28px', borderRadius: '50%' }} onError={e => e.target.style.display = 'none'} />
-              <span style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1.1rem', color: 'var(--color-secondary)' }}>FIXIT</span>
-            </Link>
-            <Link to="/login" style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--color-secondary)', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>
-              Sign In
-            </Link>
-          </div>
-          <Routes>
-            <Route path="/guides" element={<Guides />} />
-            <Route path="/guides/:slug" element={<GuideDetail />} />
-          </Routes>
-          <ConsentBanner />
-        </div>
-      );
-    }
     return <><Landing /><ConsentBanner /></>;
   }
   if (needsRolePick) return <RolePickerScreen />;
