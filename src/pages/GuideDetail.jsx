@@ -1,10 +1,13 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, Tag, Share2 } from 'lucide-react';
 import { getGuideBySlug, GUIDES } from '../data/guides';
 
 export default function GuideDetail() {
-  const { slug } = useParams();
+  const params = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  // Support both Route params and direct path extraction
+  const slug = params.slug || location.pathname.replace('/guides/', '');
   const guide = getGuideBySlug(slug);
 
   if (!guide) {

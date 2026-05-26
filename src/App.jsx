@@ -53,6 +53,8 @@ function AppShell() {
   // Guides — always accessible, logged in or not, no auth wait
   const isGuidesPage = location.pathname === '/guides' || location.pathname.startsWith('/guides/');
   if (isGuidesPage) {
+    // Extract slug from path: /guides/some-slug → some-slug
+    const guideSlug = location.pathname.startsWith('/guides/') ? location.pathname.replace('/guides/', '') : null;
     return (
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
@@ -70,10 +72,7 @@ function AppShell() {
             </Link>
           )}
         </div>
-        <Routes>
-          <Route path="/guides" element={<Guides />} />
-          <Route path="/guides/:slug" element={<GuideDetail />} />
-        </Routes>
+        {guideSlug ? <GuideDetail /> : <Guides />}
         <ConsentBanner />
       </div>
     );
