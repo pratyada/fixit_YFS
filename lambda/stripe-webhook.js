@@ -4,7 +4,6 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Initialize Firebase Admin (once per cold start)
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -25,10 +24,7 @@ function getTierFromPriceId(priceId) {
 }
 
 async function updateUserSubscription(firebaseUid, data) {
-  await db.collection('users').doc(firebaseUid).update({
-    ...data,
-    updatedAt: new Date(),
-  });
+  await db.collection('users').doc(firebaseUid).update({ ...data, updatedAt: new Date() });
 }
 
 async function handleCheckoutCompleted(session) {
@@ -75,16 +71,11 @@ async function handlePaymentFailed(invoice) {
 }
 
 export const handler = async (event) => {
-  if (event.requestContext?.http?.method !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
-
-  const sig = event.headers['stripe-signature'];
+  const sig = event.headers?.['stripe-signature'];
   if (!sig) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing stripe-signature header' }) };
   }
 
-  // Lambda API Gateway v2 delivers body as-is (raw string) when not base64
   const rawBody = event.isBase64Encoded
     ? Buffer.from(event.body, 'base64')
     : event.body;
