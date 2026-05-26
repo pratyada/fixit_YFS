@@ -123,14 +123,20 @@ export default function Subscription() {
       {/* Pricing tiers */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
         {TIERS.map(t => {
+          const TIER_LEVELS = { free: 0, basic: 1, pro: 2 };
           const isCurrent = t.key === tier;
-          const isUpgrade = !isCurrent && (t.key === 'basic' || t.key === 'pro');
+          const currentLevel = TIER_LEVELS[tier] || 0;
+          const cardLevel = TIER_LEVELS[t.key] || 0;
+          const isDowngrade = cardLevel < currentLevel;
+          const isUpgrade = cardLevel > currentLevel;
           return (
             <div key={t.key} style={{
-              background: 'white', borderRadius: '16px',
-              border: t.popular ? `2px solid ${t.color}` : '1px solid var(--color-border)',
+              background: isDowngrade ? '#F9F9F9' : 'white',
+              borderRadius: '16px',
+              border: isCurrent ? `2px solid #4CAF50` : t.popular && !isDowngrade ? `2px solid ${t.color}` : '1px solid var(--color-border)',
               padding: '20px', position: 'relative',
-              opacity: isCurrent ? 1 : 0.95,
+              opacity: isDowngrade ? 0.5 : 1,
+              filter: isDowngrade ? 'grayscale(0.5)' : 'none',
             }}>
               {t.popular && (
                 <div style={{
@@ -177,7 +183,18 @@ export default function Subscription() {
                 ))}
               </div>
 
-              {isUpgrade && !isCurrent && (
+              {isCurrent && (
+                <div style={{
+                  width: '100%', padding: '12px', borderRadius: '10px',
+                  background: '#E8F5E9', border: '1px solid #C8E6C9',
+                  color: '#2E7D32', textAlign: 'center',
+                  fontSize: '0.85rem', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                }}>
+                  <Check size={16} /> Your Current Plan
+                </div>
+              )}
+              {isUpgrade && (
                 <button onClick={() => openCheckout(t.key)} style={{
                   width: '100%', padding: '12px', borderRadius: '10px',
                   background: t.popular ? t.color : 'var(--color-secondary)',
@@ -187,6 +204,16 @@ export default function Subscription() {
                 }}>
                   Upgrade to {t.name}
                 </button>
+              )}
+              {isDowngrade && (
+                <div style={{
+                  width: '100%', padding: '12px', borderRadius: '10px',
+                  background: '#F5F5F5', border: '1px solid #E0E0E0',
+                  color: 'var(--color-text)', textAlign: 'center',
+                  fontSize: '0.8rem', fontWeight: 500,
+                }}>
+                  Included in your plan
+                </div>
               )}
             </div>
           );
