@@ -9,7 +9,8 @@
     "library": "Library",
     "admin": "Admin",
     "kiosk": "Kiosk",
-    "guides": "Guides"
+    "guides": "Guides",
+    "health": "Health"
   },
   "roles": {
     "admin": {

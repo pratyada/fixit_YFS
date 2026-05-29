@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClinicProvider, useClinic } from './contexts/ClinicContext';
@@ -30,6 +30,7 @@ import Subscription from './pages/Subscription';
 import Settings from './pages/Settings';
 import Guides from './pages/Guides';
 import GuideDetail from './pages/GuideDetail';
+import Health from './pages/Health';
 import Onboarding from './pages/Onboarding';
 import Landing from './pages/Landing';
 import FeatureGate from './components/FeatureGate';
@@ -104,10 +105,10 @@ function AppShell() {
 // ─── Tab configs per role ───
 const PATIENT_TABS = [
   { to: '/', icon: Home, labelKey: 'nav:tabs.home' },
+  { to: '/health', icon: HeartPulse, labelKey: 'nav:tabs.health' },
   { to: '/exercises', icon: Dumbbell, labelKey: 'nav:tabs.exercises' },
   { to: '/progress', icon: BarChart3, labelKey: 'nav:tabs.progress' },
   { to: '/guides', icon: Compass, labelKey: 'nav:tabs.guides' },
-  { to: '/pain', icon: Heart, labelKey: 'nav:tabs.pain' },
 ];
 
 const PRACTITIONER_TABS = [
@@ -355,6 +356,7 @@ function AppLayout() {
             ) : (
               <>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/health" element={<Health />} />
                 <Route path="/plan" element={<MyPlan />} />
                 <Route path="/programs" element={<FeatureGate feature="programs"><Programs /></FeatureGate>} />
                 <Route path="/programs/:id" element={<FeatureGate feature="programs"><ProgramDetail /></FeatureGate>} />

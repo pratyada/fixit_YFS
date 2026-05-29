@@ -301,6 +301,78 @@ export function onCompletedSessions(uid, callback) {
   );
 }
 
+// ─── Health Tracking: Food Entries ───
+
+export async function addFoodEntry(uid, data) {
+  return addDoc(collection(db, 'users', uid, 'foodEntries'), {
+    ...data,
+    timestamp: serverTimestamp(),
+  });
+}
+
+export async function deleteFoodEntry(uid, entryId) {
+  await deleteDoc(doc(db, 'users', uid, 'foodEntries', entryId));
+}
+
+export function onFoodEntries(uid, callback) {
+  return onSnapshot(
+    query(collection(db, 'users', uid, 'foodEntries'), orderBy('timestamp', 'desc')),
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+// ─── Health Tracking: Water Entries ───
+
+export async function addWaterEntry(uid, data) {
+  return addDoc(collection(db, 'users', uid, 'waterEntries'), {
+    ...data,
+    timestamp: serverTimestamp(),
+  });
+}
+
+export async function deleteWaterEntry(uid, entryId) {
+  await deleteDoc(doc(db, 'users', uid, 'waterEntries', entryId));
+}
+
+export function onWaterEntries(uid, callback) {
+  return onSnapshot(
+    query(collection(db, 'users', uid, 'waterEntries'), orderBy('timestamp', 'desc')),
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+// ─── Health Tracking: Body Metrics ───
+
+export async function addBodyMetric(uid, data) {
+  return addDoc(collection(db, 'users', uid, 'bodyMetrics'), {
+    ...data,
+    timestamp: serverTimestamp(),
+  });
+}
+
+export function onBodyMetrics(uid, callback) {
+  return onSnapshot(
+    query(collection(db, 'users', uid, 'bodyMetrics'), orderBy('timestamp', 'desc')),
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+// ─── Health Tracking: Health Reports ───
+
+export async function addHealthReport(uid, data) {
+  return addDoc(collection(db, 'users', uid, 'healthReports'), {
+    ...data,
+    timestamp: serverTimestamp(),
+  });
+}
+
+export function onHealthReports(uid, callback) {
+  return onSnapshot(
+    query(collection(db, 'users', uid, 'healthReports'), orderBy('timestamp', 'desc')),
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
 // ─── Subscription Management ───
 
 export async function updateSubscription(uid, data) {
@@ -334,7 +406,7 @@ async function deleteSubcollection(uid, subcollection) {
 
 export async function deleteUserData(uid) {
   // Delete all subcollections
-  const subcollections = ['sessions', 'painEntries', 'assignments', 'completedSessions'];
+  const subcollections = ['sessions', 'painEntries', 'assignments', 'completedSessions', 'foodEntries', 'waterEntries', 'bodyMetrics', 'healthReports'];
   for (const sub of subcollections) {
     await deleteSubcollection(uid, sub);
   }

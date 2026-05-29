@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   onCompletedSessions, onPainEntries, onAssignments,
+  onFoodEntries, onWaterEntries, onBodyMetrics, onHealthReports,
   addCompletedSession, addPainEntry, addAssignment,
   getCompletedSessions, getPainEntries, getAssignments,
 } from '../lib/firestore';
@@ -16,10 +17,16 @@ export function usePatientData(key, initialValue) {
   const [loaded, setLoaded] = useState(false);
 
   // Firestore collection mapping
-  const firestoreKey = key === 'completed_sessions' ? 'completedSessions'
-    : key === 'pain_entries' ? 'painEntries'
-    : key === 'assigned_exercises' ? 'assignments'
-    : null;
+  const FIRESTORE_KEY_MAP = {
+    completed_sessions: 'completedSessions',
+    pain_entries: 'painEntries',
+    assigned_exercises: 'assignments',
+    food_entries: 'foodEntries',
+    water_entries: 'waterEntries',
+    body_metrics: 'bodyMetrics',
+    health_reports: 'healthReports',
+  };
+  const firestoreKey = FIRESTORE_KEY_MAP[key] || null;
 
   useEffect(() => {
     if (!activePatientId) return;
@@ -30,6 +37,10 @@ export function usePatientData(key, initialValue) {
         completedSessions: onCompletedSessions,
         painEntries: onPainEntries,
         assignments: onAssignments,
+        foodEntries: onFoodEntries,
+        waterEntries: onWaterEntries,
+        bodyMetrics: onBodyMetrics,
+        healthReports: onHealthReports,
       };
       const listener = listenerMap[firestoreKey];
       if (listener) {

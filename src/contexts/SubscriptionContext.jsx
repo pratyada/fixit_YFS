@@ -24,12 +24,22 @@ const FEATURE_TIER_MAP = {
   progressCharts: 'basic',
   outcomeMeasures: 'basic',
 
+  // Basic features — health
+  foodFavorites: 'basic',
+  foodPhotos: 'basic',
+  healthReports: 'basic',
+  bodyMetricsFull: 'basic',
+  healthCharts: 'basic',
+
   // Pro features
   poseChecker: 'pro',
   videoRecording: 'pro',
   exercise3D: 'pro',
   programs: 'pro',
   reports: 'pro',
+  aiInsights: 'pro',
+  reportParsing: 'pro',
+  unlimitedHistory: 'pro',
 };
 
 const TIER_LEVELS = { free: 0, basic: 1, pro: 2 };
