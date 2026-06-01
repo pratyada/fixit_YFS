@@ -13,12 +13,15 @@ import HealthReports from '../components/health/HealthReports';
 import HealthInsights from '../components/health/HealthInsights';
 import HealthTargets from '../components/health/HealthTargets';
 import FeatureGate from '../components/FeatureGate';
+import TodayWorkout from '../components/health/TodayWorkout';
+import WorkoutPlanSelector from '../components/health/WorkoutPlanSelector';
 
 const TABS = [
   { id: 'today', label: 'Today', icon: Zap },
   { id: 'food', label: 'Food', icon: UtensilsCrossed },
   { id: 'water', label: 'Water', icon: Droplets },
   { id: 'body', label: 'Body', icon: Activity },
+  { id: 'plan', label: 'Plan', icon: Dumbbell },
   { id: 'reports', label: 'Reports', icon: FileText },
   { id: 'insights', label: 'Insights', icon: Brain },
 ];
@@ -112,6 +115,7 @@ export default function Health() {
           completedSessions={completedSessions}
           targets={targets}
           user={user}
+          profile={profile}
           setWaterEntries={setWaterEntries}
           onSwitchTab={setActiveTab}
         />
@@ -119,6 +123,12 @@ export default function Health() {
       {activeTab === 'food' && <FoodLogger />}
       {activeTab === 'water' && <WaterTracker />}
       {activeTab === 'body' && <BodyMetrics />}
+      {activeTab === 'plan' && (
+        <WorkoutPlanSelector
+          currentPlanId={profile?.workoutPlanId}
+          onSelect={() => setActiveTab('today')}
+        />
+      )}
       {activeTab === 'reports' && (
         <FeatureGate feature="healthReports">
           <HealthReports />
@@ -139,7 +149,7 @@ export default function Health() {
   );
 }
 
-function TodayDashboard({ foodEntries, waterEntries, bodyMetrics, completedSessions, targets, user, setWaterEntries, onSwitchTab }) {
+function TodayDashboard({ foodEntries, waterEntries, bodyMetrics, completedSessions, targets, user, profile, setWaterEntries, onSwitchTab }) {
   const today = new Date().toISOString().split('T')[0];
   const todayFood = foodEntries.filter(e => e.date === today);
   const todayWater = waterEntries.filter(e => e.date === today);
@@ -310,6 +320,12 @@ function TodayDashboard({ foodEntries, waterEntries, bodyMetrics, completedSessi
           </button>
         ))}
       </div>
+
+      {/* Today's Workout */}
+      <TodayWorkout
+        planId={profile?.workoutPlanId}
+        onChangePlan={() => onSwitchTab('plan')}
+      />
 
       {/* Body stats card */}
       {latest && (
