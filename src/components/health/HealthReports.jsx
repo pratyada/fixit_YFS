@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
-import { Upload, FileText, Eye, X, Trash2 } from 'lucide-react';
+import { Upload, FileText, Eye, X, Loader, CheckCircle2 } from 'lucide-react';
 import { usePatientData } from '../../hooks/usePatientData';
 import { useAuth } from '../../contexts/AuthContext';
 import { addHealthReport, addBodyMetric } from '../../lib/firestore';
 import { generateId } from '../../utils/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../lib/firebase';
 import MetricExtractor from './MetricExtractor';
 
 const REPORT_TYPES = ['InBody', 'DEXA', 'Blood Work', 'Other'];
@@ -13,25 +15,21 @@ export default function HealthReports() {
   const [reports, setReports] = usePatientData('health_reports', []);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [reportType, setReportType] = useState('InBody');
   const [showExtractor, setShowExtractor] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [viewing, setViewing] = useState(null);
   const fileRef = useRef(null);
 
   const handleFiles = (files) => {
     const file = files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setSelectedFile({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        data: e.target.result,
-      });
-      setShowExtractor(true);
-    };
-    reader.readAsDataURL(file);
+    // Store the raw File object for upload to Storage
+    setSelectedFile(file);
+    // Create a preview URL for display
+    setPreviewUrl(URL.createObjectURL(file));
+    setShowExtractor(true);
   };
 
   const handleDrop = (e) => {
@@ -41,42 +39,57 @@ export default function HealthReports() {
   };
 
   const handleSave = async (extractedMetrics) => {
-    const reportId = generateId();
-    const report = {
-      id: reportId,
-      type: reportType.toLowerCase().replace(' ', ''),
-      name: selectedFile.name,
-      fileType: selectedFile.type,
-      fileSize: selectedFile.size,
-      fileData: selectedFile.data,
-      extractedMetrics,
-      date: new Date().toISOString().split('T')[0],
-    };
-    setReports(prev => [report, ...prev]);
+    if (!user?.uid || !selectedFile) return;
+    setUploading(true);
 
-    // Also create a body metrics entry if we have weight/BF data
-    if (extractedMetrics && (extractedMetrics.weight || extractedMetrics.bodyFatPct)) {
-      const metric = {
-        id: generateId(),
-        date: report.date,
-        source: reportType.toLowerCase().replace(' ', ''),
-        weight: extractedMetrics.weight || null,
-        bodyFatPct: extractedMetrics.bodyFatPct || null,
-        muscleMass: extractedMetrics.muscleMass || null,
-        bmi: extractedMetrics.bmi || null,
-        bmr: extractedMetrics.bmr || null,
-        reportId,
+    try {
+      const reportId = generateId();
+      let fileUrl = null;
+
+      // Upload file to Firebase Storage
+      const storagePath = `reports/${user.uid}/${reportId}_${selectedFile.name}`;
+      const storageRef = ref(storage, storagePath);
+      const snap = await uploadBytes(storageRef, selectedFile, { contentType: selectedFile.type });
+      fileUrl = await getDownloadURL(snap.ref);
+
+      const report = {
+        id: reportId,
+        type: reportType.toLowerCase().replace(' ', ''),
+        name: selectedFile.name,
+        fileType: selectedFile.type,
+        fileSize: selectedFile.size,
+        fileUrl, // URL from Firebase Storage, NOT base64
+        storagePath,
+        extractedMetrics,
+        date: new Date().toISOString().split('T')[0],
       };
-      if (user?.uid) {
-        try { await addBodyMetric(user.uid, metric); } catch (e) { console.error(e); }
+
+      // Save report to Firestore
+      await addHealthReport(user.uid, report);
+
+      // Also create a body metrics entry if we have weight/BF data
+      if (extractedMetrics && (extractedMetrics.weight || extractedMetrics.bodyFatPct)) {
+        const metric = {
+          id: generateId(),
+          date: report.date,
+          source: reportType.toLowerCase().replace(' ', ''),
+          weight: extractedMetrics.weight || null,
+          bodyFatPct: extractedMetrics.bodyFatPct || null,
+          muscleMass: extractedMetrics.muscleMass || null,
+          bmi: extractedMetrics.bmi || null,
+          bmr: extractedMetrics.bmr || null,
+          reportId,
+        };
+        await addBodyMetric(user.uid, metric);
       }
+    } catch (e) {
+      console.error('Failed to save report:', e);
+      alert('Failed to upload report. Please try again.');
     }
 
-    if (user?.uid) {
-      try { await addHealthReport(user.uid, report); } catch (e) { console.error(e); }
-    }
-
+    setUploading(false);
     setSelectedFile(null);
+    setPreviewUrl(null);
     setShowExtractor(false);
   };
 
@@ -131,16 +144,24 @@ export default function HealthReports() {
             <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
               {selectedFile.name}
             </div>
-            <button onClick={() => { setShowExtractor(false); setSelectedFile(null); }}
+            <button onClick={() => { setShowExtractor(false); setSelectedFile(null); setPreviewUrl(null); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text)' }}>
               <X size={16} />
             </button>
           </div>
-          {isImage(selectedFile.type) && (
-            <img src={selectedFile.data} alt="Report preview"
+          {previewUrl && isImage(selectedFile.type) && (
+            <img src={previewUrl} alt="Report preview"
               style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '8px', marginBottom: '12px', background: 'var(--color-bg-alt)' }} />
           )}
-          <MetricExtractor reportType={reportType} onSave={handleSave} onCancel={() => { setShowExtractor(false); setSelectedFile(null); }} />
+          {uploading ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--color-accent)' }}>
+              <Loader size={24} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+              <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Uploading report & saving metrics...</div>
+              <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : (
+            <MetricExtractor reportType={reportType} onSave={handleSave} onCancel={() => { setShowExtractor(false); setSelectedFile(null); setPreviewUrl(null); }} />
+          )}
         </div>
       )}
 
@@ -148,7 +169,7 @@ export default function HealthReports() {
       {reports.length > 0 && (
         <div>
           <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text)', marginBottom: '8px' }}>
-            Report History
+            Report History ({reports.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {reports.map(r => (
@@ -157,20 +178,33 @@ export default function HealthReports() {
                 padding: '12px 14px', borderRadius: '10px', background: 'white',
                 border: '1px solid var(--color-border)',
               }}>
-                <div style={{
-                  width: '40px', height: '40px', borderRadius: '8px',
-                  background: 'var(--color-bg-alt)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
-                  <FileText size={18} color="var(--color-accent)" />
-                </div>
+                {/* Thumbnail */}
+                {r.fileUrl && isImage(r.fileType) ? (
+                  <img src={r.fileUrl} alt="" style={{
+                    width: '40px', height: '40px', borderRadius: '8px',
+                    objectFit: 'cover', flexShrink: 0, background: 'var(--color-bg-alt)',
+                  }} />
+                ) : (
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '8px',
+                    background: 'var(--color-bg-alt)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <FileText size={18} color="var(--color-accent)" />
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-secondary)' }}>{r.name}</div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {r.name || r.type}
+                    {r.extractedMetrics && <CheckCircle2 size={12} color="#4CAF50" />}
+                  </div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--color-text)' }}>
                     {r.type} &bull; {r.date}
-                    {r.extractedMetrics?.weight && ` &bull; ${r.extractedMetrics.weight} lbs`}
+                    {r.extractedMetrics?.weight ? ` &bull; ${r.extractedMetrics.weight} lbs` : ''}
+                    {r.extractedMetrics?.bodyFatPct ? ` &bull; ${r.extractedMetrics.bodyFatPct}% BF` : ''}
+                    {r.extractedMetrics?.muscleMass ? ` &bull; ${r.extractedMetrics.muscleMass} lbs muscle` : ''}
                   </div>
                 </div>
-                {r.fileData && isImage(r.fileType) && (
+                {r.fileUrl && isImage(r.fileType) && (
                   <button onClick={() => setViewing(viewing === r.id ? null : r.id)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)' }}>
                     <Eye size={16} />
@@ -185,12 +219,13 @@ export default function HealthReports() {
       {/* Preview modal */}
       {viewing && (() => {
         const r = reports.find(r => r.id === viewing);
-        return r?.fileData ? (
+        const imgSrc = r?.fileUrl || r?.fileData;
+        return imgSrc ? (
           <div onClick={() => setViewing(null)} style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px',
           }}>
-            <img src={r.fileData} alt={r.name} style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '12px' }} />
+            <img src={imgSrc} alt={r.name} style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '12px' }} />
           </div>
         ) : null;
       })()}
