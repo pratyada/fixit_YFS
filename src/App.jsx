@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
