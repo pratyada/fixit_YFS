@@ -167,6 +167,20 @@ export default function ClinicKiosk() {
           patientName: patientProfile?.name || null,
           clinicId: clinic?.id || 'fixit',
         });
+        // Fire-and-forget: notify practitioners via email
+        fetch('/api/notify-review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            patientId: patientProfile?.id || null,
+            patientEmail: patientProfile?.email || null,
+            patientName: patientProfile?.name || null,
+            exerciseName: selectedExercise.name,
+            score: analysis.overall,
+            faults: analysis.faults?.map(f => ({ name: f.name, severity: f.severity })) || [],
+            duration: analysis.duration,
+          }),
+        }).catch(() => {});
       } catch (e) {
         console.error('Failed to save kiosk session:', e);
       }

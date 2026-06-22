@@ -26,6 +26,12 @@ Parameters:
   FirebasePrivateKey:
     Type: String
     NoEcho: true
+  SesFromEmail:
+    Type: String
+    Default: noreply@yourformsux.com
+  AppUrl:
+    Type: String
+    Default: https://fixit.yourformsux.com
 
 Globals:
   Function:
@@ -42,6 +48,8 @@ Globals:
         FIREBASE_CLIENT_EMAIL: !Ref FirebaseClientEmail
         FIREBASE_PRIVATE_KEY: !Ref FirebasePrivateKey
         ALLOWED_ORIGIN: !Sub 'https://${DomainName}'
+        SES_FROM_EMAIL: !Ref SesFromEmail
+        APP_URL: !Ref AppUrl
 
 Resources:
   # ── S3 Bucket for static site ──
@@ -189,6 +197,49 @@ Resources:
           Properties:
             ApiId: !Ref ApiGateway
             Path: /api/stripe-webhook
+            Method: POST
+
+  # ── Email Notification Lambdas ──
+  DailySummaryEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: daily-summary-email.handler
+      CodeUri: ../lambda/
+      Timeout: 60
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 * * ? *)
+            Description: Daily kiosk summary email to practitioners (midnight UTC / 8 PM ET)
+            Enabled: true
+
+  SessionReviewEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: session-review-email.handler
+      CodeUri: ../lambda/
+      Timeout: 30
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ApiGateway
+            Path: /api/notify-review
             Method: POST
 
 Outputs:
