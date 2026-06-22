@@ -5,7 +5,7 @@ import { Camera, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, ChevronR
 import { useClinic } from '../contexts/ClinicContext';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
-import { addKioskSession, getUserByEmail, createStubPatient } from '../lib/firestore';
+import { addKioskSession, getUserByEmail, createStubPatient, getActiveLeaderboard } from '../lib/firestore';
 
 const POSE_CONNECTIONS = [
   ['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'],
@@ -38,6 +38,9 @@ export default function ClinicKiosk() {
   const [step, setStep] = useState('identify'); // identify | select | camera | report
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [patientProfile, setPatientProfile] = useState(null);
+  const [leaderboard, setLeaderboard] = useState(null);
+
+  useEffect(() => { getActiveLeaderboard().then(setLeaderboard).catch(() => {}); }, []);
 
   // Camera
   const videoRef = useRef(null);
@@ -314,7 +317,7 @@ export default function ClinicKiosk() {
         />
       )}
 
-      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} onExit={backToIdentify} patient={patientProfile} t={t} clinic={clinic} />}
+      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} onExit={backToIdentify} patient={patientProfile} leaderboard={leaderboard} t={t} clinic={clinic} />}
 
       {step === 'camera' && (
         <CameraScreen
@@ -527,7 +530,7 @@ function IdentifyScreen({ clinic, t, onIdentified, onSkip, onExit }) {
 // ═══════════════════════════════════════════════
 // EXERCISE SELECT SCREEN (iPad-optimized grid)
 // ═══════════════════════════════════════════════
-function SelectScreen({ exercises, onSelect, onExit, patient, t, clinic }) {
+function SelectScreen({ exercises, onSelect, onExit, patient, leaderboard, t, clinic }) {
   return (
     <div className="kiosk-fade" style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -618,6 +621,36 @@ function SelectScreen({ exercises, onSelect, onExit, patient, t, clinic }) {
           </div>
         )}
       </div>
+
+      {/* Leaderboard Banner */}
+      {leaderboard && (leaderboard.bestForm?.length > 0 || leaderboard.mostSessions?.length > 0) && (
+        <div style={{
+          display: 'flex', gap: '12px', justifyContent: 'center',
+          maxWidth: '1000px', margin: '0 auto 24px', width: '100%',
+          flexWrap: 'wrap',
+        }}>
+          {[
+            { icon: '🏆', label: 'Best Form', data: leaderboard.bestForm?.[0], val: leaderboard.bestForm?.[0]?.bestScore },
+            { icon: '⚡', label: 'Most Checks', data: leaderboard.mostSessions?.[0], val: leaderboard.mostSessions?.[0]?.sessionCount },
+            { icon: '🏅', label: 'Consistency', data: leaderboard.mostConsistent?.[0], val: leaderboard.mostConsistent?.[0]?.activeDays && `${leaderboard.mostConsistent[0].activeDays}d` },
+          ].filter(c => c.data).map(c => (
+            <div key={c.label} style={{
+              flex: '1 1 200px', maxWidth: '300px',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '14px', padding: '14px 18px',
+              display: 'flex', alignItems: 'center', gap: '12px',
+            }}>
+              <span style={{ fontSize: '1.5rem' }}>{c.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.4)' }}>{c.label}</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'white' }}>{c.data.displayName}</div>
+              </div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#FFD700' }}>{c.val}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Exercise Grid */}
       <div style={{

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users, Shield, Stethoscope, User, ChevronDown, ChevronUp, Search, RefreshCw, Camera, TrendingUp, Award, Calendar, Brain, Download, Star, Building2, Plus, Save, Palette } from 'lucide-react';
-import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner, setPatientPractitioners, getKioskSessions, getAllFeedback } from '../lib/firestore';
+import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractitioner, setPatientPractitioners, getKioskSessions, getAllFeedback, getActiveLeaderboard, getPastLeaderboards } from '../lib/firestore';
 import { getAllClinics, createClinic, updateClinic, SUPER_ADMIN_EMAIL } from '../lib/clinicConfig';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -30,6 +30,11 @@ export default function AdminDashboard() {
   // AI Training state
   const [feedbackData, setFeedbackData] = useState([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+
+  // Leaderboard state
+  const [leaderboard, setLeaderboard] = useState(null);
+  const [pastLeaderboards, setPastLeaderboards] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
   // Clinics state (super admin only)
   const [clinics, setClinics] = useState([]);
@@ -69,6 +74,15 @@ export default function AdminDashboard() {
   useEffect(() => { if (tab === 'kiosk' && kioskSessions.length === 0) loadKiosk(); }, [tab]);
   useEffect(() => { if (tab === 'aiTraining' && feedbackData.length === 0) loadFeedback(); }, [tab]);
   useEffect(() => { if (tab === 'clinics' && clinics.length === 0) loadClinics(); }, [tab]);
+
+  const loadLeaderboard = async () => {
+    setLeaderboardLoading(true);
+    const [active, past] = await Promise.all([getActiveLeaderboard(), getPastLeaderboards()]);
+    setLeaderboard(active);
+    setPastLeaderboards(past);
+    setLeaderboardLoading(false);
+  };
+  useEffect(() => { if (tab === 'leaderboard' && !leaderboard) loadLeaderboard(); }, [tab]);
 
   const handleRoleChange = async (uid, newRole) => {
     await updateUserRole(uid, newRole);
@@ -270,6 +284,7 @@ export default function AdminDashboard() {
         {[
           { key: 'users', label: t('tabs.users'), icon: Users },
           { key: 'kiosk', label: t('tabs.kioskLog'), icon: Camera },
+          { key: 'leaderboard', label: 'Leaderboard', icon: Award },
           { key: 'aiTraining', label: 'AI Training', icon: Brain },
           ...(isSuperAdmin ? [{ key: 'clinics', label: 'Clinics', icon: Building2 }] : []),
         ].map(tb => (
@@ -400,6 +415,114 @@ export default function AdminDashboard() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'leaderboard' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ margin: 0 }}>Current Period</h3>
+            <button onClick={loadLeaderboard} style={{
+              padding: '6px 14px', borderRadius: '8px', background: 'var(--color-bg-alt)',
+              border: '1px solid var(--color-border)', fontSize: '0.75rem', fontWeight: 600,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+            }}>
+              <RefreshCw size={12} /> Refresh
+            </button>
+          </div>
+          {leaderboardLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)' }}>Loading...</div>
+          ) : !leaderboard ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)' }}>
+              <Award size={32} style={{ margin: '0 auto 8px', color: 'var(--color-border)' }} />
+              No leaderboard data yet. Rankings update every 4 hours.
+            </div>
+          ) : (
+            <>
+              <div style={{ marginBottom: '8px', fontSize: '0.75rem', color: 'var(--color-text)' }}>
+                {leaderboard.periodLabel} &bull; {leaderboard.totalSessions || 0} sessions &bull; {leaderboard.totalPatients || 0} patients
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                {[
+                  { key: 'bestForm', title: 'Best Form', icon: '🏆', valKey: 'bestScore', suffix: ' pts', subKey: 'exercise' },
+                  { key: 'mostSessions', title: 'Most Pose Checks', icon: '⚡', valKey: 'sessionCount', suffix: ' sessions', subKey: null },
+                  { key: 'mostConsistent', title: 'Most Consistent', icon: '🏅', valKey: 'activeDays', suffix: ' days', subKey: null },
+                ].map(cat => {
+                  const entries = leaderboard[cat.key] || [];
+                  return (
+                    <div key={cat.key} style={{
+                      background: 'white', borderRadius: '14px',
+                      border: '1px solid var(--color-border)', padding: '16px',
+                    }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '1.2rem' }}>{cat.icon}</span> {cat.title}
+                      </div>
+                      {entries.length === 0 ? (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text)', padding: '12px 0' }}>No data yet</div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {entries.map((e, i) => {
+                            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+                            return (
+                              <div key={e.patientId} style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '8px 10px', borderRadius: '8px',
+                                background: i < 3 ? '#FAFAFA' : 'transparent',
+                              }}>
+                                <span style={{ width: '24px', textAlign: 'center', fontSize: i < 3 ? '1rem' : '0.7rem', fontWeight: 700 }}>{medal}</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+                                    {e.fullName || e.displayName}
+                                  </div>
+                                  {cat.subKey && e[cat.subKey] && (
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text)' }}>{e[cat.subKey]}</div>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-secondary)' }}>
+                                  {e[cat.valKey]}{cat.suffix}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Past Winners */}
+          {pastLeaderboards.length > 0 && (
+            <div style={{ marginTop: '24px' }}>
+              <h3>Past Winners</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {pastLeaderboards.map(lb => (
+                  <div key={lb.id} style={{
+                    background: 'white', borderRadius: '12px',
+                    border: '1px solid var(--color-border)', padding: '14px 16px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+                      {lb.periodLabel}
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem' }}>
+                      {lb.winners?.bestForm && (
+                        <span>🏆 {lb.winners.bestForm.displayName} ({lb.winners.bestForm.bestScore})</span>
+                      )}
+                      {lb.winners?.mostSessions && (
+                        <span>⚡ {lb.winners.mostSessions.displayName} ({lb.winners.mostSessions.sessionCount})</span>
+                      )}
+                      {lb.winners?.mostConsistent && (
+                        <span>🏅 {lb.winners.mostConsistent.displayName} ({lb.winners.mostConsistent.activeDays}d)</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </>

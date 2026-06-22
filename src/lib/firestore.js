@@ -218,6 +218,28 @@ export async function createStubPatient(email, clinicId) {
   return { id: ref.id, ...data };
 }
 
+// ─── Leaderboard ───
+
+export async function getActiveLeaderboard(clinicId = 'fixit') {
+  const results = await queryDocs(
+    query(collection(db, 'leaderboards'),
+      where('clinicId', '==', clinicId),
+      where('status', '==', 'active'),
+      limit(1))
+  );
+  return results[0] || null;
+}
+
+export async function getPastLeaderboards(clinicId = 'fixit', limitCount = 6) {
+  return queryDocs(
+    query(collection(db, 'leaderboards'),
+      where('clinicId', '==', clinicId),
+      where('status', '==', 'finalized'),
+      orderBy('periodEnd', 'desc'),
+      limit(limitCount))
+  );
+}
+
 // ─── Kiosk Sessions (clinic walk-ins) ───
 
 export async function addKioskSession(data) {

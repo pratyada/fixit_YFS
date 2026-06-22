@@ -242,6 +242,20 @@ Resources:
             Path: /api/notify-review
             Method: POST
 
+  UpdateLeaderboardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: update-leaderboard.handler
+      CodeUri: ../lambda/
+      Timeout: 60
+      Events:
+        LeaderboardSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(4 hours)
+            Description: Update leaderboard rankings every 4 hours
+            Enabled: true
+
 Outputs:
   CloudFrontDistributionId:
     Value: !Ref CloudFrontDistribution

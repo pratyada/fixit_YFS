@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Dumbbell, TrendingUp, Camera, Heart, Calendar, Award, ArrowRight, Flame, Target, ChevronRight, Sparkles, Play, CheckCircle2, Stethoscope, Star } from 'lucide-react';
+import { Dumbbell, TrendingUp, Camera, Heart, Calendar, Award, ArrowRight, Flame, Target, ChevronRight, Sparkles, Play, CheckCircle2, Stethoscope, Star, Trophy, Zap, Medal } from 'lucide-react';
 import { usePatientData } from '../hooks/usePatientData';
 import { useAuth } from '../contexts/AuthContext';
+import { getActiveLeaderboard } from '../lib/firestore';
 import { EXERCISE_LIBRARY, PAIN_SCALE } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 
@@ -16,7 +18,12 @@ export default function Dashboard() {
   const [painEntries] = usePatientData('pain_entries', []);
   const [profile] = usePatientData('user_profile', null);
   const [assignedExercises] = usePatientData('assigned_exercises', []);
-  const { session } = useAuth();
+  const { session, user } = useAuth();
+  const [leaderboard, setLeaderboard] = useState(null);
+
+  useEffect(() => {
+    getActiveLeaderboard().then(setLeaderboard).catch(() => {});
+  }, []);
 
   const today = new Date().toISOString().split('T')[0];
   const todaySessions = completedSessions.filter(s => s.date === today);
@@ -231,6 +238,11 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* ── Leaderboard Widget ── */}
+      {leaderboard && (leaderboard.bestForm?.length > 0 || leaderboard.mostSessions?.length > 0) && (
+        <LeaderboardWidget leaderboard={leaderboard} currentUserId={user?.uid} />
+      )}
 
     </div>
   );
@@ -477,6 +489,121 @@ function RecommendedSection({ profile, completedSessions }) {
             <ChevronRight size={16} style={{ color: 'var(--color-text)', opacity: 0.4, flexShrink: 0 }} />
           </Link>
         ))}
+      </div>
+    </div>
+  );
+}
+
+const LEADER_CATS = [
+  { key: 'bestForm', label: 'Best Form', icon: Trophy, color: '#FFD700', bg: '#FFF8E1', valueKey: 'bestScore', suffix: ' pts', subKey: 'exercise' },
+  { key: 'mostSessions', label: 'Most Checks', icon: Zap, color: '#863bff', bg: '#EDE7F6', valueKey: 'sessionCount', suffix: '', subKey: null },
+  { key: 'mostConsistent', label: 'Most Consistent', icon: Medal, color: '#4CAF50', bg: '#E8F5E9', valueKey: 'activeDays', suffix: ' days', subKey: null },
+];
+
+function LeaderboardWidget({ leaderboard, currentUserId }) {
+  const [activeTab, setActiveTab] = useState(0);
+  const cat = LEADER_CATS[activeTab];
+  const entries = leaderboard[cat.key] || [];
+  const myRank = entries.findIndex(e => e.patientId === currentUserId);
+
+  return (
+    <div style={{
+      background: 'white', borderRadius: '14px',
+      border: '1px solid var(--color-border)', overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+        padding: '18px 20px 14px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Trophy size={18} style={{ color: '#FFD700' }} />
+            <h4 style={{ margin: 0, color: 'white', fontSize: '0.95rem' }}>Leaderboard</h4>
+          </div>
+          <span style={{
+            fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)',
+            fontWeight: 600, letterSpacing: '0.5px',
+          }}>
+            {leaderboard.periodLabel}
+          </span>
+        </div>
+        {/* Category tabs */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {LEADER_CATS.map((c, i) => {
+            const Icon = c.icon;
+            const active = i === activeTab;
+            return (
+              <button key={c.key} onClick={() => setActiveTab(i)} style={{
+                flex: 1, padding: '8px 6px', borderRadius: '8px',
+                background: active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${active ? 'rgba(255,255,255,0.2)' : 'transparent'}`,
+                color: active ? 'white' : 'rgba(255,255,255,0.4)',
+                fontSize: '0.62rem', fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+              }}>
+                <Icon size={12} /> {c.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Rankings */}
+      <div style={{ padding: '12px 16px' }}>
+        {entries.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-text)', fontSize: '0.82rem' }}>
+            No rankings yet — be the first!
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {entries.slice(0, 5).map((entry, i) => {
+              const isMe = entry.patientId === currentUserId;
+              const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
+              return (
+                <div key={entry.patientId} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 12px', borderRadius: '10px',
+                  background: isMe ? cat.bg : i < 3 ? '#FAFAFA' : 'transparent',
+                  border: isMe ? `1.5px solid ${cat.color}40` : '1px solid transparent',
+                }}>
+                  <div style={{
+                    width: '24px', textAlign: 'center',
+                    fontSize: medal ? '1rem' : '0.75rem',
+                    fontWeight: 700, color: 'var(--color-text)',
+                  }}>
+                    {medal || `#${i + 1}`}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontSize: '0.82rem', fontWeight: isMe ? 700 : 500,
+                      color: isMe ? cat.color : 'var(--color-secondary)',
+                    }}>
+                      {entry.displayName} {isMe && <span style={{ fontSize: '0.65rem', color: cat.color }}>(You)</span>}
+                    </div>
+                    {cat.subKey && entry[cat.subKey] && (
+                      <div style={{ fontSize: '0.65rem', color: 'var(--color-text)' }}>{entry[cat.subKey]}</div>
+                    )}
+                  </div>
+                  <div style={{
+                    fontSize: '0.9rem', fontWeight: 700, color: cat.color,
+                  }}>
+                    {entry[cat.valueKey]}{cat.suffix}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {myRank >= 5 && (
+          <div style={{
+            textAlign: 'center', padding: '8px', marginTop: '4px',
+            fontSize: '0.75rem', color: cat.color, fontWeight: 600,
+            background: cat.bg, borderRadius: '8px',
+          }}>
+            You're #{myRank + 1} — keep going!
+          </div>
+        )}
       </div>
     </div>
   );
