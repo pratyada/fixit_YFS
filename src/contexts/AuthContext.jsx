@@ -13,7 +13,9 @@ import {
 import { auth } from '../lib/firebase';
 
 const googleProvider = new GoogleAuthProvider();
-import { getUserProfile, setUserProfile, updateUserRole, updateUserRoles, deleteUserData } from '../lib/firestore';
+import { getUserProfile, setUserProfile, getUserByEmail, updateUserRole, updateUserRoles, deleteUserData } from '../lib/firestore';
+import { collection, query, where, getDocs, writeBatch, doc, deleteDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { SUPER_ADMIN_EMAIL, getClinicSlugFromHostname } from '../lib/clinicConfig';
 import i18n from '../i18n';
 
@@ -47,6 +49,38 @@ export function AuthProvider({ children }) {
         if (!prof) {
           await new Promise(r => setTimeout(r, 1500));
           prof = await getUserProfile(firebaseUser.uid);
+        }
+
+        // Check for a stub patient (created via kiosk before signup)
+        if (!prof) {
+          const stubProfile = await getUserByEmail(email);
+          if (stubProfile && stubProfile.isStub) {
+            // Migrate stub to real user doc at users/{uid}
+            const { id: oldId, ...stubData } = stubProfile;
+            await setUserProfile(firebaseUser.uid, {
+              ...stubData,
+              name: firebaseUser.displayName || stubData.name || '',
+              email: firebaseUser.email,
+              photoURL: firebaseUser.photoURL || '',
+              isStub: false,
+            });
+            // Update kiosk sessions referencing the old stub ID
+            try {
+              const kioskSnap = await getDocs(
+                query(collection(db, 'kioskSessions'), where('patientId', '==', oldId))
+              );
+              if (kioskSnap.docs.length > 0) {
+                const batch = writeBatch(db);
+                kioskSnap.docs.forEach(d => batch.update(d.ref, { patientId: firebaseUser.uid }));
+                await batch.commit();
+              }
+              // Delete the old stub document
+              await deleteDoc(doc(db, 'users', oldId));
+            } catch (mergeErr) {
+              console.error('Stub merge cleanup error:', mergeErr);
+            }
+            prof = await getUserProfile(firebaseUser.uid);
+          }
         }
 
         // Still no profile — create a default one

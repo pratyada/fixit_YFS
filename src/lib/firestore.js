@@ -193,6 +193,31 @@ export async function updateUserRoles(uid, roles) {
   });
 }
 
+// ─── Patient Lookup (for kiosk identification) ───
+
+export async function getUserByEmail(email) {
+  const results = await queryDocs(
+    query(collection(db, 'users'), where('email', '==', email.toLowerCase()), limit(1))
+  );
+  return results[0] || null;
+}
+
+export async function createStubPatient(email, clinicId) {
+  const ref = doc(collection(db, 'users'));
+  const data = {
+    email: email.toLowerCase(),
+    name: '',
+    role: 'patient',
+    roles: ['patient'],
+    clinicId,
+    isStub: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  await setDoc(ref, data);
+  return { id: ref.id, ...data };
+}
+
 // ─── Kiosk Sessions (clinic walk-ins) ───
 
 export async function addKioskSession(data) {

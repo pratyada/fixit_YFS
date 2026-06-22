@@ -351,6 +351,12 @@ export default function AdminDashboard() {
                             {s.exerciseName}
                           </div>
                           <div style={{ fontSize: '0.65rem', color: 'var(--color-text)' }}>
+                            {s.patientEmail ? (
+                              <span style={{ color: '#863bff', fontWeight: 600 }}>{s.patientName || s.patientEmail}</span>
+                            ) : (
+                              <span style={{ color: 'var(--color-text)', fontStyle: 'italic' }}>Guest</span>
+                            )}
+                            {' \u2022 '}
                             {date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                             {s.duration ? ` \u2022 ${s.duration}s` : ''}
                             {s.totalFrames ? ` \u2022 ${s.totalFrames} frames` : ''}

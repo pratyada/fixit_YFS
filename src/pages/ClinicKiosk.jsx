@@ -5,7 +5,7 @@ import { Camera, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, ChevronR
 import { useClinic } from '../contexts/ClinicContext';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
-import { addKioskSession } from '../lib/firestore';
+import { addKioskSession, getUserByEmail, createStubPatient } from '../lib/firestore';
 
 const POSE_CONNECTIONS = [
   ['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'],
@@ -35,8 +35,9 @@ export default function ClinicKiosk() {
   const { t } = useTranslation('kiosk');
   const navigate = useNavigate();
   const clinic = useClinic();
-  const [step, setStep] = useState('select'); // select | camera | report
+  const [step, setStep] = useState('identify'); // identify | select | camera | report
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [patientProfile, setPatientProfile] = useState(null);
 
   // Camera
   const videoRef = useRef(null);
@@ -69,9 +70,10 @@ export default function ClinicKiosk() {
     if (idleRef.current) clearTimeout(idleRef.current);
     if (step === 'report') {
       idleRef.current = setTimeout(() => {
-        setStep('select');
+        setStep('identify');
         setReport(null);
         setSelectedExercise(null);
+        setPatientProfile(null);
       }, 60000); // 60s on report screen
     }
   }, [step]);
@@ -160,6 +162,10 @@ export default function ClinicKiosk() {
           faults: analysis.faults?.map(f => ({ name: f.name, severity: f.severity })) || [],
           duration: analysis.duration,
           totalFrames: analysis.totalFrames,
+          patientId: patientProfile?.id || null,
+          patientEmail: patientProfile?.email || null,
+          patientName: patientProfile?.name || null,
+          clinicId: clinic?.id || 'fixit',
         });
       } catch (e) {
         console.error('Failed to save kiosk session:', e);
@@ -182,6 +188,14 @@ export default function ClinicKiosk() {
     setStep('select');
     setReport(null);
     setSelectedExercise(null);
+  };
+
+  const backToIdentify = () => {
+    stopCamera();
+    setStep('identify');
+    setReport(null);
+    setSelectedExercise(null);
+    setPatientProfile(null);
   };
 
   // Detection loop
@@ -276,7 +290,17 @@ export default function ClinicKiosk() {
       overflow: 'hidden',
     }} onClick={resetIdle}>
 
-      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} onExit={() => navigate('/')} t={t} clinic={clinic} />}
+      {step === 'identify' && (
+        <IdentifyScreen
+          clinic={clinic}
+          t={t}
+          onIdentified={(profile) => { setPatientProfile(profile); setStep('select'); }}
+          onSkip={() => { setPatientProfile(null); setStep('select'); }}
+          onExit={() => navigate('/')}
+        />
+      )}
+
+      {step === 'select' && <SelectScreen exercises={FIXIT_EXERCISES} onSelect={selectExercise} onExit={backToIdentify} patient={patientProfile} t={t} clinic={clinic} />}
 
       {step === 'camera' && (
         <CameraScreen
@@ -360,9 +384,136 @@ function kioskBtn(bg, size = 'normal') {
 }
 
 // ═══════════════════════════════════════════════
+// IDENTIFY SCREEN (receptionist enters patient email)
+// ═══════════════════════════════════════════════
+function IdentifyScreen({ clinic, t, onIdentified, onSkip, onExit }) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+  const handleContinue = async () => {
+    if (!isValidEmail(email)) { setError('Please enter a valid email address'); return; }
+    setLoading(true); setError(null);
+    try {
+      let patient = await getUserByEmail(email.trim());
+      if (!patient) {
+        const clinicId = clinic?.id || 'fixit';
+        patient = await createStubPatient(email.trim(), clinicId);
+      }
+      onIdentified(patient);
+    } catch (err) {
+      console.error('Identify error:', err);
+      setError('Something went wrong. Please try again.');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="kiosk-fade" style={{
+      flex: 1, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: '40px', position: 'relative',
+    }}>
+      {/* Exit button */}
+      <button onClick={onExit} style={{
+        position: 'absolute', top: '20px', right: '20px',
+        background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+        color: 'rgba(255,255,255,0.5)', borderRadius: '50px',
+        padding: '8px 16px', fontSize: '0.72rem', fontWeight: 600,
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+        zIndex: 5,
+      }}>
+        <X size={14} /> Exit Kiosk
+      </button>
+
+      {/* Logo */}
+      <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          {clinic?.logo ? (
+            <img src={clinic.logo} alt={clinic.name} style={{ width: '56px', height: '56px', borderRadius: '16px', objectFit: 'cover' }} />
+          ) : (
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '16px',
+              background: 'linear-gradient(135deg, #863bff, #7e14ff)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Zap size={28} color="white" />
+            </div>
+          )}
+          <span style={{ fontSize: '2.4rem', fontWeight: 800, color: 'white', letterSpacing: '3px' }}>FIXIT</span>
+        </div>
+        <h1 style={{ color: 'white', fontSize: '1.8rem', fontWeight: 300, marginBottom: '8px' }}>
+          Welcome
+        </h1>
+        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1rem' }}>
+          Enter your email to get started
+        </p>
+      </div>
+
+      {/* Email input */}
+      <div style={{ width: '100%', maxWidth: '460px' }}>
+        <input
+          type="email"
+          value={email}
+          onChange={e => { setEmail(e.target.value); setError(null); }}
+          onKeyDown={e => e.key === 'Enter' && !loading && handleContinue()}
+          placeholder="patient@email.com"
+          autoFocus
+          style={{
+            width: '100%', padding: '20px 24px', borderRadius: '16px',
+            background: 'rgba(255,255,255,0.08)',
+            border: `2px solid ${error ? '#F44336' : 'rgba(255,255,255,0.15)'}`,
+            color: 'white', fontSize: '1.2rem', fontWeight: 500,
+            outline: 'none', boxSizing: 'border-box',
+            textAlign: 'center', letterSpacing: '0.5px',
+          }}
+        />
+        {error && (
+          <p style={{ color: '#EF5350', fontSize: '0.82rem', textAlign: 'center', marginTop: '8px' }}>{error}</p>
+        )}
+
+        <button
+          onClick={handleContinue}
+          disabled={loading || !email.trim()}
+          style={{
+            ...kioskBtn(loading || !email.trim() ? 'rgba(134,59,255,0.4)' : '#863bff', 'large'),
+            width: '100%', justifyContent: 'center', marginTop: '20px',
+            cursor: loading || !email.trim() ? 'not-allowed' : 'pointer',
+            opacity: loading || !email.trim() ? 0.6 : 1,
+          }}
+        >
+          {loading ? (
+            <><RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} /> Looking up...</>
+          ) : (
+            <>Continue <ChevronRight size={18} /></>
+          )}
+        </button>
+
+        <button onClick={onSkip} style={{
+          display: 'block', margin: '16px auto 0', background: 'none', border: 'none',
+          color: 'rgba(255,255,255,0.35)', fontSize: '0.85rem', cursor: 'pointer',
+          fontWeight: 500, padding: '8px',
+        }}>
+          Continue as Guest
+        </button>
+      </div>
+
+      <div style={{
+        position: 'absolute', bottom: '24px',
+        textAlign: 'center', color: 'rgba(255,255,255,0.15)', fontSize: '0.75rem',
+      }}>
+        Powered by FIXIT AI
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════
 // EXERCISE SELECT SCREEN (iPad-optimized grid)
 // ═══════════════════════════════════════════════
-function SelectScreen({ exercises, onSelect, onExit, t, clinic }) {
+function SelectScreen({ exercises, onSelect, onExit, patient, t, clinic }) {
   return (
     <div className="kiosk-fade" style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -433,6 +584,25 @@ function SelectScreen({ exercises, onSelect, onExit, t, clinic }) {
         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1rem' }}>
           {t('tapExercise')}
         </p>
+        {patient && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            marginTop: '12px', padding: '8px 20px', borderRadius: '50px',
+            background: 'rgba(134,59,255,0.15)', border: '1px solid rgba(134,59,255,0.3)',
+          }}>
+            <div style={{
+              width: '24px', height: '24px', borderRadius: '50%',
+              background: '#863bff', color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '0.7rem', fontWeight: 700,
+            }}>
+              {(patient.name || patient.email || '?')[0].toUpperCase()}
+            </div>
+            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', fontWeight: 500 }}>
+              {patient.name || patient.email}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Exercise Grid */}

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Activity, Dumbbell, Camera, Heart, BarChart3, Brain, Check, ArrowRight, Sparkles, Shield, Star, ChevronDown } from 'lucide-react';
+import { Activity, Dumbbell, Camera, Heart, BarChart3, Brain, Check, ArrowRight, Sparkles, Shield, Star, ChevronDown, Clock, BookOpen } from 'lucide-react';
 import { useClinic } from '../contexts/ClinicContext';
+import { GUIDES } from '../data/guides';
 
 const FEATURES = [
   { icon: Dumbbell, title: 'Exercise Library', desc: '100+ guided exercises for rehab, fitness, and pain management with step-by-step instructions.', color: '#708E86' },
@@ -165,6 +166,58 @@ export default function Landing() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* ── Guides ── */}
+      <section id="guides" style={{
+        padding: '60px 24px', background: 'var(--color-bg-alt)',
+      }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-secondary)', marginBottom: '8px' }}>
+              Training Guides
+            </h2>
+            <p style={{ fontSize: '0.9rem', color: 'var(--color-text)', maxWidth: '480px', margin: '0 auto' }}>
+              Expert guides for every goal — from marathon training to handstands, tailored for Toronto and the GTA.
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '16px',
+          }}>
+            {GUIDES.slice(0, 6).map(guide => (
+              <Link key={guide.id} to={`/guides/${guide.slug}`} style={{
+                display: 'flex', alignItems: 'flex-start', gap: '14px',
+                padding: '18px', borderRadius: '14px',
+                background: 'white', border: '1px solid var(--color-border)',
+                textDecoration: 'none', transition: 'all 0.2s',
+              }}>
+                <span style={{ fontSize: '1.8rem', flexShrink: 0, lineHeight: 1 }}>{guide.heroEmoji}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-secondary)', lineHeight: 1.3, marginBottom: '4px' }}>
+                    {guide.title}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Clock size={10} /> {guide.readTime}</span>
+                    <span>{guide.category}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '24px' }}>
+            <Link to="/guides" style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              padding: '12px 28px', borderRadius: '10px',
+              background: 'var(--color-secondary)', color: 'white',
+              textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700,
+            }}>
+              <BookOpen size={16} /> View All Guides <ArrowRight size={16} />
+            </Link>
+          </div>
         </div>
       </section>
 
