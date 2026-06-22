@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star, ChevronDown, ChevronUp, Send, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getPatientsByPractitioner, getPatientSessions, getPainEntries, getAssignments, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner } from '../lib/firestore';
+import { Camera } from 'lucide-react';
+import { getPatientsByPractitioner, getPatientSessions, getPainEntries, getAssignments, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner, getKioskSessions } from '../lib/firestore';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { addAssignment } from '../lib/firestore';
@@ -23,6 +24,9 @@ export default function PractitionerDashboard() {
   const [allPatients, setAllPatients] = useState([]);
   const [addSearch, setAddSearch] = useState('');
   const [loadingAll, setLoadingAll] = useState(false);
+  const [pracTab, setPracTab] = useState('patients'); // 'patients' | 'kiosk'
+  const [kioskSessions, setKioskSessions] = useState([]);
+  const [kioskLoading, setKioskLoading] = useState(false);
 
   const loadPatients = async () => {
     if (user) {
@@ -33,6 +37,14 @@ export default function PractitionerDashboard() {
   };
 
   useEffect(() => { loadPatients(); }, [user]);
+
+  const loadKioskSessions = async () => {
+    setKioskLoading(true);
+    const sessions = await getKioskSessions(200);
+    setKioskSessions(sessions);
+    setKioskLoading(false);
+  };
+  useEffect(() => { if (pracTab === 'kiosk' && kioskSessions.length === 0) loadKioskSessions(); }, [pracTab]);
 
   const openAddPatient = async () => {
     setShowAddPatient(true);
@@ -277,6 +289,44 @@ export default function PractitionerDashboard() {
         </p>
       </div>
 
+      {/* Tab Switcher */}
+      <div style={{ display: 'flex', gap: '6px', background: 'var(--color-bg-alt)', borderRadius: '50px', padding: '4px', border: '1px solid var(--color-border)' }}>
+        {[
+          { key: 'patients', label: t('tabs.patients', { defaultValue: 'My Patients' }), icon: Users },
+          { key: 'kiosk', label: t('tabs.kioskLog', { defaultValue: 'Kiosk Log' }), icon: Camera },
+        ].map(tb => {
+          const Icon = tb.icon;
+          return (
+            <button
+              key={tb.key}
+              onClick={() => setPracTab(tb.key)}
+              style={{
+                flex: 1, padding: '10px 12px', borderRadius: '50px',
+                background: pracTab === tb.key ? 'white' : 'transparent',
+                border: pracTab === tb.key ? '1px solid var(--color-border)' : '1px solid transparent',
+                color: pracTab === tb.key ? 'var(--color-secondary)' : 'var(--color-text)',
+                fontSize: '0.78rem', fontWeight: pracTab === tb.key ? 700 : 500,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              }}
+            >
+              <Icon size={14} /> {tb.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {pracTab === 'kiosk' && (
+        <KioskLogView
+          sessions={kioskSessions}
+          loading={kioskLoading}
+          onRefresh={loadKioskSessions}
+          practitionerId={user.uid}
+          t={t}
+          i18n={i18n}
+        />
+      )}
+
+      {pracTab === 'patients' && <>
       {/* Search + Add */}
       <div style={{ display: 'flex', gap: '8px' }}>
         <div style={{ flex: 1, position: 'relative' }}>
@@ -419,6 +469,157 @@ export default function PractitionerDashboard() {
             </button>
           ))}
         </div>
+      )}
+      </>}
+    </div>
+  );
+}
+
+function KioskLogView({ sessions, loading, onRefresh, practitionerId, t, i18n }) {
+  const [expandedId, setExpandedId] = useState(null);
+  const scoreColor = (sc) => sc >= 80 ? '#4CAF50' : sc >= 60 ? '#FFC107' : sc >= 40 ? '#FF9800' : '#F44336';
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text)' }}>Loading kiosk sessions...</div>;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '0.82rem', color: 'var(--color-text)' }}>
+          {sessions.length} kiosk sessions
+        </div>
+        <button onClick={onRefresh} style={{
+          padding: '6px 14px', borderRadius: '8px', background: 'var(--color-bg-alt)',
+          border: '1px solid var(--color-border)', fontSize: '0.72rem', fontWeight: 600,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+        }}>
+          Refresh
+        </button>
+      </div>
+
+      {sessions.length === 0 ? (
+        <div style={{
+          background: 'white', borderRadius: '14px', border: '1px solid var(--color-border)',
+          padding: '40px', textAlign: 'center', color: 'var(--color-text)', fontSize: '0.85rem',
+        }}>
+          <Camera size={32} style={{ margin: '0 auto 8px', color: 'var(--color-border)' }} />
+          No kiosk sessions yet
+        </div>
+      ) : (
+        sessions.map((s, idx) => {
+          const date = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+          const isExpanded = expandedId === (s.id || idx);
+          return (
+            <div key={s.id || idx} style={{
+              background: 'white', borderRadius: '14px',
+              border: '1px solid var(--color-border)', overflow: 'hidden',
+            }}>
+              {/* Summary row */}
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : (s.id || idx))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
+                  padding: '14px 16px', background: 'none', border: 'none',
+                  cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                {/* Score badge */}
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '12px',
+                  background: scoreColor(s.score) + '18', color: scoreColor(s.score),
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, fontSize: '1rem', flexShrink: 0,
+                }}>
+                  {s.score}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-secondary)' }}>
+                    {s.exerciseName}
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--color-text)' }}>
+                    {s.patientEmail ? (
+                      <span style={{ color: '#863bff', fontWeight: 600 }}>{s.patientName || s.patientEmail}</span>
+                    ) : (
+                      <span style={{ fontStyle: 'italic' }}>Guest</span>
+                    )}
+                    {' \u2022 '}
+                    {date.toLocaleDateString(i18n?.language || 'en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    {s.duration ? ` \u2022 ${s.duration}s` : ''}
+                  </div>
+                </div>
+                {/* Faults count */}
+                {s.faults?.length > 0 && (
+                  <span style={{
+                    fontSize: '0.6rem', fontWeight: 700, padding: '3px 8px', borderRadius: '50px',
+                    background: '#FFF3E0', color: '#E65100',
+                  }}>
+                    {s.faults.length} {s.faults.length === 1 ? 'issue' : 'issues'}
+                  </span>
+                )}
+                {isExpanded ? <ChevronUp size={16} color="var(--color-text)" /> : <ChevronDown size={16} color="var(--color-text)" />}
+              </button>
+
+              {/* Expanded detail */}
+              {isExpanded && (
+                <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--color-border)' }}>
+                  {/* Score categories */}
+                  {s.categories && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px', marginBottom: '10px' }}>
+                      {s.categories.map(cat => (
+                        <div key={cat.name} style={{
+                          padding: '6px 12px', borderRadius: '8px',
+                          background: 'var(--color-bg-alt)', fontSize: '0.72rem',
+                        }}>
+                          {cat.icon} {cat.name}: <strong style={{ color: scoreColor(cat.score) }}>{cat.score}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Faults */}
+                  {s.faults?.length > 0 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text)', marginBottom: '6px' }}>
+                        Form Issues
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {s.faults.map((f, j) => (
+                          <span key={j} style={{
+                            fontSize: '0.7rem', padding: '4px 10px', borderRadius: '6px',
+                            background: f.severity === 'high' ? '#FFEBEE' : f.severity === 'moderate' ? '#FFF3E0' : '#E8F5E9',
+                            color: f.severity === 'high' ? '#C62828' : f.severity === 'moderate' ? '#E65100' : '#2E7D32',
+                            fontWeight: 600,
+                          }}>
+                            {f.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Link to patient for full feedback */}
+                  {s.patientId ? (
+                    <div style={{
+                      padding: '12px', borderRadius: '10px', background: '#EDE7F6',
+                      fontSize: '0.78rem', color: '#5E35B1',
+                    }}>
+                      <strong>Tip:</strong> To rate this session with full feedback, go to{' '}
+                      <strong>My Patients</strong> tab, find <strong>{s.patientName || s.patientEmail}</strong>, and expand their session to give star rating, score override, and per-fault corrections.
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: '12px', borderRadius: '10px', background: '#FFF8E1',
+                      fontSize: '0.78rem', color: '#F57F17',
+                    }}>
+                      Guest session — no patient account linked. Rating not available.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })
       )}
     </div>
   );
