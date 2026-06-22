@@ -5,7 +5,7 @@ import { Camera, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, ChevronR
 import { useClinic } from '../contexts/ClinicContext';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
-import { addKioskSession, getUserByEmail, createStubPatient, getActiveLeaderboard } from '../lib/firestore';
+import { addKioskSession, addSession, getUserByEmail, createStubPatient, getActiveLeaderboard } from '../lib/firestore';
 
 const POSE_CONNECTIONS = [
   ['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'],
@@ -170,6 +170,27 @@ export default function ClinicKiosk() {
           patientName: patientProfile?.name || null,
           clinicId: clinic?.id || 'fixit',
         });
+        // Also save to patient's sessions so practitioners can see & rate it
+        if (patientProfile?.id) {
+          addSession(patientProfile.id, {
+            exerciseId: selectedExercise.id,
+            exerciseName: selectedExercise.name,
+            type: 'kiosk_pose_check',
+            aiScore: analysis.overall,
+            aiSummary: analysis.tips?.join(' ') || '',
+            aiModelVersion: 'movenet-lightning-v1',
+            aiAnalysis: {
+              overall: analysis.overall,
+              duration: analysis.duration,
+              totalFrames: analysis.totalFrames,
+              categories: analysis.categories,
+              faults: analysis.faults || [],
+              angles: analysis.angles || {},
+              tips: analysis.tips || [],
+              timeline: analysis.timeline || [],
+            },
+          }).catch(e => console.error('Failed to save patient session:', e));
+        }
         // Fire-and-forget: notify practitioners via email
         fetch('/api/notify-review', {
           method: 'POST',
