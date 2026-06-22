@@ -17,7 +17,7 @@ if (!getApps().length) {
 const db = getFirestore();
 const ses = new SESClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
-const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'noreply@yourformsux.com';
+const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'i@yprateek.com';
 const APP_URL = process.env.APP_URL || 'https://fixit.yourformsux.com';
 
 function scoreColor(s) {
