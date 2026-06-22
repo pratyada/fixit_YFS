@@ -475,6 +475,219 @@ export default function PractitionerDashboard() {
   );
 }
 
+function KioskFeedbackForm({ session: s, practitionerId }) {
+  const [rating, setRating] = useState(3);
+  const [practitionerScore, setPractitionerScore] = useState(s.score || 70);
+  const [whatGood, setWhatGood] = useState('');
+  const [whatImprove, setWhatImprove] = useState('');
+  const [faultVerdicts, setFaultVerdicts] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      // Find the patient session ID (saved to users/{patientId}/sessions)
+      const patientSessions = await getPatientSessions(s.patientId);
+      const matchingSession = patientSessions.find(ps =>
+        ps.exerciseId === s.exerciseId &&
+        Math.abs((ps.createdAt?.toDate?.() || new Date(ps.createdAt)).getTime() - (s.createdAt?.toDate?.() || new Date(s.createdAt)).getTime()) < 60000
+      );
+
+      const sessionId = matchingSession?.id || s.id;
+
+      await addFeedback({
+        sessionId,
+        patientId: s.patientId,
+        practitionerId,
+        exerciseId: s.exerciseId,
+        exerciseName: s.exerciseName,
+        rating,
+        whatWasGood: whatGood,
+        whatNeedsImproving: whatImprove,
+        aiScore: s.score,
+        practitionerScore,
+        aiModelVersionSnapshot: 'movenet-lightning-v1',
+        faultCorrections: Object.entries(faultVerdicts).map(([name, verdict]) => ({ faultId: name, faultName: name, verdict })),
+        categoryRatings: s.categories?.map(c => ({ name: c.name, aiScore: c.score, practitionerScore: c.score })) || [],
+        aiCategories: s.categories || [],
+        aiFaults: s.faults || [],
+        source: 'kiosk_log',
+      });
+
+      // Mark patient session as reviewed if found
+      if (matchingSession) {
+        await updateSession(s.patientId, matchingSession.id, { status: 'REVIEWED' });
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error('Failed to submit feedback:', err);
+    }
+    setSubmitting(false);
+  };
+
+  if (submitted) {
+    return (
+      <div style={{
+        padding: '14px', borderRadius: '10px', background: '#E8F5E9',
+        display: 'flex', alignItems: 'center', gap: '8px',
+        fontSize: '0.82rem', color: '#2E7D32', fontWeight: 600,
+      }}>
+        <CheckCircle2 size={16} /> Feedback submitted
+      </div>
+    );
+  }
+
+  if (!showForm) {
+    return (
+      <button onClick={() => setShowForm(true)} style={{
+        width: '100%', padding: '12px', borderRadius: '10px',
+        background: 'var(--color-accent)', color: 'white', border: 'none',
+        fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+      }}>
+        <MessageSquare size={16} /> Rate This Session
+      </button>
+    );
+  }
+
+  return (
+    <div style={{
+      padding: '16px', borderRadius: '12px', background: '#FAFAFA',
+      border: '1px solid var(--color-border)',
+      display: 'flex', flexDirection: 'column', gap: '14px',
+    }}>
+      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-secondary)' }}>
+        Rate Session
+      </div>
+
+      {/* Star Rating */}
+      <div>
+        <label style={feedbackLabelStyle}>AI Accuracy (1-5 stars)</label>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {[1, 2, 3, 4, 5].map(n => (
+            <button key={n} onClick={() => setRating(n)} style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+            }}>
+              <Star size={24} fill={n <= rating ? '#FFB300' : 'none'} color={n <= rating ? '#FFB300' : '#ccc'} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Practitioner Score */}
+      <div>
+        <label style={feedbackLabelStyle}>Your Score: <strong>{practitionerScore}</strong>/100</label>
+        <input
+          type="range" min="0" max="100" value={practitionerScore}
+          onChange={e => setPractitionerScore(Number(e.target.value))}
+          style={{ width: '100%' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--color-text)' }}>
+          <span>Poor</span><span>AI: {s.score}</span><span>Perfect</span>
+        </div>
+      </div>
+
+      {/* Fault Verdicts */}
+      {s.faults?.length > 0 && (
+        <div>
+          <label style={feedbackLabelStyle}>Do you agree with the AI-detected issues?</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {s.faults.map(f => (
+              <div key={f.name} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 10px', borderRadius: '8px', background: 'white',
+                border: '1px solid var(--color-border)',
+              }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--color-secondary)' }}>{f.name}</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {['agree', 'partial', 'disagree'].map(v => (
+                    <button key={v} onClick={() => setFaultVerdicts(prev => ({ ...prev, [f.name]: v }))} style={{
+                      padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 600,
+                      border: '1px solid',
+                      background: faultVerdicts[f.name] === v
+                        ? (v === 'agree' ? '#E8F5E9' : v === 'partial' ? '#FFF8E1' : '#FFEBEE')
+                        : 'white',
+                      borderColor: faultVerdicts[f.name] === v
+                        ? (v === 'agree' ? '#4CAF50' : v === 'partial' ? '#FFB300' : '#E53935')
+                        : 'var(--color-border)',
+                      color: faultVerdicts[f.name] === v
+                        ? (v === 'agree' ? '#2E7D32' : v === 'partial' ? '#F57F17' : '#C62828')
+                        : 'var(--color-text)',
+                      cursor: 'pointer', textTransform: 'capitalize',
+                    }}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Text feedback */}
+      <div>
+        <label style={feedbackLabelStyle}>What was good?</label>
+        <textarea
+          value={whatGood} onChange={e => setWhatGood(e.target.value)}
+          placeholder="e.g., Good depth on the squat..."
+          rows={2}
+          style={feedbackTextareaStyle}
+        />
+      </div>
+      <div>
+        <label style={feedbackLabelStyle}>What needs improving?</label>
+        <textarea
+          value={whatImprove} onChange={e => setWhatImprove(e.target.value)}
+          placeholder="e.g., Knees caving inward..."
+          rows={2}
+          style={feedbackTextareaStyle}
+        />
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button onClick={() => setShowForm(false)} style={{
+          padding: '10px 16px', borderRadius: '10px', background: '#F5F5F5',
+          border: 'none', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+        }}>
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          style={{
+            flex: 1, padding: '10px 16px', borderRadius: '10px',
+            background: submitting ? '#ccc' : 'var(--color-accent)',
+            color: 'white', border: 'none',
+            fontSize: '0.78rem', fontWeight: 700, cursor: submitting ? 'wait' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          }}
+        >
+          <Send size={14} /> {submitting ? 'Submitting...' : 'Submit Feedback'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const feedbackLabelStyle = {
+  display: 'block', fontSize: '0.68rem', fontWeight: 700,
+  textTransform: 'uppercase', letterSpacing: '1px',
+  color: 'var(--color-text)', marginBottom: '6px',
+};
+
+const feedbackTextareaStyle = {
+  width: '100%', padding: '10px 12px', borderRadius: '10px',
+  border: '1px solid var(--color-border)', fontSize: '0.82rem',
+  color: 'var(--color-secondary)', outline: 'none',
+  boxSizing: 'border-box', resize: 'vertical',
+  fontFamily: 'inherit',
+};
+
 function KioskLogView({ sessions, loading, onRefresh, practitionerId, t, i18n }) {
   const [expandedId, setExpandedId] = useState(null);
   const scoreColor = (sc) => sc >= 80 ? '#4CAF50' : sc >= 60 ? '#FFC107' : sc >= 40 ? '#FF9800' : '#F44336';
@@ -598,15 +811,9 @@ function KioskLogView({ sessions, loading, onRefresh, practitionerId, t, i18n })
                     </div>
                   )}
 
-                  {/* Link to patient for full feedback */}
+                  {/* Feedback form */}
                   {s.patientId ? (
-                    <div style={{
-                      padding: '12px', borderRadius: '10px', background: '#EDE7F6',
-                      fontSize: '0.78rem', color: '#5E35B1',
-                    }}>
-                      <strong>Tip:</strong> To rate this session with full feedback, go to{' '}
-                      <strong>My Patients</strong> tab, find <strong>{s.patientName || s.patientEmail}</strong>, and expand their session to give star rating, score override, and per-fault corrections.
-                    </div>
+                    <KioskFeedbackForm session={s} practitionerId={practitionerId} />
                   ) : (
                     <div style={{
                       padding: '12px', borderRadius: '10px', background: '#FFF8E1',
