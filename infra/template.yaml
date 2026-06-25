@@ -28,7 +28,7 @@ Parameters:
     NoEcho: true
   SesFromEmail:
     Type: String
-    Default: i@yprateek.com
+    Default: noreply@yourformsux.com
   AppUrl:
     Type: String
     Default: https://fixit.yourformsux.com
