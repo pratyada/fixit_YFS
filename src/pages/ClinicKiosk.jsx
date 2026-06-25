@@ -5,7 +5,8 @@ import { Camera, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, ChevronR
 import { useClinic } from '../contexts/ClinicContext';
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
-import { addKioskSession, addSession, getUserByEmail, createStubPatient, getActiveLeaderboard } from '../lib/firestore';
+import { addKioskSession, addSession, updateSession, getUserByEmail, createStubPatient, getActiveLeaderboard } from '../lib/firestore';
+import { uploadVideo } from '../lib/storage-firebase';
 
 const POSE_CONNECTIONS = [
   ['left_shoulder', 'right_shoulder'], ['left_shoulder', 'left_elbow'],
@@ -63,6 +64,10 @@ export default function ClinicKiosk() {
   const streamRef = useRef(null);
   const recordedFramesRef = useRef({ front: [], side: [] });
   const timerRef = useRef(null);
+  // Video recording (MediaRecorder)
+  const mediaRecorderRef = useRef(null);
+  const videoChunksRef = useRef({ front: [], side: [] });
+  const videoBlobsRef = useRef({ front: null, side: null });
   // Auto-reset timer: go back to exercise select after inactivity
   const idleRef = useRef(null);
 
@@ -77,6 +82,8 @@ export default function ClinicKiosk() {
         setReport(null);
         setSelectedExercise(null);
         setPatientProfile(null);
+        videoBlobsRef.current = { front: null, side: null };
+        videoChunksRef.current = { front: [], side: [] };
       }, 60000); // 60s on report screen
     }
   }, [step]);
@@ -117,6 +124,9 @@ export default function ClinicKiosk() {
 
   const stopCamera = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop(); mediaRecorderRef.current = null;
+    }
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
     if (timerRef.current) clearInterval(timerRef.current);
     setCameraReady(false); setRecording(false); setRecordTimer(0);
@@ -124,6 +134,27 @@ export default function ClinicKiosk() {
 
   const startRecording = () => {
     recordedFramesRef.current[angleName] = [];
+    videoChunksRef.current[angleName] = [];
+    videoBlobsRef.current[angleName] = null;
+    // Start MediaRecorder for video capture
+    if (streamRef.current) {
+      try {
+        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9' : 'video/webm';
+        const recorder = new MediaRecorder(streamRef.current, { mimeType });
+        recorder.ondataavailable = (e) => {
+          if (e.data?.size > 0) videoChunksRef.current[angleName].push(e.data);
+        };
+        recorder.onstop = () => {
+          const blob = new Blob(videoChunksRef.current[angleName], { type: 'video/webm' });
+          videoBlobsRef.current[angleName] = blob;
+        };
+        recorder.start(100);
+        mediaRecorderRef.current = recorder;
+      } catch (e) {
+        console.warn('MediaRecorder not available:', e);
+      }
+    }
     setRecording(true);
     setRecordTimer(0);
     timerRef.current = setInterval(() => setRecordTimer(t => t + 1), 1000);
@@ -132,11 +163,18 @@ export default function ClinicKiosk() {
   const stopRecording = () => {
     setRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
+    // Stop MediaRecorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
     setAngleRecorded(prev => ({ ...prev, [angleName]: true }));
   };
 
   const retakeAngle = () => {
     recordedFramesRef.current[angleName] = [];
+    videoChunksRef.current[angleName] = [];
+    videoBlobsRef.current[angleName] = null;
     setAngleRecorded(prev => ({ ...prev, [angleName]: false }));
   };
 
@@ -170,9 +208,10 @@ export default function ClinicKiosk() {
           patientName: patientProfile?.name || null,
           clinicId: clinic?.id || 'fixit',
         });
-        // Also save to patient's sessions so practitioners can see & rate it
+        // Save to patient's sessions with video upload
         if (patientProfile?.id) {
-          addSession(patientProfile.id, {
+          // Create session doc first
+          const sessionRef = await addSession(patientProfile.id, {
             exerciseId: selectedExercise.id,
             exerciseName: selectedExercise.name,
             type: 'kiosk_pose_check',
@@ -189,7 +228,35 @@ export default function ClinicKiosk() {
               tips: analysis.tips || [],
               timeline: analysis.timeline || [],
             },
-          }).catch(e => console.error('Failed to save patient session:', e));
+          });
+          // Upload videos in background (don't block the UI)
+          const sessionId = sessionRef.id;
+          (async () => {
+            try {
+              const videoData = {};
+              const frontBlob = videoBlobsRef.current.front;
+              const sideBlob = videoBlobsRef.current.side;
+              if (frontBlob && frontBlob.size > 0) {
+                const { url, path } = await uploadVideo(patientProfile.id, sessionId, 'front', frontBlob);
+                videoData.frontVideoUrl = url;
+                videoData.frontVideoKey = path;
+              }
+              if (sideBlob && sideBlob.size > 0) {
+                const { url, path } = await uploadVideo(patientProfile.id, sessionId, 'side', sideBlob);
+                videoData.sideVideoUrl = url;
+                videoData.sideVideoKey = path;
+              }
+              if (Object.keys(videoData).length > 0) {
+                await updateSession(patientProfile.id, sessionId, {
+                  ...videoData,
+                  videoMimeType: 'video/webm',
+                  status: 'ANALYZED',
+                });
+              }
+            } catch (uploadErr) {
+              console.error('Video upload error:', uploadErr);
+            }
+          })();
         }
         // Fire-and-forget: notify practitioners via email
         fetch('/api/notify-review', {
@@ -234,6 +301,8 @@ export default function ClinicKiosk() {
     setReport(null);
     setSelectedExercise(null);
     setPatientProfile(null);
+    videoBlobsRef.current = { front: null, side: null };
+    videoChunksRef.current = { front: [], side: [] };
   };
 
   // Detection loop
