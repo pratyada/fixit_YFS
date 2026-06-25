@@ -242,6 +242,7 @@ function AppLayout() {
                 <ArrowRightLeft size={10} /> Switch Role
               </button>
             )}
+            <div style={{ fontSize: '0.55rem', color: 'var(--color-text)', opacity: 0.4 }}>v1.4.0</div>
             <div style={{ display: 'flex', gap: '6px' }}>
               <LanguageSwitcher />
               <button onClick={() => navigate('/settings')} style={{
