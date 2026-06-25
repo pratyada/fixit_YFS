@@ -284,6 +284,7 @@ function AppLayout() {
               <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '0.92rem', color: 'var(--color-secondary)', letterSpacing: '-0.3px' }}>
                 {clinic.productName || t('auth:brandName')}
               </div>
+              <span style={{ fontSize: '0.5rem', color: 'var(--color-text)', opacity: 0.35 }}>v1.4.0</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ textAlign: 'right', lineHeight: 1.15 }}>
