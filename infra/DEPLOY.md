@@ -167,6 +167,32 @@ aws lambda update-function-code \
   --zip-file fileb://../lambda-package.zip
 ```
 
+## SEO prerender routing — CloudFront Function (REQUIRED for guides to be served)
+
+The site is a prerendered SPA: `npm run build` writes static `dist/guides/<slug>/index.html`
+for every guide. But the live CloudFront distribution serves S3 via OAC, which does
+**not** resolve subfolder `index.html`, and maps `403/404 → /index.html`. So without a
+URL rewrite, `/guides/<slug>` misses in S3 → 403 → the empty CSR shell, and crawlers
+never see the prerendered pages.
+
+The fix is a CloudFront Function (`infra/cloudfront/spa-rewrite.js`) attached to the
+distribution's default behavior. The live distribution (`E2FAZUAO8YL8YA`) was created
+manually and is **not** managed by this SAM template, so apply it with the committed,
+idempotent script rather than `sam deploy`:
+
+```bash
+bash infra/cloudfront/apply-spa-rewrite.sh   # safe to re-run; no-ops if already attached
+```
+
+Run this once (and again only if `spa-rewrite.js` changes or the distribution is
+recreated — set `FIXIT_DIST_ID` to override the target). The function code is the
+version-controlled source of truth; `infra/template.yaml` also declares it for the day
+the infra is adopted into CloudFormation.
+
+> Long-term: to eliminate infra drift, import the existing bucket + distribution into a
+> CloudFormation stack (`aws cloudformation create-change-set --change-set-type IMPORT`)
+> and manage everything via `sam deploy`. Until then, this script is the durable path.
+
 ## Cost Estimate (monthly)
 
 | Service | Estimated Cost |

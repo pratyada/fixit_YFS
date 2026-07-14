@@ -49,16 +49,29 @@ jobs:
 
       - name: Sync to S3
         run: |
+          # 1. Hashed assets & images → immutable long cache.
+          #    Exclude all HTML (incl. prerendered guides/*/index.html) and the
+          #    content files that must stay fresh.
           aws s3 sync dist/ s3://${{ env.S3_BUCKET }} \
             --delete \
             --cache-control "public, max-age=31536000, immutable" \
-            --exclude "index.html" \
+            --exclude "*.html" \
+            --exclude "sitemap.xml" \
+            --exclude "robots.txt" \
             --exclude "manifest.json"
 
-          # index.html and manifest.json should not be cached
-          aws s3 cp dist/index.html s3://${{ env.S3_BUCKET }}/index.html \
+          # 2. All HTML — root shell AND prerendered pages — must never be cached
+          #    immutably, or a content change serves stale HTML for a year.
+          aws s3 sync dist/ s3://${{ env.S3_BUCKET }} \
+            --exclude "*" --include "*.html" \
+            --content-type "text/html" \
             --cache-control "no-cache, no-store, must-revalidate"
 
+          # 3. Sitemap/robots — short cache so new guides surface quickly.
+          aws s3 cp dist/sitemap.xml s3://${{ env.S3_BUCKET }}/sitemap.xml \
+            --cache-control "public, max-age=3600" || true
+          aws s3 cp dist/robots.txt s3://${{ env.S3_BUCKET }}/robots.txt \
+            --cache-control "public, max-age=3600" || true
           if [ -f dist/manifest.json ]; then
             aws s3 cp dist/manifest.json s3://${{ env.S3_BUCKET }}/manifest.json \
               --cache-control "no-cache"

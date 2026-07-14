@@ -88,6 +88,31 @@ Resources:
         SigningBehavior: always
         SigningProtocol: sigv4
 
+  # ── CloudFront Function: resolve pretty URLs to prerendered index.html ──
+  # Without this, /guides/<slug> hits S3 as a missing key → 403 → SPA fallback
+  # serves the empty CSR shell, and prerendered pages are never seen by crawlers.
+  # This rewrites directory/extensionless requests to the folder's index.html.
+  SpaRewriteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${DomainName}-spa-rewrite'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Append index.html for directory/extensionless requests (prerendered pages)
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          if (uri.endsWith('/')) {
+            request.uri = uri + 'index.html';
+          } else if (uri.lastIndexOf('.') < uri.lastIndexOf('/')) {
+            // No file extension in the last path segment → treat as a page.
+            request.uri = uri + '/index.html';
+          }
+          return request;
+        }
+
   # ── CloudFront Distribution ──
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
@@ -118,6 +143,9 @@ Resources:
           ViewerProtocolPolicy: redirect-to-https
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized
           Compress: true
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt SpaRewriteFunction.FunctionMetadata.FunctionARN
         CacheBehaviors:
           # API routes → Lambda
           - PathPattern: /api/*

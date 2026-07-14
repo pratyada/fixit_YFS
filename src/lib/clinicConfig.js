@@ -103,8 +103,8 @@ export function applyClinicTheme(clinic) {
     root.style.setProperty('--color-secondary', clinic.colors.secondary);
     root.style.setProperty('--color-accent', clinic.colors.accent);
   }
-  // Update page title
-  document.title = `${clinic.name} — FIXIT`;
+  // NOTE: page <title> is owned by RouteSeo (src/components/Seo.jsx) so each
+  // route gets a unique, SEO-correct title. Do not set document.title here.
   // Update favicon
   const favicon = document.querySelector('link[rel="icon"]');
   if (favicon && clinic.favicon) favicon.href = clinic.favicon;
