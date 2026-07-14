@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,34 +8,53 @@ import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import ConsentBanner from './components/ConsentBanner';
 
+// ── Eager: public/prerendered pages + light shells ──
+// Kept as static imports so guide/landing/login/privacy render synchronously
+// (fast public load, and no Suspense fallback race during the prerender crawl).
+// None of these pull in the heavy ML/3D/chart libraries.
 import Login from './pages/Login';
 import PrivacyPolicy from './pages/PrivacyPolicy';
-import Dashboard from './pages/Dashboard';
-import Exercises from './pages/Exercises';
-import ExerciseDetail from './pages/ExerciseDetail';
-import PoseChecker from './pages/PoseChecker';
-import Progress from './pages/Progress';
-import Reports from './pages/Reports';
-import MyPlan from './pages/MyPlan';
-import PainJournal from './pages/PainJournal';
-import Programs from './pages/Programs';
-import ProgramDetail from './pages/ProgramDetail';
-import ProgramBuilder from './pages/ProgramBuilder';
-import OutcomeMeasures from './pages/OutcomeMeasures';
-import RecordSession from './pages/RecordSession';
-import AdminDashboard from './pages/AdminDashboard';
-import PractitionerDashboard from './pages/PractitionerDashboard';
-import ClinicKiosk from './pages/ClinicKiosk';
-import Subscription from './pages/Subscription';
-import Settings from './pages/Settings';
 import Guides from './pages/Guides';
 import GuideDetail from './pages/GuideDetail';
-import Health from './pages/Health';
-import Onboarding from './pages/Onboarding';
 import Landing from './pages/Landing';
 import FeatureGate from './components/FeatureGate';
 
+// ── Lazy: authenticated app pages ──
+// Split into per-page chunks so TensorFlow (PoseChecker/ClinicKiosk),
+// three.js (Exercise3D), and chart.js (Progress/Reports/etc.) load ONLY when
+// their page is actually visited — never on the public/guide pages.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Exercises = lazy(() => import('./pages/Exercises'));
+const ExerciseDetail = lazy(() => import('./pages/ExerciseDetail'));
+const PoseChecker = lazy(() => import('./pages/PoseChecker'));
+const Progress = lazy(() => import('./pages/Progress'));
+const Reports = lazy(() => import('./pages/Reports'));
+const MyPlan = lazy(() => import('./pages/MyPlan'));
+const PainJournal = lazy(() => import('./pages/PainJournal'));
+const Programs = lazy(() => import('./pages/Programs'));
+const ProgramDetail = lazy(() => import('./pages/ProgramDetail'));
+const ProgramBuilder = lazy(() => import('./pages/ProgramBuilder'));
+const OutcomeMeasures = lazy(() => import('./pages/OutcomeMeasures'));
+const RecordSession = lazy(() => import('./pages/RecordSession'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const PractitionerDashboard = lazy(() => import('./pages/PractitionerDashboard'));
+const ClinicKiosk = lazy(() => import('./pages/ClinicKiosk'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Health = lazy(() => import('./pages/Health'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+
 export default function App() {
+  const { pathname } = useLocation();
+
+  // Guides are always public and never authenticated. Render them ENTIRELY
+  // outside the Firebase providers so the Auth + Firestore SDK (~150 KB gzip)
+  // never loads on the prerendered guide pages — keeps them fast and light for
+  // SEO. Auth logic for every other route is unchanged.
+  if (pathname === '/guides' || pathname.startsWith('/guides/')) {
+    return <PublicShell pathname={pathname} />;
+  }
+
   return (
     <ClinicProvider>
       <AuthProvider>
@@ -47,37 +66,33 @@ export default function App() {
   );
 }
 
+// Provider-free shell for public guide pages. Uses only static CSS-var theming
+// (defaults live in index.css) and eager-imported page components — no Firebase.
+function PublicShell({ pathname }) {
+  const guideSlug = pathname.startsWith('/guides/') ? pathname.replace('/guides/', '') : null;
+  return (
+    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <img src="/favicon.ico" alt="FIXIT" style={{ width: '28px', height: '28px', borderRadius: '50%' }} onError={e => e.target.style.display = 'none'} />
+          <span style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1.1rem', color: 'var(--color-secondary)' }}>FIXIT</span>
+        </Link>
+        <Link to="/" style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--color-secondary)', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>
+          Open App
+        </Link>
+      </div>
+      {guideSlug ? <GuideDetail /> : <Guides />}
+      <ConsentBanner />
+    </div>
+  );
+}
+
 function AppShell() {
   const { user, loading, needsRolePick, needsOnboarding } = useAuth();
   const location = useLocation();
 
-  // Guides — always accessible, logged in or not, no auth wait
-  const isGuidesPage = location.pathname === '/guides' || location.pathname.startsWith('/guides/');
-  if (isGuidesPage) {
-    // Extract slug from path: /guides/some-slug → some-slug
-    const guideSlug = location.pathname.startsWith('/guides/') ? location.pathname.replace('/guides/', '') : null;
-    return (
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-            <img src="/favicon.ico" alt="FIXIT" style={{ width: '28px', height: '28px', borderRadius: '50%' }} onError={e => e.target.style.display = 'none'} />
-            <span style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1.1rem', color: 'var(--color-secondary)' }}>FIXIT</span>
-          </Link>
-          {user ? (
-            <Link to="/" style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--color-secondary)', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>
-              Dashboard
-            </Link>
-          ) : (
-            <Link to="/login" style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--color-secondary)', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>
-              Sign In
-            </Link>
-          )}
-        </div>
-        {guideSlug ? <GuideDetail /> : <Guides />}
-        <ConsentBanner />
-      </div>
-    );
-  }
+  // NOTE: /guides* is handled by <PublicShell> in App() before this renders,
+  // so guide pages never mount the auth providers.
 
   // Public pages — no auth wait
   if (!user && location.pathname === '/privacy') {
@@ -98,7 +113,7 @@ function AppShell() {
     return <><Landing /><ConsentBanner /></>;
   }
   if (needsRolePick) return <RolePickerScreen />;
-  if (needsOnboarding) return <Onboarding />;
+  if (needsOnboarding) return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
   return <><AppLayout /><ConsentBanner /></>;
 }
 
@@ -335,6 +350,7 @@ function AppLayout() {
           maxWidth: isDesktop ? '1100px' : undefined,
           WebkitOverflowScrolling: 'touch',
         }}>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {isAdmin ? (
               <>
@@ -380,6 +396,7 @@ function AppLayout() {
             )}
             <Route path="/privacy" element={<PrivacyPolicy />} />
           </Routes>
+          </Suspense>
         </main>
       </div>
 
@@ -517,6 +534,24 @@ function RolePickerScreen() {
           <LogOut size={12} /> {t('rolePicker.signOut')}
         </button>
       </div>
+    </div>
+  );
+}
+
+// Lightweight fallback shown while a lazy page chunk loads.
+function PageLoader() {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: '40vh', width: '100%',
+    }}>
+      <div style={{
+        width: '28px', height: '28px', borderRadius: '50%',
+        border: '3px solid var(--color-border)',
+        borderTopColor: 'var(--color-accent)',
+        animation: 'spin 0.7s linear infinite',
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
