@@ -41,6 +41,10 @@ Parameters:
   MarketingReplyTo:
     Type: String
     Default: yourformsux@gmail.com
+  MarketingAddress:
+    Type: String
+    Default: FIXIT, Toronto, ON, Canada
+    Description: Physical mailing address shown in email footers (CASL/CAN-SPAM)
   SuperAdminEmail:
     Type: String
     Default: ''
@@ -119,6 +123,7 @@ Resources:
           ANTHROPIC_API_KEY: !Ref AnthropicApiKey
           MARKETING_FROM_EMAIL: !Ref MarketingFromEmail
           MARKETING_REPLY_TO: !Ref MarketingReplyTo
+          MARKETING_ADDRESS: !Ref MarketingAddress
           SUPER_ADMIN_EMAIL: !Ref SuperAdminEmail
           SITE_BUCKET: !Ref SiteBucketName
           ALLOWED_ORIGIN: !Ref AllowedOrigin

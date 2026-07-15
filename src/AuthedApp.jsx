@@ -44,6 +44,8 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Health = lazy(() => import('./pages/Health'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Subscribers = lazy(() => import('./pages/Subscribers'));
+const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns'));
+const SentHistory = lazy(() => import('./pages/SentHistory'));
 
 // The authenticated application: Firebase providers wrapping the app shell.
 // Loaded lazily from App.jsx so the Firebase SDK stays out of the entry chunk.
@@ -349,9 +351,9 @@ function AppLayout() {
                 <Route path="/pose" element={<PoseChecker />} />
                 <Route path="/kiosk" element={<ClinicKiosk />} />
                 <Route path="/subscribers" element={<Subscribers />} />
-                <Route path="/email" element={<MarketingSoon title="Email Campaigns" phase={2} />} />
+                <Route path="/email" element={<EmailCampaigns />} />
                 <Route path="/blog" element={<MarketingSoon title="Blog" phase={3} />} />
-                <Route path="/sent" element={<MarketingSoon title="Sent History" phase={2} />} />
+                <Route path="/sent" element={<SentHistory />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </>
             ) : isPractitioner ? (
