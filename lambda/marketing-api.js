@@ -281,18 +281,36 @@ async function handleEmailGenerate(event) {
   if (!ANTHROPIC_API_KEY) throw new HttpError(400, 'ANTHROPIC_API_KEY not set — configure the stack to enable AI generation');
   const { topic } = parseBody(event);
   if (!topic) throw new HttpError(400, 'topic required');
-  const system = `You write marketing emails for FIXIT, an AI-powered health & fitness tracking app (Toronto, Canada). Voice: warm, concise, motivating, never spammy. Return ONLY minified JSON: {"subject": "...", "preheader": "...", "bodyHtml": "..."}. bodyHtml is inner email HTML (no <html>/<head>/<body>), using <p>, <h2>, <ul>, <a>, and a clear CTA link to ${APP_URL}. Use {{firstName}} once near the top. Keep under 250 words.`;
+  const system = `You write marketing emails for FIXIT, an AI-powered health & fitness tracking app (Toronto, Canada). Voice: warm, concise, motivating, never spammy. bodyHtml is inner email HTML only (no <html>/<head>/<body>), using <p>, <h2>, <ul>, <a>, with a clear CTA link to ${APP_URL}. Use {{firstName}} once near the top. Keep under 250 words.`;
+  // Use tool-use so Claude returns validated structured JSON (avoids brittle
+  // JSON.parse of model prose, which breaks on unescaped quotes in HTML).
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1500, system, messages: [{ role: 'user', content: `Write a marketing email about: ${topic}` }] }),
+    body: JSON.stringify({
+      model: 'claude-sonnet-5', max_tokens: 1500, system,
+      tools: [{
+        name: 'draft_email',
+        description: 'Return the drafted marketing email.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            subject: { type: 'string' },
+            preheader: { type: 'string', description: 'inbox preview text' },
+            bodyHtml: { type: 'string', description: 'inner HTML email body' },
+          },
+          required: ['subject', 'preheader', 'bodyHtml'],
+        },
+      }],
+      tool_choice: { type: 'tool', name: 'draft_email' },
+      messages: [{ role: 'user', content: `Write a marketing email about: ${topic}` }],
+    }),
   });
   if (!res.ok) throw new HttpError(502, `Anthropic error ${res.status}`);
   const data = await res.json();
-  const text = (data.content || []).find((c) => c.type === 'text')?.text || '';
-  const m = text.match(/\{[\s\S]*\}/);
-  if (!m) throw new HttpError(502, 'Could not parse AI response');
-  return json(200, JSON.parse(m[0]));
+  const tool = (data.content || []).find((c) => c.type === 'tool_use');
+  if (!tool) throw new HttpError(502, 'AI did not return a draft');
+  return json(200, tool.input);
 }
 
 function unsubscribePage(ok, email) {
