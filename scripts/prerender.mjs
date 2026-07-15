@@ -120,9 +120,16 @@ async function main() {
           waitUntil: 'networkidle2',
           timeout: NAV_TIMEOUT,
         });
-        // Wait until the SEO head has been applied AND #root has real content.
+        // Wait until: SEO head applied, #root has content, and no loading
+        // placeholder ([data-loading]) remains — so lazy chunks / auth splash
+        // have resolved and we snapshot the real page, not a spinner.
         await page.waitForFunction(
-          () => window.__SEO_READY__ && document.getElementById('root')?.children.length > 0,
+          () => {
+            const root = document.getElementById('root');
+            return window.__SEO_READY__
+              && root && root.children.length > 0
+              && !root.querySelector('[data-loading]');
+          },
           { timeout: NAV_TIMEOUT },
         );
 
