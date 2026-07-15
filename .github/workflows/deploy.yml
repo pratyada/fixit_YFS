@@ -40,6 +40,7 @@ jobs:
           VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
           VITE_STRIPE_PRICE_BASIC: ${{ secrets.VITE_STRIPE_PRICE_BASIC }}
           VITE_STRIPE_PRICE_PRO: ${{ secrets.VITE_STRIPE_PRICE_PRO }}
+          VITE_MARKETING_API_BASE: ${{ secrets.VITE_MARKETING_API_BASE }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

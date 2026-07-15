@@ -37,45 +37,41 @@ The chosen sender is **yourformsux@gmail.com** (via SES).
    a single param (`MarketingFromEmail`) — when ready, switch to a domain sender
    (`noreply@yourformsux.com` with SES domain identity + DKIM) with no code change.
 
-## Deploy
+## Deploy (standalone stack)
 
-Infra changes are applied by **SAM**, not the GitHub Actions workflow (the CI
-only does `s3 sync` + `lambda update-function-code`). So a `sam deploy` is
-required whenever `infra/template.yaml` changes.
+The live FIXIT infra was created manually and is **not** under a CloudFormation
+stack, so marketing ships as its **own** self-contained stack
+(`infra/marketing/template.yaml`) — it creates only net-new resources (3 tables,
+the `fixit-marketing-api` Lambda, and its **own** HTTP API) and references the
+existing S3 site bucket by name. Nothing existing is touched.
 
 ```bash
-cd infra
+cd infra/marketing
 sam build
-sam deploy \
-  --stack-name fixit-prod \
+sam deploy --guided \
+  --stack-name fixit-marketing \
   --region us-east-1 \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
-    AnthropicApiKey=sk-ant-... \
+    FirebaseProjectId=fixit-6167d \
+    FirebaseClientEmail=firebase-adminsdk-...@fixit-6167d.iam.gserviceaccount.com \
+    FirebasePrivateKey="-----BEGIN PRIVATE KEY-----\n..." \
+    AnthropicApiKey=sk-ant-...            # blank OK until Phase 2/3 \
     MarketingFromEmail=yourformsux@gmail.com \
-    MarketingReplyTo=yourformsux@gmail.com \
-    SuperAdminEmail=<your-admin-email> \
-    # ...plus all existing params (Stripe/Firebase/Cert) — reuse saved config
+    SuperAdminEmail=<your-admin-email>
 ```
 
-> NOTE: the live FIXIT infra was created manually and is **not** currently under a
-> CloudFormation stack (see the SEO/CloudFront notes). Before `sam deploy` can
-> manage it, the existing bucket/distribution/lambdas must be imported into the
-> stack, OR the marketing resources deployed as a **separate** small stack. Decide
-> this before first deploy — see "Deploy model decision" below.
+The stack output **`MarketingApiUrl`** is the marketing API base. Wire the
+frontend to it:
+- set repo secret **`VITE_MARKETING_API_BASE`** = that URL (used by
+  `.github/workflows/deploy.yml` at build), and locally in `.env.local`.
 
-After the stack exists, ordinary pushes to `main` update the Lambda code via the
-`.github/workflows/deploy.yml` loop (which now includes `fixit-marketing-api`).
+After the stack exists, ordinary pushes to `main` update the Lambda **code** via
+the deploy workflow loop (which includes `fixit-marketing-api`). Re-run
+`sam deploy` only when `infra/marketing/template.yaml` changes.
 
-## Deploy model decision (before first deploy)
-
-The marketing tables + Lambda can ship two ways:
-1. **Separate stack** (`fixit-marketing`) — cleanest given the main infra isn't
-   stack-managed yet. Reference the existing S3 bucket/API by name/ARN.
-2. **Import existing resources** into one stack, then add marketing — more correct
-   long-term, more upfront work.
-
-Recommended: **separate stack** now; consolidate later.
+> The main FIXIT `infra/template.yaml` is unchanged by marketing — everything
+> lives here. Consolidate into one stack later if the infra is ever imported.
 
 ## Verify Phase 0
 

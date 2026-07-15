@@ -4,7 +4,8 @@
 
 import { auth } from './firebase';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+// Marketing runs in its own stack (own API Gateway) — point at it explicitly.
+const API_BASE = import.meta.env.VITE_MARKETING_API_BASE || import.meta.env.VITE_API_BASE_URL || '';
 
 async function authedFetch(path, { method = 'GET', body } = {}) {
   const token = await auth.currentUser?.getIdToken();

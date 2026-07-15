@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: FIXIT Marketing — subscribers, email, blog (standalone stack)
+
+# Self-contained stack for the marketing pipeline. Deployed separately from the
+# (manually-created) main FIXIT infra, so it only creates NET-NEW resources and
+# touches nothing existing. It exposes its OWN HTTP API; the frontend calls it
+# via VITE_MARKETING_API_BASE. The blog-publish Lambda writes into the existing
+# site bucket (referenced by name) — CloudFront serves those objects via its OAC.
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: fixit.yourformsux.com
+  SiteBucketName:
+    Type: String
+    Default: fixit.yourformsux.com-site
+    Description: Existing S3 site bucket the blog HTML/images publish into
+  AllowedOrigin:
+    Type: String
+    Default: https://fixit.yourformsux.com
+  AppUrl:
+    Type: String
+    Default: https://fixit.yourformsux.com
+  FirebaseProjectId:
+    Type: String
+  FirebaseClientEmail:
+    Type: String
+  FirebasePrivateKey:
+    Type: String
+    NoEcho: true
+  AnthropicApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Anthropic API key for AI drafting (needed Phase 2/3; blank OK for now)
+  MarketingFromEmail:
+    Type: String
+    Default: yourformsux@gmail.com
+    Description: Verified SES sender for marketing email
+  MarketingReplyTo:
+    Type: String
+    Default: yourformsux@gmail.com
+  SuperAdminEmail:
+    Type: String
+    Default: ''
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 60
+    MemorySize: 1024
+
+Resources:
+  SubscribersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: fixit-subscribers
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+
+  EmailHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: fixit-email-history
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: emailId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: emailId
+          KeyType: HASH
+
+  BlogPostsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: fixit-blog-posts
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: slug
+          AttributeType: S
+      KeySchema:
+        - AttributeName: slug
+          KeyType: HASH
+
+  MarketingApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: '$default'
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref AllowedOrigin
+          - 'http://localhost:5173'
+        AllowMethods:
+          - GET
+          - POST
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+
+  MarketingApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: fixit-marketing-api
+      Handler: marketing-api.handler
+      CodeUri: ../../lambda/
+      Environment:
+        Variables:
+          SUBSCRIBERS_TABLE: !Ref SubscribersTable
+          EMAIL_HISTORY_TABLE: !Ref EmailHistoryTable
+          BLOG_POSTS_TABLE: !Ref BlogPostsTable
+          ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+          MARKETING_FROM_EMAIL: !Ref MarketingFromEmail
+          MARKETING_REPLY_TO: !Ref MarketingReplyTo
+          SUPER_ADMIN_EMAIL: !Ref SuperAdminEmail
+          SITE_BUCKET: !Ref SiteBucketName
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
+          APP_URL: !Ref AppUrl
+          FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
+          FIREBASE_CLIENT_EMAIL: !Ref FirebaseClientEmail
+          FIREBASE_PRIVATE_KEY: !Ref FirebasePrivateKey
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SubscribersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EmailHistoryTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BlogPostsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:DeleteObject
+                - s3:ListBucket
+              Resource:
+                - !Sub 'arn:aws:s3:::${SiteBucketName}'
+                - !Sub 'arn:aws:s3:::${SiteBucketName}/*'
+      Events:
+        Marketing:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MarketingApi
+            Path: /api/marketing/{proxy+}
+            Method: ANY
+        Subscribe:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MarketingApi
+            Path: /api/subscribe
+            Method: POST
+        Unsubscribe:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MarketingApi
+            Path: /api/unsubscribe
+            Method: GET
+
+Outputs:
+  MarketingApiUrl:
+    Description: Base URL for the marketing API — set as VITE_MARKETING_API_BASE
+    Value: !Sub 'https://${MarketingApi}.execute-api.${AWS::Region}.amazonaws.com'
