@@ -165,22 +165,42 @@ async function importSubscribers(rows, source = 'import') {
 }
 
 // ── Email (Phase 2) ──
-function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl }) {
+const DEFAULT_AUTHOR = 'The FIXIT Health Team';
+const DEFAULT_AUTHOR_TITLE = 'Evidence-based physiotherapy, chiropractic & performance';
+
+function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroImageUrl = '', authorName = DEFAULT_AUTHOR, authorTitle = DEFAULT_AUTHOR_TITLE }) {
+  const hero = heroImageUrl
+    ? `<tr><td><img src="${heroImageUrl}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto"></td></tr>`
+    : '';
+  const initials = (authorName.match(/\b\w/g) || ['F']).slice(0, 2).join('').toUpperCase();
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
-<body style="margin:0;background:#f4f7f6;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#4E4E53">
+<body style="margin:0;background:#eef2f1;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#3f4a47;-webkit-font-smoothing:antialiased">
 <span style="display:none;max-height:0;overflow:hidden;opacity:0">${preheader}</span>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7f6;padding:24px 0">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f1;padding:28px 0">
 <tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:16px;overflow:hidden">
-<tr><td style="background:linear-gradient(135deg,#708E86,#4E4E53);padding:22px 28px">
-<span style="font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#fff">FIXIT</span>
-</td></tr>
-<tr><td style="padding:28px;font-size:15px;line-height:1.6">${bodyHtml}</td></tr>
-<tr><td style="padding:20px 28px;border-top:1px solid #eee;font-size:11px;color:#98a2a0;text-align:center">
-<p style="margin:0 0 6px">You're receiving this because you subscribed to FIXIT.</p>
-<p style="margin:0 0 6px">${ADDRESS}</p>
-<p style="margin:0"><a href="${unsubscribeUrl}" style="color:#708E86">Unsubscribe</a> &nbsp;·&nbsp; <a href="${APP_URL}" style="color:#708E86">${APP_URL.replace(/^https?:\/\//, '')}</a></p>
-</td></tr>
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 6px 24px rgba(78,78,83,0.08)">
+  <tr><td style="background:linear-gradient(135deg,#708E86,#4E4E53);padding:24px 32px">
+    <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff">FIXIT</span>
+    <span style="font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:1px;text-transform:uppercase;margin-left:10px">Health Intelligence</span>
+  </td></tr>
+  ${hero}
+  <tr><td style="padding:32px 32px 8px;font-size:16px;line-height:1.7;color:#3f4a47">${bodyHtml}</td></tr>
+  <tr><td style="padding:4px 32px 28px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eef0ef"><tr>
+      <td style="padding-top:18px;width:44px;vertical-align:top">
+        <div style="width:44px;height:44px;border-radius:50%;background:#708E86;color:#fff;font-weight:700;font-size:15px;text-align:center;line-height:44px">${initials}</div>
+      </td>
+      <td style="padding:18px 0 0 12px;vertical-align:top">
+        <div style="font-weight:700;color:#4E4E53;font-size:14px">${authorName}</div>
+        <div style="font-size:12px;color:#8a938f">${authorTitle}</div>
+      </td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:18px 32px;background:#f7faf9;border-top:1px solid #eef0ef;font-size:11px;color:#98a2a0;text-align:center;line-height:1.6">
+    <p style="margin:0 0 6px">You're receiving this because you subscribed to FIXIT — evidence-based training & recovery.</p>
+    <p style="margin:0 0 6px">${ADDRESS}</p>
+    <p style="margin:0"><a href="${unsubscribeUrl}" style="color:#708E86;font-weight:600">Unsubscribe</a> &nbsp;·&nbsp; <a href="${APP_URL}" style="color:#708E86;font-weight:600">${APP_URL.replace(/^https?:\/\//, '')}</a></p>
+  </td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -195,7 +215,7 @@ function injectTracking(htmlBody, emailId, email, base) {
 }
 
 async function handleEmailSend(event) {
-  const { type = 'all', to, subject, bodyHtml, preheader = '', category } = parseBody(event);
+  const { type = 'all', to, subject, bodyHtml, preheader = '', category, heroImageUrl = '', authorName, authorTitle } = parseBody(event);
   if (!subject || !bodyHtml) throw new HttpError(400, 'subject and bodyHtml required');
   const base = selfBase(event);
 
@@ -215,7 +235,7 @@ async function handleEmailSend(event) {
     try {
       const unsub = `${base}/api/unsubscribe?email=${enc(sub.email)}&token=${enc(sub.unsubscribeToken || '')}`;
       const personalized = bodyHtml.replaceAll('{{firstName}}', sub.name || 'there');
-      const wrapped = brandedEmail({ subject, preheader, bodyHtml: personalized, unsubscribeUrl: unsub });
+      const wrapped = brandedEmail({ subject, preheader, bodyHtml: personalized, unsubscribeUrl: unsub, heroImageUrl, authorName, authorTitle });
       const tracked = injectTracking(wrapped, emailId, sub.email, base);
       await ses.send(new SendEmailCommand({
         Source: FROM,
@@ -281,14 +301,25 @@ async function handleEmailGenerate(event) {
   if (!ANTHROPIC_API_KEY) throw new HttpError(400, 'ANTHROPIC_API_KEY not set — configure the stack to enable AI generation');
   const { topic } = parseBody(event);
   if (!topic) throw new HttpError(400, 'topic required');
-  const system = `You write marketing emails for FIXIT, an AI-powered health & fitness tracking app (Toronto, Canada). Voice: warm, concise, motivating, never spammy. bodyHtml is inner email HTML only (no <html>/<head>/<body>), using <p>, <h2>, <ul>, <a>, with a clear CTA link to ${APP_URL}. Use {{firstName}} once near the top. Keep under 250 words.`;
+  const system = `You are the lead health writer for FIXIT (an AI health & fitness tracking app, Toronto, Canada). Write with the depth and authority of a clinician-scientist with 20+ years across physiotherapy, chiropractic care, and evidence-based strength & conditioning: accurate physiological mechanisms, specific protocols (sets/reps/tempo/frequency/load), and what the research broadly shows — but warm, clear, and practical for a general audience. Never make unsafe or absolute medical claims; frame as general educational guidance.
+
+Write a RICH newsletter (350–550 words) as email-safe inline-styled HTML for the "bodyHtml" field: no <html>/<head>/<body>, no <style> tags, no class attributes — INLINE styles only. Structure:
+- Open with a short paragraph addressing {{firstName}} (use it exactly once): <p style="margin:0 0 14px">…</p>
+- 2–4 sections, each led by <h2 style="font-size:19px;color:#4E4E53;margin:22px 0 8px">…</h2>, with <p style="margin:0 0 14px">…</p> and where useful <ul style="margin:0 0 14px;padding-left:20px;line-height:1.7">…</ul>.
+- Include AT LEAST TWO of these infographic blocks, using EXACTLY this inline HTML (fill CAPS placeholders with real, specific content):
+  • Stat: <div style="background:#f4f7f6;border-left:4px solid #708E86;border-radius:10px;padding:16px 18px;margin:18px 0"><div style="font-size:30px;font-weight:800;color:#708E86;line-height:1">NUMBER</div><div style="font-size:13px;color:#6b746f;margin-top:4px">LABEL</div></div>
+  • Research: <div style="background:#eef5f2;border-radius:12px;padding:16px 18px;margin:18px 0"><div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#708E86;margin-bottom:6px">🔬 What the research shows</div><div style="font-size:14px;color:#44504c;line-height:1.6">EVIDENCE</div></div>
+  • Protocol: <div style="background:#fbfaf6;border:1px solid #ece7d9;border-radius:12px;padding:16px 18px;margin:18px 0"><div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#b08948;margin-bottom:8px">✅ The protocol</div><ol style="margin:0;padding-left:18px;font-size:14px;color:#44504c;line-height:1.8">STEPS</ol></div>
+- End with a CTA button: <div style="text-align:center;margin:26px 0 6px"><a href="${APP_URL}" style="display:inline-block;background:#4E4E53;color:#fff;text-decoration:none;padding:13px 30px;border-radius:10px;font-weight:700;font-size:15px">Track this in FIXIT →</a></div>
+
+Be credible and specific — real numbers, real mechanisms. Do NOT include the header, footer, or signature (the template adds those).`;
   // Use tool-use so Claude returns validated structured JSON (avoids brittle
   // JSON.parse of model prose, which breaks on unescaped quotes in HTML).
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-5', max_tokens: 1500, system,
+      model: 'claude-sonnet-5', max_tokens: 3000, system,
       tools: [{
         name: 'draft_email',
         description: 'Return the drafted marketing email.',
@@ -311,6 +342,18 @@ async function handleEmailGenerate(event) {
   const tool = (data.content || []).find((c) => c.type === 'tool_use');
   if (!tool) throw new HttpError(502, 'AI did not return a draft');
   return json(200, tool.input);
+}
+
+// Full branded email HTML for the admin preview — identical to what's sent
+// (with a sample name / unsubscribe), so what you see is what recipients get.
+async function handleEmailPreview(event) {
+  const { subject = '(subject)', preheader = '', bodyHtml = '', heroImageUrl = '', authorName, authorTitle } = parseBody(event);
+  const html = brandedEmail({
+    subject, preheader,
+    bodyHtml: (bodyHtml || '').replaceAll('{{firstName}}', 'there'),
+    unsubscribeUrl: '#', heroImageUrl, authorName, authorTitle,
+  });
+  return json(200, { html });
 }
 
 function unsubscribePage(ok, email) {
@@ -362,6 +405,7 @@ export const handler = async (event) => {
     // Email (Phase 2)
     if (path.endsWith('/marketing/email/send') && method === 'POST') return await handleEmailSend(event);
     if (path.endsWith('/marketing/email/generate') && method === 'POST') return await handleEmailGenerate(event);
+    if (path.endsWith('/marketing/email/preview') && method === 'POST') return await handleEmailPreview(event);
     if (path.endsWith('/marketing/email/history') && method === 'GET') return await handleEmailHistory();
 
     // Subscribers (Phase 1)

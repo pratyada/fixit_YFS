@@ -28,6 +28,7 @@ export const marketing = {
   importSubscribers: (subscribers) => authedFetch('/api/marketing/subscribers/import', { method: 'POST', body: { subscribers } }),
 
   generateEmail: (topic) => authedFetch('/api/marketing/email/generate', { method: 'POST', body: { topic } }),
+  previewEmail: (payload) => authedFetch('/api/marketing/email/preview', { method: 'POST', body: payload }),
   sendEmail: (payload) => authedFetch('/api/marketing/email/send', { method: 'POST', body: payload }),
   emailHistory: () => authedFetch('/api/marketing/email/history'),
 };
