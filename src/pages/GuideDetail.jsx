@@ -1,6 +1,7 @@
 import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, Tag, Share2 } from 'lucide-react';
 import { getGuideBySlug, GUIDES } from '../data/guides';
+import SubscribeForm from '../components/SubscribeForm';
 
 export default function GuideDetail() {
   const params = useParams();
@@ -146,6 +147,11 @@ export default function GuideDetail() {
         }}>
           Get Started Free
         </Link>
+      </div>
+
+      {/* Newsletter signup */}
+      <div style={{ marginTop: '32px' }}>
+        <SubscribeForm />
       </div>
 
       {/* Related guides */}

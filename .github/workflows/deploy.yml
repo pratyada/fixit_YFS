@@ -134,7 +134,7 @@ jobs:
           zip -r ../lambda-package.zip . -x "*.git*"
 
           # Update each function
-          for fn in fixit-create-checkout-session fixit-create-portal-session fixit-stripe-webhook fixit-daily-summary-email fixit-session-review-email fixit-update-leaderboard; do
+          for fn in fixit-create-checkout-session fixit-create-portal-session fixit-stripe-webhook fixit-daily-summary-email fixit-session-review-email fixit-update-leaderboard fixit-marketing-api; do
             aws lambda update-function-code \
               --function-name $fn \
               --zip-file fileb://../lambda-package.zip \

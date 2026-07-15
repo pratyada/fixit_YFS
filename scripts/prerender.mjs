@@ -133,7 +133,16 @@ async function main() {
           { timeout: NAV_TIMEOUT },
         );
 
-        const html = await page.evaluate(() => '<!doctype html>\n' + document.documentElement.outerHTML);
+        // Strip <link rel="modulepreload"> before snapshotting. During render,
+        // Vite's runtime injects preload hints for chunks it *might* need
+        // (e.g. the lazy authed-app graph), which would otherwise force public
+        // pages to download Firebase. These are only fetch-early hints — the
+        // entry <script> still imports exactly what each route needs — so
+        // removing them keeps public/guide pages lean without breaking anything.
+        const html = await page.evaluate(() => {
+          document.querySelectorAll('link[rel="modulepreload"]').forEach((el) => el.remove());
+          return '<!doctype html>\n' + document.documentElement.outerHTML;
+        });
         const outDir = route.path === '/' ? DIST : join(DIST, route.path);
         mkdirSync(outDir, { recursive: true });
         writeFileSync(join(outDir, 'index.html'), html, 'utf8');

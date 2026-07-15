@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClinicProvider, useClinic } from './contexts/ClinicContext';
@@ -43,6 +43,7 @@ const Subscription = lazy(() => import('./pages/Subscription'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Health = lazy(() => import('./pages/Health'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Subscribers = lazy(() => import('./pages/Subscribers'));
 
 // The authenticated application: Firebase providers wrapping the app shell.
 // Loaded lazily from App.jsx so the Firebase SDK stays out of the entry chunk.
@@ -106,7 +107,23 @@ const ADMIN_TABS = [
   { to: '/', icon: Shield, labelKey: 'nav:tabs.admin' },
   { to: '/exercises', icon: BookOpen, labelKey: 'nav:tabs.library' },
   { to: '/kiosk', icon: Camera, labelKey: 'nav:tabs.kiosk' },
+  // Marketing pipeline (labelKey falls back to the string when no i18n key exists)
+  { to: '/subscribers', icon: Users, labelKey: 'Subscribers' },
+  { to: '/email', icon: Mail, labelKey: 'Email' },
+  { to: '/blog', icon: PenTool, labelKey: 'Blog' },
+  { to: '/sent', icon: Send, labelKey: 'Sent' },
 ];
+
+// Placeholder for marketing sections not yet built (Email=Phase 2, Blog=Phase 3,
+// Sent=Phase 2). Keeps the nav structure visible.
+function MarketingSoon({ title, phase }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--color-text)' }}>
+      <h1 style={{ marginBottom: '8px' }}>{title}</h1>
+      <p style={{ fontSize: '0.85rem' }}>Coming in Phase {phase}.</p>
+    </div>
+  );
+}
 
 const ROLE_META = {
   admin: { icon: Shield, color: '#5E35B1', bg: '#EDE7F6', labelKey: 'nav:roles.admin.label', descKey: 'nav:roles.admin.desc' },
@@ -331,6 +348,10 @@ function AppLayout() {
                 <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
                 <Route path="/pose" element={<PoseChecker />} />
                 <Route path="/kiosk" element={<ClinicKiosk />} />
+                <Route path="/subscribers" element={<Subscribers />} />
+                <Route path="/email" element={<MarketingSoon title="Email Campaigns" phase={2} />} />
+                <Route path="/blog" element={<MarketingSoon title="Blog" phase={3} />} />
+                <Route path="/sent" element={<MarketingSoon title="Sent History" phase={2} />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </>
             ) : isPractitioner ? (

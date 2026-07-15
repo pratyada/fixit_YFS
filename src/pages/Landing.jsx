@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Activity, Dumbbell, Camera, Heart, BarChart3, Brain, Check, ArrowRight, Sparkles, Shield, Star, ChevronDown, Clock, BookOpen } from 'lucide-react';
 import { useClinic } from '../contexts/ClinicContext';
 import { GUIDES } from '../data/guides';
+import SubscribeForm from '../components/SubscribeForm';
 
 const FEATURES = [
   { icon: Dumbbell, title: 'Exercise Library', desc: '100+ guided exercises for rehab, fitness, and pain management with step-by-step instructions.', color: '#708E86' },
@@ -317,6 +318,11 @@ export default function Landing() {
             </details>
           ))}
         </div>
+      </section>
+
+      {/* ── Newsletter ── */}
+      <section style={{ padding: '48px 24px', background: 'var(--color-bg-alt)' }}>
+        <SubscribeForm />
       </section>
 
       {/* ── Footer ── */}

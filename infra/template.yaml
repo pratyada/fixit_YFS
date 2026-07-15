@@ -32,6 +32,22 @@ Parameters:
   AppUrl:
     Type: String
     Default: https://fixit.yourformsux.com
+  # ── Marketing pipeline (blog + email) ──
+  AnthropicApiKey:
+    Type: String
+    NoEcho: true
+    Description: Anthropic API key for AI blog/email drafting
+  MarketingFromEmail:
+    Type: String
+    Default: yourformsux@gmail.com
+    Description: Verified SES sender for marketing email (must be verified in SES)
+  MarketingReplyTo:
+    Type: String
+    Default: yourformsux@gmail.com
+  SuperAdminEmail:
+    Type: String
+    Default: ''
+    Description: Optional email allowed to use marketing API even without an admin role doc
 
 Globals:
   Function:
@@ -181,11 +197,14 @@ Resources:
           - !Sub 'https://${DomainName}'
           - 'http://localhost:5173'
         AllowMethods:
+          - GET
           - POST
+          - DELETE
           - OPTIONS
         AllowHeaders:
           - Content-Type
           - stripe-signature
+          - Authorization
 
   # ── Lambda Functions ──
   CreateCheckoutSessionFunction:
@@ -283,6 +302,105 @@ Resources:
             Schedule: rate(4 hours)
             Description: Update leaderboard rankings every 4 hours
             Enabled: true
+
+  # ── DynamoDB: marketing / blog data (first tables in the stack) ──
+  SubscribersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: fixit-subscribers
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+
+  EmailHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: fixit-email-history
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: emailId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: emailId
+          KeyType: HASH
+
+  BlogPostsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: fixit-blog-posts
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: slug
+          AttributeType: S
+      KeySchema:
+        - AttributeName: slug
+          KeyType: HASH
+
+  # ── Marketing API: blog drafting, email, subscribers (admin-authenticated) ──
+  MarketingApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: marketing-api.handler
+      CodeUri: ../lambda/
+      Timeout: 60          # AI drafting + image processing can be slow
+      MemorySize: 1024     # sharp image optimization needs headroom
+      Environment:
+        Variables:
+          SUBSCRIBERS_TABLE: !Ref SubscribersTable
+          EMAIL_HISTORY_TABLE: !Ref EmailHistoryTable
+          BLOG_POSTS_TABLE: !Ref BlogPostsTable
+          ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+          MARKETING_FROM_EMAIL: !Ref MarketingFromEmail
+          MARKETING_REPLY_TO: !Ref MarketingReplyTo
+          SUPER_ADMIN_EMAIL: !Ref SuperAdminEmail
+          SITE_BUCKET: !Sub '${DomainName}-site'
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SubscribersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EmailHistoryTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BlogPostsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:DeleteObject
+                - s3:ListBucket
+              Resource:
+                - !GetAtt SiteBucket.Arn
+                - !Sub '${SiteBucket.Arn}/*'
+      Events:
+        # Admin routes (auth enforced inside the handler via Firebase ID token)
+        Marketing:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ApiGateway
+            Path: /api/marketing/{proxy+}
+            Method: ANY
+        # Public: newsletter signup + one-click unsubscribe + open/click tracking
+        Subscribe:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ApiGateway
+            Path: /api/subscribe
+            Method: POST
+        Unsubscribe:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ApiGateway
+            Path: /api/unsubscribe
+            Method: GET
 
 Outputs:
   CloudFrontDistributionId:
