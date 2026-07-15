@@ -29,6 +29,8 @@ Parameters:
   FirebasePrivateKey:
     Type: String
     NoEcho: true
+    Default: ''
+    Description: Leave blank at deploy; inject securely post-deploy from the SA JSON file
   AnthropicApiKey:
     Type: String
     NoEcho: true
