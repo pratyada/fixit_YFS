@@ -332,17 +332,19 @@ export const handler = async (event) => {
       }
       return html(200, unsubscribePage(!!valid, email));
     }
-    if (path.endsWith('/track/open')) return handleTrackOpen(event);
-    if (path.endsWith('/track/click')) return handleTrackClick(event);
+    // `return await` (not bare return) so a rejected handler is caught here and
+    // mapped to the right status instead of escaping as an uncaught 500.
+    if (path.endsWith('/track/open')) return await handleTrackOpen(event);
+    if (path.endsWith('/track/click')) return await handleTrackClick(event);
 
     // ── Admin ──
     const caller = await requireAdmin(event);
     if (path.endsWith('/marketing/ping')) return json(200, { ok: true, caller, time: new Date().toISOString() });
 
     // Email (Phase 2)
-    if (path.endsWith('/marketing/email/send') && method === 'POST') return handleEmailSend(event);
-    if (path.endsWith('/marketing/email/generate') && method === 'POST') return handleEmailGenerate(event);
-    if (path.endsWith('/marketing/email/history') && method === 'GET') return handleEmailHistory();
+    if (path.endsWith('/marketing/email/send') && method === 'POST') return await handleEmailSend(event);
+    if (path.endsWith('/marketing/email/generate') && method === 'POST') return await handleEmailGenerate(event);
+    if (path.endsWith('/marketing/email/history') && method === 'GET') return await handleEmailHistory();
 
     // Subscribers (Phase 1)
     if (path.endsWith('/marketing/subscribers/import') && method === 'POST') {
