@@ -1,6 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Mail, Sparkles, Send, Eye } from 'lucide-react';
+import { Mail, Sparkles, Send, Eye, ImagePlus } from 'lucide-react';
 import { marketing } from '../lib/marketingApi';
+
+// Resize/compress in the browser before upload (keeps emails light, no server lib).
+function resizeImage(file, maxW = 1200) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width);
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', 0.82).split(',')[1]);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 const card = { background: 'white', border: '1px solid var(--color-border)', borderRadius: '14px', padding: '18px' };
 const inp = { width: '100%', padding: '10px 12px', borderRadius: '9px', border: '1px solid var(--color-border)', fontSize: '0.85rem', background: 'white', boxSizing: 'border-box' };
@@ -21,8 +42,32 @@ export default function EmailCampaigns() {
   const [sending, setSending] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewing, setPreviewing] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+
+  const uploadFile = async (file) => {
+    const base64 = await resizeImage(file);
+    const { url } = await marketing.uploadImage(base64, 'jpg', 'image/jpeg');
+    return url;
+  };
+  const onHeroFile = async (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    setUploading(true); setErr('');
+    try { setHeroImageUrl(await uploadFile(f)); setPreviewHtml(''); }
+    catch (er) { setErr('Upload failed: ' + er.message); }
+    finally { setUploading(false); e.target.value = ''; }
+  };
+  const onInlineFile = async (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    setUploading(true); setErr('');
+    try {
+      const url = await uploadFile(f);
+      setBodyHtml((b) => `${b}\n<img src="${url}" alt="" style="display:block;max-width:100%;border-radius:12px;margin:18px 0">\n`);
+      setPreviewHtml('');
+    } catch (er) { setErr('Upload failed: ' + er.message); }
+    finally { setUploading(false); e.target.value = ''; }
+  };
 
   useEffect(() => { marketing.listSubscribers().then(setMeta).catch(() => {}); }, []);
 
@@ -87,10 +132,24 @@ export default function EmailCampaigns() {
       <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <div><label style={lbl}>Subject</label><input style={inp} value={subject} onChange={(e) => edited(setSubject)(e.target.value)} /></div>
         <div><label style={lbl}>Preheader (inbox preview)</label><input style={inp} value={preheader} onChange={(e) => edited(setPreheader)(e.target.value)} /></div>
-        <div><label style={lbl}>Hero image URL (optional)</label><input style={inp} placeholder="https://… (a header image)" value={heroImageUrl} onChange={(e) => edited(setHeroImageUrl)(e.target.value)} /></div>
+        <div>
+          <label style={lbl}>Hero image (top banner, optional)</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input style={inp} placeholder="paste an image URL, or upload →" value={heroImageUrl} onChange={(e) => edited(setHeroImageUrl)(e.target.value)} />
+            <label style={{ ...btn, background: 'var(--color-accent)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <ImagePlus size={15} /> Upload
+              <input type="file" accept="image/*" onChange={onHeroFile} style={{ display: 'none' }} />
+            </label>
+          </div>
+          {heroImageUrl && <img src={heroImageUrl} alt="" style={{ maxHeight: '90px', borderRadius: '8px', marginTop: '8px' }} />}
+        </div>
         <div>
           <label style={lbl}>Body HTML <span style={{ fontWeight: 400, color: 'var(--color-text)' }}>— edit freely; {'{{firstName}}'} personalizes</span></label>
           <textarea style={{ ...inp, minHeight: '220px', fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem' }} value={bodyHtml} onChange={(e) => edited(setBodyHtml)(e.target.value)} />
+          <label style={{ ...btn, background: 'var(--color-accent)', cursor: 'pointer', marginTop: '8px' }}>
+            <ImagePlus size={15} /> {uploading ? 'Uploading…' : 'Insert image into body'}
+            <input type="file" accept="image/*" onChange={onInlineFile} style={{ display: 'none' }} disabled={uploading} />
+          </label>
         </div>
         <div>
           <button onClick={preview} disabled={previewing} style={{ ...btn, background: 'var(--color-secondary)' }}>

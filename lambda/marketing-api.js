@@ -19,6 +19,7 @@ import {
   ScanCommand, BatchGetCommand, BatchWriteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 if (!getApps().length) {
   initializeApp({
@@ -32,6 +33,8 @@ if (!getApps().length) {
 const db = getFirestore();
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' }));
 const ses = new SESClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+const SITE_BUCKET = process.env.SITE_BUCKET;
 
 const SUBSCRIBERS = process.env.SUBSCRIBERS_TABLE;
 const HISTORY = process.env.EMAIL_HISTORY_TABLE;
@@ -356,6 +359,23 @@ async function handleEmailPreview(event) {
   return json(200, { html });
 }
 
+// Store an uploaded (browser-resized) image to S3 → returns a CloudFront URL
+// usable in emails and blog posts. IAM already grants s3:PutObject on the bucket.
+async function handleUploadImage(event) {
+  const { base64, ext = 'jpg', contentType = 'image/jpeg' } = parseBody(event);
+  if (!base64) throw new HttpError(400, 'base64 image required');
+  const buf = Buffer.from(base64.replace(/^data:[^;]+;base64,/, ''), 'base64');
+  if (!buf.length) throw new HttpError(400, 'empty image');
+  if (buf.length > 5 * 1024 * 1024) throw new HttpError(400, 'Image too large (max 5MB)');
+  const safeExt = /^(jpe?g|png|webp|gif)$/i.test(ext) ? ext.toLowerCase() : 'jpg';
+  const key = `email-assets/${randomUUID()}.${safeExt}`;
+  await s3.send(new PutObjectCommand({
+    Bucket: SITE_BUCKET, Key: key, Body: buf, ContentType: contentType,
+    CacheControl: 'public, max-age=31536000, immutable',
+  }));
+  return json(200, { url: `${APP_URL}/${key}` });
+}
+
 function unsubscribePage(ok, email) {
   const msg = ok
     ? `<h1>You're unsubscribed</h1><p>${email} will no longer receive FIXIT emails.</p>`
@@ -406,6 +426,7 @@ export const handler = async (event) => {
     if (path.endsWith('/marketing/email/send') && method === 'POST') return await handleEmailSend(event);
     if (path.endsWith('/marketing/email/generate') && method === 'POST') return await handleEmailGenerate(event);
     if (path.endsWith('/marketing/email/preview') && method === 'POST') return await handleEmailPreview(event);
+    if (path.endsWith('/marketing/upload-image') && method === 'POST') return await handleUploadImage(event);
     if (path.endsWith('/marketing/email/history') && method === 'GET') return await handleEmailHistory();
 
     // Subscribers (Phase 1)
