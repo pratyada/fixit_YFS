@@ -1,7 +1,34 @@
 import { useRef, useState } from 'react';
-import { Palette, Sparkles, Download } from 'lucide-react';
+import { Palette, Sparkles, Download, Film } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { marketing } from '../lib/marketingApi';
+
+// One animation frame: gentle fade-in + ken-burns drift on the poster image,
+// a sweeping gold "shine", and a soft vignette. t is 0..1 over the clip.
+function drawFrame(ctx, img, w, h, t) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#1a201e'; ctx.fillRect(0, 0, w, h);
+  const intro = Math.min(1, t / 0.10);
+  const eIntro = 1 - Math.pow(1 - intro, 3);
+  const scale = (1.06 - 0.06 * eIntro) + 0.035 * t;   // 1.06 → 1.0 → ~1.035
+  const dw = w * scale, dh = h * scale;
+  const dx = (w - dw) / 2 - t * 0.012 * w;
+  const dy = (h - dh) / 2 - t * 0.012 * h;
+  ctx.save(); ctx.globalAlpha = eIntro; ctx.drawImage(img, dx, dy, dw, dh); ctx.restore();
+  // gold shine sweep (loops ~every 3.2s), additive
+  const secs = t * 10;
+  const phase = (secs % 3.2) / 3.2;
+  const sx = -w * 0.4 + phase * (w * 1.8);
+  const g = ctx.createLinearGradient(sx, 0, sx + w * 0.35, h);
+  g.addColorStop(0, 'rgba(255,255,255,0)');
+  g.addColorStop(0.5, 'rgba(230,201,135,0.11)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); ctx.restore();
+  // vignette
+  const vg = ctx.createRadialGradient(w / 2, h * 0.42, h * 0.2, w / 2, h / 2, h * 0.78);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.28)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+}
 
 // Formats rendered at TRUE export resolution (scaled down only for display).
 const FORMATS = [
@@ -121,6 +148,8 @@ export default function Creatives() {
   const [selected, setSelected] = useState(() => new Set(FORMATS.map((f) => f.key)));
   const [content, setContent] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [videoBusy, setVideoBusy] = useState(null);
+  const [videos, setVideos] = useState({});
   const [err, setErr] = useState('');
   const refs = useRef({});
 
@@ -141,6 +170,40 @@ export default function Creatives() {
       const url = await toPng(node, { width: fmt.w, height: fmt.h, pixelRatio: 1, style: { transform: 'none' }, cacheBust: true });
       const a = document.createElement('a'); a.href = url; a.download = `fixit-${fmt.key}-${fmt.w}x${fmt.h}.png`; a.click();
     } catch (e) { setErr('Export failed: ' + e.message); }
+  };
+
+  // Rasterize the poster, then animate + record a 10s clip in the browser.
+  const recordVideo = async (fmt) => {
+    const node = refs.current[fmt.key];
+    if (!node || !window.MediaRecorder) { setErr('Video recording not supported in this browser'); return; }
+    setVideoBusy(fmt.key); setErr('');
+    try {
+      const dataUrl = await toPng(node, { width: fmt.w, height: fmt.h, pixelRatio: 1, style: { transform: 'none' }, cacheBust: true });
+      const img = new Image(); img.src = dataUrl; await img.decode();
+      const canvas = document.createElement('canvas'); canvas.width = fmt.w; canvas.height = fmt.h;
+      const ctx = canvas.getContext('2d');
+      const mime = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm']
+        .find((m) => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+      const stream = canvas.captureStream(30);
+      const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+      const chunks = []; rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      const stopped = new Promise((res) => { rec.onstop = res; });
+      rec.start();
+      const t0 = performance.now();
+      await new Promise((resolve) => {
+        const step = (now) => {
+          const t = Math.min(1, (now - t0) / 10000);
+          drawFrame(ctx, img, fmt.w, fmt.h, t);
+          if (t < 1) requestAnimationFrame(step); else resolve();
+        };
+        requestAnimationFrame(step);
+      });
+      rec.stop(); await stopped;
+      const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+      const url = URL.createObjectURL(new Blob(chunks, { type: mime }));
+      setVideos((v) => ({ ...v, [fmt.key]: { url, ext } }));
+    } catch (e) { setErr('Video failed: ' + e.message); }
+    finally { setVideoBusy(null); }
   };
 
   const chosen = FORMATS.filter((f) => selected.has(f.key));
@@ -188,10 +251,23 @@ export default function Creatives() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                   <span style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>{f.label} · {f.w}×{f.h}</span>
-                  <button onClick={() => download(f)} style={{ ...btn, background: 'var(--color-secondary)', padding: '7px 12px', fontSize: '0.75rem' }}>
-                    <Download size={13} /> PNG
-                  </button>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={() => download(f)} style={{ ...btn, background: 'var(--color-secondary)', padding: '7px 11px', fontSize: '0.75rem' }}>
+                      <Download size={13} /> PNG
+                    </button>
+                    <button onClick={() => recordVideo(f)} disabled={!!videoBusy} style={{ ...btn, background: 'var(--color-accent)', padding: '7px 11px', fontSize: '0.75rem', opacity: videoBusy && videoBusy !== f.key ? 0.5 : 1 }}>
+                      <Film size={13} /> {videoBusy === f.key ? 'Recording 10s…' : 'Video'}
+                    </button>
+                  </div>
                 </div>
+                {videos[f.key] && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '2px' }}>
+                    <video src={videos[f.key].url} controls loop autoPlay muted playsInline style={{ width: f.disp, borderRadius: '12px', display: 'block' }} />
+                    <a href={videos[f.key].url} download={`fixit-${f.key}-${f.w}x${f.h}.${videos[f.key].ext}`} style={{ fontSize: '0.72rem', color: 'var(--color-accent)', fontWeight: 700 }}>
+                      ↓ Download {videos[f.key].ext.toUpperCase()} · 10s
+                    </a>
+                  </div>
+                )}
               </div>
             );
           })}
