@@ -172,7 +172,7 @@ function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroI
   const hero = heroImageUrl
     ? `<tr><td><img src="${heroImageUrl}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto"></td></tr>`
     : '';
-  const initials = (authorName.match(/\b\w/g) || ['F']).slice(0, 2).join('').toUpperCase();
+  const monogram = 'YFS'; // YourFormSux brand mark in the signature
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
 <body style="margin:0;background:#eef2f1;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#3f4a47;-webkit-font-smoothing:antialiased">
 <span style="display:none;max-height:0;overflow:hidden;opacity:0">${preheader}</span>
@@ -181,14 +181,14 @@ function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroI
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 6px 24px rgba(78,78,83,0.08)">
   <tr><td style="background:linear-gradient(135deg,#708E86,#4E4E53);padding:24px 32px">
     <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff">FIXIT</span>
-    <span style="font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:1px;text-transform:uppercase;margin-left:10px">Health Intelligence</span>
+    <span style="font-size:12px;color:rgba(255,255,255,0.75);margin-left:8px">by YourFormSux</span>
   </td></tr>
   ${hero}
   <tr><td style="padding:32px 32px 8px;font-size:16px;line-height:1.7;color:#3f4a47">${bodyHtml}</td></tr>
   <tr><td style="padding:4px 32px 28px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eef0ef"><tr>
       <td style="padding-top:18px;width:44px;vertical-align:top">
-        <div style="width:44px;height:44px;border-radius:50%;background:#708E86;color:#fff;font-weight:700;font-size:15px;text-align:center;line-height:44px">${initials}</div>
+        <div style="width:44px;height:44px;border-radius:50%;background:#708E86;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.5px;text-align:center;line-height:44px">${monogram}</div>
       </td>
       <td style="padding:18px 0 0 12px;vertical-align:top">
         <div style="font-weight:700;color:#4E4E53;font-size:14px">${authorName}</div>
