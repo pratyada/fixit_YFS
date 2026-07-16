@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send, Palette } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClinicProvider, useClinic } from './contexts/ClinicContext';
@@ -45,6 +45,7 @@ const Health = lazy(() => import('./pages/Health'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Subscribers = lazy(() => import('./pages/Subscribers'));
 const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns'));
+const Creatives = lazy(() => import('./pages/Creatives'));
 const SentHistory = lazy(() => import('./pages/SentHistory'));
 
 // The authenticated application: Firebase providers wrapping the app shell.
@@ -112,6 +113,7 @@ const ADMIN_TABS = [
   // Marketing pipeline (labelKey falls back to the string when no i18n key exists)
   { to: '/subscribers', icon: Users, labelKey: 'Subscribers' },
   { to: '/email', icon: Mail, labelKey: 'Email' },
+  { to: '/creatives', icon: Palette, labelKey: 'Creatives' },
   { to: '/blog', icon: PenTool, labelKey: 'Blog' },
   { to: '/sent', icon: Send, labelKey: 'Sent' },
 ];
@@ -352,6 +354,7 @@ function AppLayout() {
                 <Route path="/kiosk" element={<ClinicKiosk />} />
                 <Route path="/subscribers" element={<Subscribers />} />
                 <Route path="/email" element={<EmailCampaigns />} />
+                <Route path="/creatives" element={<Creatives />} />
                 <Route path="/blog" element={<MarketingSoon title="Blog" phase={3} />} />
                 <Route path="/sent" element={<SentHistory />} />
                 <Route path="*" element={<Navigate to="/" />} />

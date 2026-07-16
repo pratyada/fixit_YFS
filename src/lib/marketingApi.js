@@ -30,6 +30,7 @@ export const marketing = {
   generateEmail: (topic) => authedFetch('/api/marketing/email/generate', { method: 'POST', body: { topic } }),
   previewEmail: (payload) => authedFetch('/api/marketing/email/preview', { method: 'POST', body: payload }),
   uploadImage: (base64, ext = 'jpg', contentType = 'image/jpeg') => authedFetch('/api/marketing/upload-image', { method: 'POST', body: { base64, ext, contentType } }),
+  generateCreative: (brief) => authedFetch('/api/marketing/creative/generate', { method: 'POST', body: { brief } }),
   sendEmail: (payload) => authedFetch('/api/marketing/email/send', { method: 'POST', body: payload }),
   emailHistory: () => authedFetch('/api/marketing/email/history'),
 };

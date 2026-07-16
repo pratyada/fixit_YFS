@@ -359,6 +359,51 @@ async function handleEmailPreview(event) {
   return json(200, { html });
 }
 
+// AI social-creative copy for the Creatives studio. Returns structured fields
+// the frontend renders into the FIXIT-branded poster templates.
+async function handleCreativeGenerate(event) {
+  if (!ANTHROPIC_API_KEY) throw new HttpError(400, 'ANTHROPIC_API_KEY not set — configure the stack to enable AI generation');
+  const { brief } = parseBody(event);
+  if (!brief) throw new HttpError(400, 'brief required');
+  const system = `You write punchy, on-brand social-media creative copy for FIXIT — an AI health & fitness tracking app by YourFormSux (Toronto). Given a brief, return copy for a poster/banner. Be concrete, energetic, specific to the brief, never generic.
+- eyebrow: short UPPERCASE label (2-4 words)
+- headline: 1-3 short words, big display
+- headlineAccent: ONE word (from or right after the headline) to highlight
+- tagline: one punchy line
+- statNumber: a striking figure relevant to the brief (e.g. "1 in 3", "80%", "2x")
+- statText: short context for the stat
+- dateLine + venue: ONLY if the brief is an event (else empty strings)
+- demoLine: optional secondary line (else empty)
+- ctaText: short action ending in " →" (e.g. "RSVP in FIXIT →", "Start free →")`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5', max_tokens: 1000, system,
+      tools: [{
+        name: 'creative',
+        description: 'Return social creative copy.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            eyebrow: { type: 'string' }, headline: { type: 'string' }, headlineAccent: { type: 'string' },
+            tagline: { type: 'string' }, dateLine: { type: 'string' }, venue: { type: 'string' },
+            statNumber: { type: 'string' }, statText: { type: 'string' }, demoLine: { type: 'string' }, ctaText: { type: 'string' },
+          },
+          required: ['eyebrow', 'headline', 'headlineAccent', 'tagline', 'statNumber', 'statText', 'ctaText'],
+        },
+      }],
+      tool_choice: { type: 'tool', name: 'creative' },
+      messages: [{ role: 'user', content: `Brief: ${brief}` }],
+    }),
+  });
+  if (!res.ok) throw new HttpError(502, `Anthropic error ${res.status}`);
+  const data = await res.json();
+  const tool = (data.content || []).find((c) => c.type === 'tool_use');
+  if (!tool) throw new HttpError(502, 'AI did not return creative copy');
+  return json(200, tool.input);
+}
+
 // Store an uploaded (browser-resized) image to S3 → returns a CloudFront URL
 // usable in emails and blog posts. IAM already grants s3:PutObject on the bucket.
 async function handleUploadImage(event) {
@@ -427,6 +472,7 @@ export const handler = async (event) => {
     if (path.endsWith('/marketing/email/generate') && method === 'POST') return await handleEmailGenerate(event);
     if (path.endsWith('/marketing/email/preview') && method === 'POST') return await handleEmailPreview(event);
     if (path.endsWith('/marketing/upload-image') && method === 'POST') return await handleUploadImage(event);
+    if (path.endsWith('/marketing/creative/generate') && method === 'POST') return await handleCreativeGenerate(event);
     if (path.endsWith('/marketing/email/history') && method === 'GET') return await handleEmailHistory();
 
     // Subscribers (Phase 1)
