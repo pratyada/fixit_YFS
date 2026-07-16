@@ -28,13 +28,17 @@ const inp = { width: '100%', padding: '10px 12px', borderRadius: '9px', border: 
 const btn = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '9px', border: 'none', color: 'white', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' };
 const lbl = { display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '4px' };
 
+// Persist the draft so leaving/refreshing the page doesn't lose it.
+const DRAFT_KEY = 'fixit_email_draft';
+const loadDraft = () => { try { return JSON.parse(localStorage.getItem(DRAFT_KEY)) || {}; } catch { return {}; } };
+
 export default function EmailCampaigns() {
   const [meta, setMeta] = useState({ activeCount: 0, categories: [] });
-  const [topic, setTopic] = useState('');
-  const [subject, setSubject] = useState('');
-  const [preheader, setPreheader] = useState('');
-  const [bodyHtml, setBodyHtml] = useState('');
-  const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [topic, setTopic] = useState(() => loadDraft().topic || '');
+  const [subject, setSubject] = useState(() => loadDraft().subject || '');
+  const [preheader, setPreheader] = useState(() => loadDraft().preheader || '');
+  const [bodyHtml, setBodyHtml] = useState(() => loadDraft().bodyHtml || '');
+  const [heroImageUrl, setHeroImageUrl] = useState(() => loadDraft().heroImageUrl || '');
   const [audience, setAudience] = useState('all');
   const [category, setCategory] = useState('');
   const [single, setSingle] = useState('');
@@ -70,6 +74,20 @@ export default function EmailCampaigns() {
   };
 
   useEffect(() => { marketing.listSubscribers().then(setMeta).catch(() => {}); }, []);
+
+  // Auto-save the draft (debounced) whenever any field changes.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ topic, subject, preheader, bodyHtml, heroImageUrl }));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [topic, subject, preheader, bodyHtml, heroImageUrl]);
+
+  const clearDraft = () => {
+    if (!confirm('Clear this draft and start fresh?')) return;
+    localStorage.removeItem(DRAFT_KEY);
+    setTopic(''); setSubject(''); setPreheader(''); setBodyHtml(''); setHeroImageUrl(''); setPreviewHtml(''); setMsg('');
+  };
 
   // Any edit invalidates the current preview.
   const edited = (setter) => (v) => { setter(v); setPreviewHtml(''); };
@@ -113,7 +131,13 @@ export default function EmailCampaigns() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '920px' }}>
-      <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={22} /> Email Campaigns</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}><Mail size={22} /> Email Campaigns</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>Draft auto-saves on this device</span>
+          <button onClick={clearDraft} style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '7px 12px', cursor: 'pointer', fontSize: '0.78rem', color: 'var(--color-text)' }}>Clear draft</button>
+        </div>
+      </div>
       {err && <div style={{ ...card, borderColor: '#e0a0a0', color: '#c0392b', fontSize: '0.82rem' }}>{err}</div>}
       {msg && <div style={{ ...card, borderColor: 'var(--color-accent)', color: 'var(--color-accent)', fontSize: '0.85rem', fontWeight: 600 }}>{msg}</div>}
 

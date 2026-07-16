@@ -258,6 +258,8 @@ async function handleEmailSend(event) {
       emailId, kind: 'campaign', subject, type, category: category || '', sentAt: new Date().toISOString(),
       recipientCount: recipients.length, sentCount: sent.length, failedCount: failed.length,
       sentTo: sent.map((r) => r.email), opens: [], openCount: 0, clicks: [], clickCount: 0,
+      // Saved so the campaign can be reused (sent again to others) from Sent History.
+      preheader: preheader || '', bodyHtml, heroImageUrl: heroImageUrl || '',
     },
   }));
   return json(200, { ok: true, emailId, sent: sent.length, failed: failed.length, failures: failed.slice(0, 10) });

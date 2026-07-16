@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Send, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Send, RefreshCw, ChevronDown, ChevronRight, Repeat } from 'lucide-react';
 import { marketing } from '../lib/marketingApi';
 
 const card = { background: 'white', border: '1px solid var(--color-border)', borderRadius: '14px', padding: '16px' };
@@ -10,6 +11,16 @@ export default function SentHistory() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [open, setOpen] = useState(null);
+  const navigate = useNavigate();
+
+  // Load a past campaign's content back into the Email composer to send to others.
+  const reuse = (c) => {
+    if (!c.bodyHtml) { setErr('This campaign was sent before content-saving — open the Email tab to recompose it.'); return; }
+    localStorage.setItem('fixit_email_draft', JSON.stringify({
+      subject: c.subject, preheader: c.preheader || '', bodyHtml: c.bodyHtml, heroImageUrl: c.heroImageUrl || '',
+    }));
+    navigate('/email');
+  };
 
   const load = async () => {
     setLoading(true); setErr('');
@@ -65,6 +76,13 @@ export default function SentHistory() {
                 <div style={{ marginBottom: '6px' }}><b>Opened by:</b> {(e.opens || []).map((o) => o.email).join(', ') || '—'}</div>
                 <div><b>Clicked:</b> {(e.clicks || []).map((c) => `${c.email} → ${c.url}`).join('; ') || '—'}</div>
                 {e.failedCount > 0 && <div style={{ color: '#c0392b', marginTop: '6px' }}>{e.failedCount} failed to send</div>}
+                <button onClick={() => reuse(e)} style={{
+                  marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  background: 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: '9px',
+                  padding: '9px 16px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
+                }}>
+                  <Repeat size={14} /> Send this to others
+                </button>
               </div>
             )}
           </div>
