@@ -116,6 +116,23 @@ async function scanAll(table, params = {}) {
   } while (ExclusiveStartKey);
   return items;
 }
+// Cached roster of member names (titles stripped). Scanning the table on every
+// kiosk turn would be wasteful, so cache in the warm Lambda container for 5 min.
+let _rosterCache = null; let _rosterAt = 0;
+async function getRoster() {
+  if (_rosterCache && Date.now() - _rosterAt < 300000) return _rosterCache;
+  const subs = await scanAll(SUBSCRIBERS, { ProjectionExpression: '#n, email', ExpressionAttributeNames: { '#n': 'name' } });
+  const clean = [];
+  for (const s of subs) {
+    const name = String(s.name || '')
+      .replace(/\b(mr|mrs|ms|miss|dr|prof|mx)\.?\b/gi, '')   // drop honorifics
+      .replace(/\s+/g, ' ').trim();
+    if (name) clean.push({ name, email: s.email });
+  }
+  _rosterCache = clean; _rosterAt = Date.now();
+  return clean;
+}
+
 async function upsertSubscriber({ email, name = '', source = 'website', category = '', tags = [] }) {
   const key = normEmail(email);
   if (!EMAIL_RE.test(key)) throw new HttpError(400, 'Invalid email');
@@ -448,6 +465,15 @@ async function handleKioskChat(event) {
   const known = subscriber && (subscriber.name || subscriber.history)
     ? `\n\nWhat you already know about this person (use it naturally, don't read it back verbatim):\n${subscriber.name ? `- Name: ${subscriber.name}\n` : ''}${subscriber.history ? `- Background: ${subscriber.history}\n` : ''}`
     : '';
+  // Member roster → let Claude map a mis-heard name to the real member.
+  let rosterBlock = '';
+  try {
+    const roster = await getRoster();
+    if (roster.length) {
+      const names = roster.map((r) => r.name).slice(0, 250).join(', ');
+      rosterBlock = `\n\nKNOWN MEMBERS (the speech-to-text often mangles names — map what you hear to the CLOSEST member on this list, allowing for accents and phonetic errors, e.g. "Pratik"/"Prithak" → "Prateek", "Deepuk" → "Deepak"):\n${names}\n\nWhen the person says their name: silently pick the closest member from this list and greet them by that CORRECTED spelling, then confirm it — e.g. "Great to see you, Prateek — did I get that right?". If two members are similarly close, ask a quick distinguisher (last initial). If nothing on the list is close, treat them as a new walk-in and just ask them to spell their first name. Never invent a member who isn't on the list.`;
+    }
+  } catch { /* roster optional */ }
   const system = `You are the FIXIT AI form coach — a warm, sharp voice assistant at the YourFormSux movement clinic in Toronto. You speak OUT LOUD to a person standing in front of a camera kiosk, completely hands-free. Persona: a health professional with a PhD and about two decades in physiotherapy, chiropractic and strength coaching. You are encouraging, human, and genuinely conversational — you remember what the person just said and respond to it directly. If they ask "did you get my name?", answer with their actual name.
 
 Your goal this session: (1) greet warmly and briefly, (2) learn the person's first name, (3) help them choose ONE exercise from the list to check their form on, then (4) hand off to the pose-check camera.
@@ -458,7 +484,7 @@ Rules for every spoken reply:
 - Only choose an exercise that appears in the list below. Match loosely to what they describe (e.g. "my knees" → a knee-friendly option you offer).
 - Set done=true ONLY once you have BOTH a first name AND a confirmed exercise from the list. When done, put its id in exerciseId and make your reply tell them you're starting the pose check now.
 - If they're unsure what to do, warmly suggest two or three options from the list.
-- Keep firstName populated with the name as soon as you learn it.${known}
+- Keep firstName populated with the name as soon as you learn it.${known}${rosterBlock}
 
 Available exercises (id: name):
 ${list}`;
@@ -511,14 +537,12 @@ async function handleKioskSttToken() {
   // Roster of known names → keyterms (Deepgram caps ~100). Optional; never fatal.
   let keyterms = [];
   try {
-    const subs = await scanAll(SUBSCRIBERS, { ProjectionExpression: '#n', ExpressionAttributeNames: { '#n': 'name' } });
-    const names = new Set();
-    for (const s of subs) {
-      for (const w of String(s.name || '').trim().split(/\s+/)) {
-        if (w.length > 1) names.add(w);
-      }
+    const roster = await getRoster();
+    const words = new Set();
+    for (const { name } of roster) {
+      for (const w of name.split(/\s+/)) if (w.length > 1) words.add(w);
     }
-    keyterms = [...names].slice(0, 90);
+    keyterms = [...words].slice(0, 90);
   } catch { /* roster is a boost, not a requirement */ }
   return json(200, { token: access_token, expiresIn: expires_in, keyterms });
 }

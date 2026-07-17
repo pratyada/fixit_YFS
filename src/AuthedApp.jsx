@@ -18,6 +18,7 @@ import Guides from './pages/Guides';
 import GuideDetail from './pages/GuideDetail';
 import Landing from './pages/Landing';
 import FeatureGate from './components/FeatureGate';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 
 // ── Lazy: authenticated app pages ──
 // Split into per-page chunks so TensorFlow (PoseChecker/ClinicKiosk),
@@ -345,6 +346,7 @@ function AppLayout() {
           WebkitOverflowScrolling: 'touch',
         }}>
           <Suspense fallback={<PageLoader />}>
+          <RouteErrorBoundary>
           <Routes>
             {isAdmin ? (
               <>
@@ -396,6 +398,7 @@ function AppLayout() {
             )}
             <Route path="/privacy" element={<PrivacyPolicy />} />
           </Routes>
+          </RouteErrorBoundary>
           </Suspense>
         </main>
       </div>

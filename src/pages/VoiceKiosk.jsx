@@ -147,11 +147,16 @@ export default function VoiceKiosk() {
       content: '(A new person just walked up to the FIXIT kiosk and said the wake word to begin. Greet them warmly and briefly, mention you\'ll use the camera to check their form, and ask their first name.)',
     }];
 
+    let personName = '';
     const handoff = (id) => {
       const ex = EXERCISES.find((e) => e.id === id) || matchExercise(id || '');
       if (!ex) return false;
       setState('idle');
-      navigate('/pose?exercise=' + ex.id);
+      // voice=1 tells the pose checker to read the score aloud and return here;
+      // name lets it greet by name in the spoken result.
+      const params = new URLSearchParams({ exercise: ex.id, voice: '1' });
+      if (personName) params.set('name', personName);
+      navigate('/pose?' + params.toString());
       return true;
     };
 
@@ -161,6 +166,7 @@ export default function VoiceKiosk() {
         setState('thinking');
         const out = await chat(messages, exList, { signal: sig });
         if (sig.aborted) return;
+        if (out.firstName) personName = out.firstName;
         messages.push({ role: 'assistant', content: out.reply });
         await say(out.reply);
         if (sig.aborted) return;

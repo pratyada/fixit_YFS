@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Camera, CameraOff, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, Search, ChevronRight, FlipHorizontal, RotateCcw, Check } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
 import { analyzeMovement } from '../utils/movementAnalysis';
+import { speak } from '../lib/voice';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
@@ -36,10 +37,15 @@ export default function PoseChecker() {
   const { t: tKiosk } = useTranslation('kiosk');
   const { user } = useAuth();
   const navigate = useNavigate();
-  const goBack = () => navigate('/');
+  // Launched from the voice kiosk? Then "back" and the post-check flow return
+  // to the kiosk (not the admin panel), and we read the score aloud.
+  const _qs = new URLSearchParams(window.location.search);
+  const voiceMode = _qs.get('voice') === '1';
+  const voiceName = (_qs.get('name') || '').trim();
+  const goBack = () => navigate(voiceMode ? '/voice' : '/');
 
   // Check for pre-selected exercise from URL (?exercise=fixit-squats)
-  const urlExerciseId = new URLSearchParams(window.location.search).get('exercise')
+  const urlExerciseId = _qs.get('exercise')
     || new URLSearchParams(window.location.hash.split('?')[1] || '').get('exercise');
   const preSelectedExercise = urlExerciseId ? ALL_POSE_EXERCISES.find(e => e.id === urlExerciseId) : null;
 
@@ -261,6 +267,20 @@ export default function PoseChecker() {
       } catch (e) {
         console.error('[FIXIT] Failed to save pose check:', e);
       }
+    }
+
+    // Voice kiosk: read the score aloud, then hand back to the kiosk so the
+    // next person can just say "FIXIT". This is what closes the hands-free loop.
+    if (voiceMode && analysis && !analysis.error) {
+      const cats = [...(analysis.categories || [])];
+      const strong = cats.slice().sort((a, b) => b.score - a.score)[0];
+      const fault = analysis.faults?.[0]?.name;
+      const summary = `${voiceName ? voiceName + ', ' : ''}nice work! You scored ${analysis.overall} out of 100.`
+        + (strong ? ` Your ${strong.name.toLowerCase()} looked strong.` : '')
+        + (fault ? ` One thing to watch next time — ${fault.toLowerCase()}.` : '')
+        + ` Say FIXIT whenever you're ready for another check.`;
+      try { await speak(summary); } catch { /* speaking is best-effort */ }
+      navigate('/voice');
     }
   };
 
