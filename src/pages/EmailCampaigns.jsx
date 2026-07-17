@@ -40,6 +40,7 @@ export default function EmailCampaigns() {
   const [bodyHtml, setBodyHtml] = useState(() => loadDraft().bodyHtml || '');
   const [heroImageUrl, setHeroImageUrl] = useState(() => loadDraft().heroImageUrl || '');
   const [brand, setBrand] = useState(() => loadDraft().brand || 'fixit'); // fixit | yfs | personal
+  const [fromName, setFromName] = useState(() => loadDraft().fromName || ''); // signature name for yfs/personal
   const [audience, setAudience] = useState('all');
   const [category, setCategory] = useState('');
   const [single, setSingle] = useState('');
@@ -79,10 +80,10 @@ export default function EmailCampaigns() {
   // Auto-save the draft (debounced) whenever any field changes.
   useEffect(() => {
     const t = setTimeout(() => {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ topic, subject, preheader, bodyHtml, heroImageUrl, brand }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ topic, subject, preheader, bodyHtml, heroImageUrl, brand, fromName }));
     }, 300);
     return () => clearTimeout(t);
-  }, [topic, subject, preheader, bodyHtml, heroImageUrl, brand]);
+  }, [topic, subject, preheader, bodyHtml, heroImageUrl, brand, fromName]);
 
   const clearDraft = () => {
     if (!confirm('Clear this draft and start fresh?')) return;
@@ -97,7 +98,7 @@ export default function EmailCampaigns() {
     if (!topic.trim()) return;
     setGen(true); setErr(''); setPreviewHtml('');
     try {
-      const r = await marketing.generateEmail(topic.trim());
+      const r = await marketing.generateEmail(topic.trim(), { brand, authorName: fromName.trim() || undefined });
       setSubject(r.subject || ''); setPreheader(r.preheader || ''); setBodyHtml(r.bodyHtml || '');
     } catch (e) { setErr(e.message); }
     finally { setGen(false); }
@@ -107,7 +108,7 @@ export default function EmailCampaigns() {
     if (!bodyHtml.trim()) { setErr('Nothing to preview yet'); return; }
     setPreviewing(true); setErr('');
     try {
-      const r = await marketing.previewEmail({ subject, preheader, bodyHtml, heroImageUrl, brand });
+      const r = await marketing.previewEmail({ subject, preheader, bodyHtml, heroImageUrl, brand, authorName: fromName.trim() || undefined });
       setPreviewHtml(r.html);
     } catch (e) { setErr(e.message); }
     finally { setPreviewing(false); }
@@ -122,6 +123,7 @@ export default function EmailCampaigns() {
     try {
       const r = await marketing.sendEmail({
         type: audience, subject, preheader, bodyHtml, heroImageUrl, brand,
+        authorName: fromName.trim() || undefined,
         category: audience === 'category' ? category : undefined,
         to: audience === 'single' ? single : undefined,
       });
@@ -175,6 +177,13 @@ export default function EmailCampaigns() {
               </button>
             ))}
           </div>
+          {brand !== 'fixit' && (
+            <div style={{ marginTop: '8px' }}>
+              <input style={inp}
+                placeholder={brand === 'personal' ? 'Signed by (e.g. Ashima) — appears as the sender' : 'Sign-off name (default: The YourFormSux Team)'}
+                value={fromName} onChange={(e) => edited(setFromName)(e.target.value)} />
+            </div>
+          )}
         </div>
         <div>
           <label style={lbl}>Hero image (top banner, optional)</label>

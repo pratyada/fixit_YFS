@@ -364,20 +364,35 @@ async function handleTrackClick(event) {
 
 async function handleEmailGenerate(event) {
   if (!ANTHROPIC_API_KEY) throw new HttpError(400, 'ANTHROPIC_API_KEY not set — configure the stack to enable AI generation');
-  const { topic } = parseBody(event);
+  const { topic, brand = 'fixit', authorName } = parseBody(event);
   if (!topic) throw new HttpError(400, 'topic required');
-  const system = `You are the lead health writer for FIXIT (an AI health & fitness tracking app, Toronto, Canada). Write with the depth and authority of a clinician-scientist with 20+ years across physiotherapy, chiropractic care, and evidence-based strength & conditioning: accurate physiological mechanisms, specific protocols (sets/reps/tempo/frequency/load), and what the research broadly shows — but warm, clear, and practical for a general audience. Never make unsafe or absolute medical claims; frame as general educational guidance.
 
-Write a RICH newsletter (350–550 words) as email-safe inline-styled HTML for the "bodyHtml" field: no <html>/<head>/<body>, no <style> tags, no class attributes — INLINE styles only. Structure:
-- Open with a short paragraph addressing {{firstName}} (use it exactly once): <p style="margin:0 0 14px">…</p>
+  // Shared rules across brands: email-safe HTML + the one-tap RSVP CTA.
+  const htmlRules = `Write email-safe inline-styled HTML for the "bodyHtml" field: no <html>/<head>/<body>, no <style> tags, no class attributes — INLINE styles only. Address {{firstName}} exactly once. Do NOT include the header, footer, or signature — the template adds those.`;
+  const ctaBtn = (text) => `End with ONE centered CTA button linking to the one-tap RSVP/join page (recipients just enter their email — no login, no signup): <div style="text-align:center;margin:26px 0 6px"><a href="${APP_URL}/rsvp" style="display:inline-block;background:#4E4E53;color:#fff;text-decoration:none;padding:13px 30px;border-radius:10px;font-weight:700;font-size:15px">${text} →</a></div>`;
+
+  let system;
+  if (brand === 'personal') {
+    const who = (authorName && authorName.trim()) || 'the founder of YourFormSux';
+    system = `You are writing a SHORT, genuinely PERSONAL email as ${who}, in the first person ("I"/"we"), like writing to a friend or a valued member — NOT a corporate newsletter. Warm, human, a little excited, 90–170 words. NO infographics, NO stat/research boxes, NO clinical jargon, NO headings. Just a few short <p style="margin:0 0 14px">…</p> paragraphs. ${htmlRules}
+${ctaBtn('Count me in')} — use warm personal button text (e.g. "Count me in", "Save my spot"). Do not write a sign-off/signature; the template adds it as ${who}.`;
+  } else if (brand === 'yfs') {
+    system = `You are the community voice of YourFormSux — a Toronto fitness & movement community (events, meetups, training, watch parties). Write a friendly, energetic COMMUNITY email: welcoming and human, not clinical. 180–320 words. ${htmlRules}
+Structure: open with a short paragraph to {{firstName}}; 1–3 short sections led by <h2 style="font-size:19px;color:#4E4E53;margin:22px 0 8px">…</h2> with <p style="margin:0 0 14px">…</p>, and where useful a <ul style="margin:0 0 14px;padding-left:20px;line-height:1.7">…</ul>. You MAY include ONE details box: <div style="background:#eef5f2;border-radius:12px;padding:16px 18px;margin:18px 0"><div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#708E86;margin-bottom:6px">📅 The details</div><div style="font-size:14px;color:#44504c;line-height:1.6">WHAT / WHEN / WHERE</div></div>. Avoid heavy clinical/research framing. ${ctaBtn('RSVP — count me in')}`;
+  } else {
+    system = `You are the lead health writer for FIXIT (an AI health & fitness tracking app, Toronto, Canada). Write with the depth and authority of a clinician-scientist with 20+ years across physiotherapy, chiropractic care, and evidence-based strength & conditioning: accurate physiological mechanisms, specific protocols (sets/reps/tempo/frequency/load), and what the research broadly shows — but warm, clear, and practical for a general audience. Never make unsafe or absolute medical claims; frame as general educational guidance.
+
+Write a RICH newsletter (350–550 words). ${htmlRules} Structure:
+- Open with a short paragraph addressing {{firstName}}: <p style="margin:0 0 14px">…</p>
 - 2–4 sections, each led by <h2 style="font-size:19px;color:#4E4E53;margin:22px 0 8px">…</h2>, with <p style="margin:0 0 14px">…</p> and where useful <ul style="margin:0 0 14px;padding-left:20px;line-height:1.7">…</ul>.
 - Include AT LEAST TWO of these infographic blocks, using EXACTLY this inline HTML (fill CAPS placeholders with real, specific content):
   • Stat: <div style="background:#f4f7f6;border-left:4px solid #708E86;border-radius:10px;padding:16px 18px;margin:18px 0"><div style="font-size:30px;font-weight:800;color:#708E86;line-height:1">NUMBER</div><div style="font-size:13px;color:#6b746f;margin-top:4px">LABEL</div></div>
   • Research: <div style="background:#eef5f2;border-radius:12px;padding:16px 18px;margin:18px 0"><div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#708E86;margin-bottom:6px">🔬 What the research shows</div><div style="font-size:14px;color:#44504c;line-height:1.6">EVIDENCE</div></div>
   • Protocol: <div style="background:#fbfaf6;border:1px solid #ece7d9;border-radius:12px;padding:16px 18px;margin:18px 0"><div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#b08948;margin-bottom:8px">✅ The protocol</div><ol style="margin:0;padding-left:18px;font-size:14px;color:#44504c;line-height:1.8">STEPS</ol></div>
-- End with a CTA button that links to the one-tap RSVP / join page (recipients just enter their email — no login, no signup): <div style="text-align:center;margin:26px 0 6px"><a href="${APP_URL}/rsvp" style="display:inline-block;background:#4E4E53;color:#fff;text-decoration:none;padding:13px 30px;border-radius:10px;font-weight:700;font-size:15px">RSVP — count me in →</a></div>. If the email is not about an event, use join-oriented button text instead (e.g. "Join the FIXIT list →") but keep the same ${APP_URL}/rsvp link.
+- ${ctaBtn('RSVP — count me in')}. If not an event, use "Join the FIXIT list" as the button text but keep the same link.
 
-Be credible and specific — real numbers, real mechanisms. Do NOT include the header, footer, or signature (the template adds those).`;
+Be credible and specific — real numbers, real mechanisms.`;
+  }
   // Use tool-use so Claude returns validated structured JSON (avoids brittle
   // JSON.parse of model prose, which breaks on unescaped quotes in HTML).
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -399,7 +414,7 @@ Be credible and specific — real numbers, real mechanisms. Do NOT include the h
         },
       }],
       tool_choice: { type: 'tool', name: 'draft_email' },
-      messages: [{ role: 'user', content: `Write a marketing email about: ${topic}` }],
+      messages: [{ role: 'user', content: `Write the email about: ${topic}` }],
     }),
   });
   if (!res.ok) throw new HttpError(502, `Anthropic error ${res.status}`);

@@ -27,7 +27,7 @@ export const marketing = {
   removeSubscriber: (email) => authedFetch('/api/marketing/subscribers', { method: 'DELETE', body: { email } }),
   importSubscribers: (subscribers) => authedFetch('/api/marketing/subscribers/import', { method: 'POST', body: { subscribers } }),
 
-  generateEmail: (topic) => authedFetch('/api/marketing/email/generate', { method: 'POST', body: { topic } }),
+  generateEmail: (topic, extra = {}) => authedFetch('/api/marketing/email/generate', { method: 'POST', body: { topic, ...extra } }),
   previewEmail: (payload) => authedFetch('/api/marketing/email/preview', { method: 'POST', body: payload }),
   uploadImage: (base64, ext = 'jpg', contentType = 'image/jpeg') => authedFetch('/api/marketing/upload-image', { method: 'POST', body: { base64, ext, contentType } }),
   generateCreative: (brief) => authedFetch('/api/marketing/creative/generate', { method: 'POST', body: { brief } }),
