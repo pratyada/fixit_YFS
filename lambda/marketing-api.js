@@ -20,6 +20,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PollyClient, SynthesizeSpeechCommand } from '@aws-sdk/client-polly';
 
 if (!getApps().length) {
   initializeApp({
@@ -34,6 +35,7 @@ const db = getFirestore();
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' }));
 const ses = new SESClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+const polly = new PollyClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const SITE_BUCKET = process.env.SITE_BUCKET;
 
 const SUBSCRIBERS = process.env.SUBSCRIBERS_TABLE;
@@ -432,6 +434,18 @@ function unsubscribePage(ok, email) {
 ${msg}<p style="margin-top:24px"><a href="${APP_URL}" style="color:#708E86">Back to FIXIT</a></p></body></html>`;
 }
 
+// ── Kiosk (voice) ──
+// AWS Polly generative TTS → base64 mp3 the kiosk plays. "Ruth" = warm US voice.
+async function handleKioskSpeak(event) {
+  const { text, voice = 'Ruth', engine = 'generative' } = parseBody(event);
+  if (!text || !text.trim()) throw new HttpError(400, 'text required');
+  const out = await polly.send(new SynthesizeSpeechCommand({
+    Text: text.slice(0, 2800), VoiceId: voice, Engine: engine, OutputFormat: 'mp3',
+  }));
+  const bytes = await out.AudioStream.transformToByteArray();
+  return json(200, { audio: Buffer.from(bytes).toString('base64'), mime: 'audio/mpeg' });
+}
+
 // ── Router ──
 export const handler = async (event) => {
   const method = event.requestContext?.http?.method || 'GET';
@@ -475,6 +489,7 @@ export const handler = async (event) => {
     if (path.endsWith('/marketing/email/preview') && method === 'POST') return await handleEmailPreview(event);
     if (path.endsWith('/marketing/upload-image') && method === 'POST') return await handleUploadImage(event);
     if (path.endsWith('/marketing/creative/generate') && method === 'POST') return await handleCreativeGenerate(event);
+    if (path.endsWith('/marketing/kiosk/speak') && method === 'POST') return await handleKioskSpeak(event);
     if (path.endsWith('/marketing/email/history') && method === 'GET') return await handleEmailHistory();
 
     // Subscribers (Phase 1)
