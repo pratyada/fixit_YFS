@@ -144,11 +144,37 @@ export default function EmailCampaigns() {
       {err && <div style={{ ...card, borderColor: '#e0a0a0', color: '#c0392b', fontSize: '0.82rem' }}>{err}</div>}
       {msg && <div style={{ ...card, borderColor: 'var(--color-accent)', color: 'var(--color-accent)', fontSize: '0.85rem', fontWeight: 600 }}>{msg}</div>}
 
-      {/* AI compose */}
+      {/* Step 1: brand — chosen FIRST because it sets the whole identity AND the AI's writing voice */}
+      <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <label style={lbl}>1 · Brand — sets the header, footer, sign-off &amp; the AI's writing voice</label>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {[
+            { key: 'fixit', label: 'FIXIT by YourFormSux', hint: 'clinical product newsletter' },
+            { key: 'yfs', label: 'YourFormSux', hint: 'community / events' },
+            { key: 'personal', label: 'Personal', hint: 'a personal note from you' },
+          ].map((b) => (
+            <button key={b.key} onClick={() => edited(setBrand)(b.key)} style={{
+              flex: '1 1 150px', textAlign: 'left', padding: '11px 14px', borderRadius: '10px', cursor: 'pointer',
+              border: `1.5px solid ${brand === b.key ? 'var(--color-secondary)' : 'var(--color-border)'}`,
+              background: brand === b.key ? 'var(--color-bg-alt)' : 'transparent',
+            }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: brand === b.key ? 'var(--color-secondary)' : 'var(--color-text)' }}>{b.label}</div>
+              <div style={{ fontSize: '0.66rem', color: 'var(--color-text)' }}>{b.hint}</div>
+            </button>
+          ))}
+        </div>
+        {brand !== 'fixit' && (
+          <input style={inp}
+            placeholder={brand === 'personal' ? 'Signed by (e.g. Ashima) — appears as the sender' : 'Sign-off name (default: The YourFormSux Team)'}
+            value={fromName} onChange={(e) => edited(setFromName)(e.target.value)} />
+        )}
+      </div>
+
+      {/* Step 2: AI draft the topic into the chosen brand's voice */}
       <div style={{ ...card, display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 320px' }}>
-          <label style={lbl}>AI draft — topic</label>
-          <input style={inp} placeholder="e.g. why protein timing matters for recovery" value={topic} onChange={(e) => setTopic(e.target.value)} />
+          <label style={lbl}>2 · AI draft — topic <span style={{ fontWeight: 400, color: 'var(--color-text)' }}>(written in the {brand === 'fixit' ? 'FIXIT' : brand === 'yfs' ? 'YourFormSux' : 'Personal'} voice)</span></label>
+          <input style={inp} placeholder="e.g. FIFA finale watch party this Sunday" value={topic} onChange={(e) => setTopic(e.target.value)} />
         </div>
         <button onClick={generate} disabled={gen} style={{ ...btn, background: 'var(--color-accent)' }}>
           <Sparkles size={15} /> {gen ? 'Writing…' : 'Generate'}
@@ -159,32 +185,6 @@ export default function EmailCampaigns() {
       <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <div><label style={lbl}>Subject</label><input style={inp} value={subject} onChange={(e) => edited(setSubject)(e.target.value)} /></div>
         <div><label style={lbl}>Preheader (inbox preview)</label><input style={inp} value={preheader} onChange={(e) => edited(setPreheader)(e.target.value)} /></div>
-        <div>
-          <label style={lbl}>Brand — header, footer &amp; sign-off</label>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {[
-              { key: 'fixit', label: 'FIXIT by YourFormSux', hint: 'the product' },
-              { key: 'yfs', label: 'YourFormSux', hint: 'community / events' },
-              { key: 'personal', label: 'Personal', hint: 'a note from you' },
-            ].map((b) => (
-              <button key={b.key} onClick={() => edited(setBrand)(b.key)} style={{
-                flex: '1 1 150px', textAlign: 'left', padding: '9px 12px', borderRadius: '10px', cursor: 'pointer',
-                border: `1.5px solid ${brand === b.key ? 'var(--color-secondary)' : 'var(--color-border)'}`,
-                background: brand === b.key ? 'var(--color-bg-alt)' : 'transparent',
-              }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: brand === b.key ? 'var(--color-secondary)' : 'var(--color-text)' }}>{b.label}</div>
-                <div style={{ fontSize: '0.66rem', color: 'var(--color-text)' }}>{b.hint}</div>
-              </button>
-            ))}
-          </div>
-          {brand !== 'fixit' && (
-            <div style={{ marginTop: '8px' }}>
-              <input style={inp}
-                placeholder={brand === 'personal' ? 'Signed by (e.g. Ashima) — appears as the sender' : 'Sign-off name (default: The YourFormSux Team)'}
-                value={fromName} onChange={(e) => edited(setFromName)(e.target.value)} />
-            </div>
-          )}
-        </div>
         <div>
           <label style={lbl}>Hero image (top banner, optional)</label>
           <div style={{ display: 'flex', gap: '8px' }}>
