@@ -122,7 +122,12 @@ export default function VoiceKiosk() {
     setState('listening');
     // Deepgram streaming STT (accents + names) with proper end-of-utterance
     // detection; falls back to the browser recognizer if Deepgram isn't set up.
-    const t = await listenStream({ onInterim: setHeard, signal: abortRef.current?.signal });
+    let t = await listenStream({ onInterim: setHeard, signal: abortRef.current?.signal });
+    // One quick retry: a single missed finalization shouldn't cost a turn and
+    // make the coach re-ask what it already asked.
+    if (!t && !aborted()) {
+      t = await listenStream({ onInterim: setHeard, signal: abortRef.current?.signal });
+    }
     setState('thinking');
     return t;
   }, []);

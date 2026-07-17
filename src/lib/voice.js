@@ -84,17 +84,20 @@ export async function listenStream({ onInterim, keyterms = [], timeout = 15000, 
   const terms = (keyterms.length ? keyterms : (grant.keyterms || [])).slice(0, 90);
 
   return new Promise((resolve, reject) => {
-    let stream, mr, ws, finalText = '', settled = false, guard;
+    let stream, mr, ws, finalText = '', lastInterim = '', settled = false, guard;
     const cleanup = () => {
       clearTimeout(guard);
       try { if (mr && mr.state !== 'inactive') mr.stop(); } catch { /* */ }
       try { if (ws && ws.readyState <= 1) ws.close(); } catch { /* */ }
       try { stream?.getTracks().forEach((t) => t.stop()); } catch { /* */ }
     };
+    // Fall back to the best interim if no final locked in — a slightly-late
+    // finalization should never come back as silence and derail the turn.
+    const best = () => (finalText || lastInterim);
     const finish = (text) => { if (settled) return; settled = true; cleanup(); resolve((text || '').trim()); };
 
     if (signal) signal.addEventListener('abort', () => finish(''), { once: true });
-    guard = setTimeout(() => finish(finalText), timeout);
+    guard = setTimeout(() => finish(best()), timeout);
 
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
       .then((s) => {
@@ -119,15 +122,16 @@ export async function listenStream({ onInterim, keyterms = [], timeout = 15000, 
             const t = msg.channel?.alternatives?.[0]?.transcript || '';
             if (t) {
               if (msg.is_final) finalText = (finalText + ' ' + t).trim();
+              else lastInterim = t;
               onInterim?.((finalText + ' ' + (msg.is_final ? '' : t)).trim());
             }
-            if (msg.speech_final && finalText) finish(finalText);   // utterance ended
-          } else if (msg.type === 'UtteranceEnd' && finalText) {
-            finish(finalText);
+            if (msg.speech_final && best()) finish(best());   // utterance ended
+          } else if (msg.type === 'UtteranceEnd' && best()) {
+            finish(best());
           }
         };
-        ws.onerror = () => finish(finalText);
-        ws.onclose = () => finish(finalText);
+        ws.onerror = () => finish(best());
+        ws.onclose = () => finish(best());
       })
       .catch((err) => { cleanup(); reject(err); });
   });
