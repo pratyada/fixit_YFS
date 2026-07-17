@@ -1,7 +1,26 @@
-import { useRef, useState } from 'react';
-import { Palette, Sparkles, Download, Film } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Palette, Sparkles, Download, Film, Wand2, Clock, Trash2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { marketing } from '../lib/marketingApi';
+
+// Local, cost-free persistence for generated creatives. Generations live only in
+// component state, so navigating away used to lose them (and force a paid
+// regeneration). We mirror every generation into localStorage and surface them as
+// a reloadable history strip.
+const HISTORY_KEY = 'fixit_creatives_history_v1';
+const HISTORY_MAX = 40;
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+function saveHistory(list) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, HISTORY_MAX))); } catch { /* quota / private mode — non-fatal */ }
+}
 
 // One animation frame: gentle fade-in + ken-burns drift on the poster image,
 // a sweeping gold "shine", and a soft vignette. t is 0..1 over the clip.
@@ -151,16 +170,73 @@ export default function Creatives() {
   const [videoBusy, setVideoBusy] = useState(null);
   const [videos, setVideos] = useState({});
   const [err, setErr] = useState('');
+  const [history, setHistory] = useState(loadHistory);
+  const [refine, setRefine] = useState('');
+  const [activeId, setActiveId] = useState(null);
   const refs = useRef({});
 
+  // Persist history whenever it changes.
+  useEffect(() => { saveHistory(history); }, [history]);
+
   const toggle = (k) => setSelected((s) => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; });
+
+  // Record a fresh generation into state + history. Stores the brief and the
+  // selected formats alongside the content so a reload restores the full setup.
+  const record = (theBrief, theContent) => {
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      ts: Date.now(),
+      brief: theBrief,
+      content: theContent,
+      formats: [...selected],
+      label: theContent.headline || theBrief.slice(0, 60),
+    };
+    setContent(theContent);
+    setActiveId(entry.id);
+    setVideos({});          // videos are keyed by format only — stale for new content
+    setHistory((h) => [entry, ...h].slice(0, HISTORY_MAX));
+  };
 
   const generate = async () => {
     if (!brief.trim()) return;
     setBusy(true); setErr('');
-    try { setContent(await marketing.generateCreative(brief.trim())); }
+    try { record(brief.trim(), await marketing.generateCreative(brief.trim())); }
     catch (e) { setErr(e.message); }
     finally { setBusy(false); }
+  };
+
+  // Ask the model to improve the current creative. The generate endpoint only
+  // accepts a free-text brief, so we hand it the previous output plus the desired
+  // changes as context and let it revise.
+  const applyRefine = async () => {
+    if (!refine.trim() || !content) return;
+    setBusy(true); setErr('');
+    const augmented =
+      `${brief.trim()}\n\n` +
+      `Revise the previous creative below. Keep what works; apply these changes:\n${refine.trim()}\n\n` +
+      `Previous creative (JSON):\n${JSON.stringify(content)}`;
+    try {
+      record(brief.trim(), await marketing.generateCreative(augmented));
+      setRefine('');
+    }
+    catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  // Reload a past creative into the editor without any API call.
+  const loadEntry = (entry) => {
+    setContent(entry.content);
+    setBrief(entry.brief);
+    setSelected(new Set(entry.formats?.length ? entry.formats : FORMATS.map((f) => f.key)));
+    setActiveId(entry.id);
+    setVideos({});
+    setRefine('');
+    setErr('');
+  };
+
+  const deleteEntry = (id) => {
+    setHistory((h) => h.filter((e) => e.id !== id));
+    if (activeId === id) { setActiveId(null); }
   };
 
   const download = async (fmt) => {
@@ -239,6 +315,20 @@ export default function Creatives() {
       </div>
 
       {content && (
+        <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Wand2 size={14} /> Refine this creative
+          </label>
+          <textarea value={refine} onChange={(e) => setRefine(e.target.value)}
+            placeholder="e.g. Make the headline punchier, use a Saturday date instead, emphasize the free entry, warmer tone."
+            style={{ width: '100%', minHeight: '64px', padding: '11px 13px', borderRadius: '10px', border: '1px solid var(--color-border)', fontSize: '0.85rem', boxSizing: 'border-box' }} />
+          <button onClick={applyRefine} disabled={busy || !refine.trim()} style={{ ...btn, background: 'var(--color-secondary)', alignSelf: 'flex-start' }}>
+            <Wand2 size={14} /> {busy ? 'Revising…' : 'Apply improvement'}
+          </button>
+        </div>
+      )}
+
+      {content && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
           {chosen.map((f) => {
             const s = f.disp / f.w;
@@ -271,6 +361,42 @@ export default function Creatives() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={14} /> History · {history.length} saved{' '}
+            <span style={{ fontWeight: 500, color: 'var(--color-secondary)', opacity: 0.7 }}>— reload any past creative for free (no regeneration)</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {history.map((e) => {
+              const isActive = e.id === activeId;
+              return (
+                <div key={e.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '10px',
+                  border: `1px solid ${isActive ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                  background: isActive ? 'rgba(211,172,87,0.08)' : 'white',
+                }}>
+                  <button onClick={() => loadEntry(e)} title="Reload this creative" style={{
+                    flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {e.label || 'Untitled creative'}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--color-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {new Date(e.ts).toLocaleString()} · {e.brief}
+                    </div>
+                  </button>
+                  <button onClick={() => loadEntry(e)} style={{ ...btn, background: 'var(--color-accent)', padding: '6px 12px', fontSize: '0.72rem' }}>Load</button>
+                  <button onClick={() => deleteEntry(e.id)} title="Delete" style={{ ...btn, background: 'transparent', color: 'var(--color-secondary)', padding: '6px 8px' }}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

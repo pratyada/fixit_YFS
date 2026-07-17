@@ -73,6 +73,7 @@ export default function SentHistory() {
             </div>
             {isOpen && (
               <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--color-bg-alt)', fontSize: '0.78rem' }}>
+                <div style={{ marginBottom: '6px' }}><b>Sent to:</b> {(e.sentTo || []).join(', ') || '—'}</div>
                 <div style={{ marginBottom: '6px' }}><b>Opened by:</b> {(e.opens || []).map((o) => o.email).join(', ') || '—'}</div>
                 <div><b>Clicked:</b> {(e.clicks || []).map((c) => `${c.email} → ${c.url}`).join('; ') || '—'}</div>
                 {e.failedCount > 0 && <div style={{ color: '#c0392b', marginTop: '6px' }}>{e.failedCount} failed to send</div>}

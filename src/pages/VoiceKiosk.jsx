@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
-import { speak, listen, wakeWord } from '../lib/voice';
+import { speak, listen, wakeWord, chat } from '../lib/voice';
 
 const EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES];
 
@@ -102,50 +102,81 @@ export default function VoiceKiosk() {
   const [heard, setHeard] = useState('');       // live transcript
   const [awake, setAwake] = useState(false);
   const runningRef = useRef(false);
+  const abortRef = useRef(null);
 
   const setState = (s) => { stateRef.current = s; setUiState(s); };
+  const aborted = () => abortRef.current?.signal.aborted;
 
   const say = useCallback(async (text) => {
+    if (aborted()) return;
     setCaption(text); setHeard(''); setState('speaking');
-    await speak(text, { onAmplitude: (a) => { ampRef.current = a; } });
+    await speak(text, { onAmplitude: (a) => { ampRef.current = a; }, signal: abortRef.current?.signal });
     ampRef.current = 0;
   }, []);
 
   const hear = useCallback(async () => {
+    if (aborted()) return '';
     await new Promise((r) => setTimeout(r, 300)); // let the speaker + mic settle before listening
+    if (aborted()) return '';
     setState('listening');
-    // Note: no mic analyser here — running getUserMedia alongside SpeechRecognition
-    // can starve the recognizer. The orb still animates its "listening" state.
-    const t = await listen({ onInterim: setHeard });
+    const t = await listen({ onInterim: setHeard, signal: abortRef.current?.signal });
     setState('thinking');
     return t;
   }, []);
 
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+    runningRef.current = false;
+    setAwake(false); setState('idle'); setHeard(''); setCaption('');
+  }, []);
+
   const runFlow = useCallback(async () => {
     if (runningRef.current) return;
+    const ac = new AbortController(); abortRef.current = ac;
+    const sig = ac.signal;
     runningRef.current = true; setAwake(true);
+
+    // The coach is a real conversation now — Claude reads the whole exchange and
+    // decides what to say, so it answers follow-ups and picks the exercise itself.
+    const exList = EXERCISES.map((e) => ({ id: e.id, name: e.name }));
+    const messages = [{
+      role: 'user',
+      content: '(A new person just walked up to the FIXIT kiosk and said the wake word to begin. Greet them warmly and briefly, mention you\'ll use the camera to check their form, and ask their first name.)',
+    }];
+
+    const handoff = (id) => {
+      const ex = EXERCISES.find((e) => e.id === id) || matchExercise(id || '');
+      if (!ex) return false;
+      setState('idle');
+      navigate('/pose?exercise=' + ex.id);
+      return true;
+    };
+
     try {
-      await say("Hi there, welcome to FIXIT by YourFormSux. I'm your AI form coach. Before we start — I'll use the camera to check your form; that's stored securely just for your feedback. What's your first name?");
-      const name = (await hear()).split(' ')[0] || '';
-      const greet = name ? `Nice to meet you, ${name}. ` : '';
-      await say(`${greet}Which exercise would you like me to check? You can say things like squat, wall sit, glute bridge, or straight leg raise.`);
+      let silent = 0;
+      for (let turn = 0; turn < 14 && !sig.aborted; turn++) {
+        setState('thinking');
+        const out = await chat(messages, exList, { signal: sig });
+        if (sig.aborted) return;
+        messages.push({ role: 'assistant', content: out.reply });
+        await say(out.reply);
+        if (sig.aborted) return;
+        if (out.done && handoff(out.exerciseId)) return;
 
-      let exercise = null;
-      for (let tries = 0; tries < 3 && !exercise; tries++) {
         const said = await hear();
-        exercise = matchExercise(said);
-        if (!exercise) await say(`Hmm, I didn't catch an exercise. Try naming one — for example, "squat" or "wall sit".`);
+        if (sig.aborted) return;
+        if (!said) {
+          if (++silent >= 2) { await say("No worries — say FIXIT whenever you're ready to check your form."); return; }
+          messages.push({ role: 'user', content: '(The person stayed quiet.)' });
+        } else {
+          silent = 0;
+          messages.push({ role: 'user', content: said });
+        }
       }
-      if (!exercise) { await say("No problem — let's try again later. Say FIXIT whenever you're ready."); return; }
-
-      await say(`Great choice — the ${exercise.name}. Stand back so the camera can see your whole body, and I'll walk you through it. Starting your pose check now.`);
-      setState('idle');
-      navigate('/pose?exercise=' + exercise.id);
     } catch (err) {
-      setState('idle');
-      setCaption('Mic issue: ' + (err?.message || 'unknown') + '. Tap “Tap to start” to retry.');
+      if (!sig.aborted) setCaption('Trouble connecting: ' + (err?.message || 'unknown') + '. Say “FIXIT” to try again.');
     } finally {
-      runningRef.current = false; setAwake(false); setState('idle');
+      runningRef.current = false; if (!sig.aborted) setAwake(false); setState('idle');
     }
   }, [say, hear, navigate]);
 
@@ -179,7 +210,16 @@ export default function VoiceKiosk() {
         <div style={{ fontFamily: 'system-ui', fontSize: '0.72rem', letterSpacing: '2px', textTransform: 'uppercase', color: '#7f9089' }}>
           {uiState === 'listening' ? 'Listening…' : uiState === 'thinking' ? 'Thinking…' : uiState === 'speaking' ? 'Speaking…' : 'Ready'}
         </div>
-        {!awake && (
+        {awake ? (
+          <button onClick={stop} style={{
+            background: 'rgba(220,90,90,0.14)', border: '1px solid rgba(224,120,120,0.5)', color: '#f0c9c9',
+            borderRadius: '999px', padding: '11px 30px', fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'system-ui',
+            display: 'flex', alignItems: 'center', gap: '9px',
+          }}>
+            <span style={{ width: '11px', height: '11px', borderRadius: '2px', background: '#e07878', display: 'inline-block' }} />
+            Stop
+          </button>
+        ) : (
           <button onClick={runFlow} style={{
             background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)', color: '#eef4f1',
             borderRadius: '999px', padding: '11px 26px', fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'system-ui',

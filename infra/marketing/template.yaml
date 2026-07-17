@@ -38,8 +38,8 @@ Parameters:
     Description: Anthropic API key for AI drafting (needed Phase 2/3; blank OK for now)
   MarketingFromEmail:
     Type: String
-    Default: yourformsux@gmail.com
-    Description: Verified SES sender for marketing email
+    Default: FIXIT by YourFormSux <noreply@yourformsux.com>
+    Description: SES sender (friendly-from). Domain yourformsux.com is DKIM-verified; noreply@ is the aligned sender.
   MarketingReplyTo:
     Type: String
     Default: yourformsux@gmail.com

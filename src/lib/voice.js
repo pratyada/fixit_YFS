@@ -45,9 +45,23 @@ export async function speak(text, { onAmplitude, signal } = {}) {
   }
 }
 
+// Ask the Claude coach brain for the next spoken line, given the conversation
+// so far. Returns { reply, firstName, done, exerciseId }.
+export async function chat(messages, exercises, { subscriber, signal } = {}) {
+  const token = await auth.currentUser?.getIdToken();
+  const res = await fetch(`${API_BASE}/api/marketing/kiosk/chat`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ messages, exercises, subscriber }),
+    signal,
+  });
+  if (!res.ok) throw new Error('coach failed');
+  return res.json();
+}
+
 // Listen once via the browser (Chrome desktop). Resolves with the transcript.
 // onInterim(text) streams partial words; onAmplitude(0..1) drives the orb.
-export function listen({ onInterim, onAmplitude, timeout = 9000 } = {}) {
+export function listen({ onInterim, onAmplitude, timeout = 9000, signal } = {}) {
   return new Promise((resolve, reject) => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return reject(new Error('Speech recognition needs desktop Chrome'));
@@ -56,6 +70,7 @@ export function listen({ onInterim, onAmplitude, timeout = 9000 } = {}) {
     let finalT = '', stopMic;
     const done = (fn, arg) => { try { rec.stop(); } catch { /* */ } stopMic?.(); fn(arg); };
     const guard = setTimeout(() => done(resolve, finalT.trim()), timeout);
+    if (signal) signal.addEventListener('abort', () => { clearTimeout(guard); done(resolve, ''); }, { once: true });
     rec.onresult = (e) => {
       let interim = '';
       for (const r of e.results) { if (r.isFinal) finalT += r[0].transcript; else interim += r[0].transcript; }

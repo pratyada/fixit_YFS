@@ -435,6 +435,65 @@ ${msg}<p style="margin-top:24px"><a href="${APP_URL}" style="color:#708E86">Back
 }
 
 // ── Kiosk (voice) ──
+// Claude-driven coach brain. Takes the full spoken conversation so far and
+// returns the next thing to say out loud — genuinely context-aware (it answers
+// follow-ups, remembers the name, picks an exercise) instead of a fixed script.
+async function handleKioskChat(event) {
+  if (!ANTHROPIC_API_KEY) throw new HttpError(400, 'ANTHROPIC_API_KEY not set — configure the stack to enable AI coaching');
+  const { messages = [], exercises = [], subscriber = null } = parseBody(event);
+  if (!Array.isArray(messages) || !messages.length) throw new HttpError(400, 'messages required');
+  const list = (Array.isArray(exercises) ? exercises : []).slice(0, 80)
+    .map((e) => `- ${e.id}: ${e.name}`).join('\n');
+  const known = subscriber && (subscriber.name || subscriber.history)
+    ? `\n\nWhat you already know about this person (use it naturally, don't read it back verbatim):\n${subscriber.name ? `- Name: ${subscriber.name}\n` : ''}${subscriber.history ? `- Background: ${subscriber.history}\n` : ''}`
+    : '';
+  const system = `You are the FIXIT AI form coach — a warm, sharp voice assistant at the YourFormSux movement clinic in Toronto. You speak OUT LOUD to a person standing in front of a camera kiosk, completely hands-free. Persona: a health professional with a PhD and about two decades in physiotherapy, chiropractic and strength coaching. You are encouraging, human, and genuinely conversational — you remember what the person just said and respond to it directly. If they ask "did you get my name?", answer with their actual name.
+
+Your goal this session: (1) greet warmly and briefly, (2) learn the person's first name, (3) help them choose ONE exercise from the list to check their form on, then (4) hand off to the pose-check camera.
+
+Rules for every spoken reply:
+- 1-2 short sentences, max. This is read aloud by a text-to-speech voice — absolutely no lists, markdown, bullet points, or emojis.
+- Sound like a real person. React to exactly what they just said; never repeat a canned line.
+- Only choose an exercise that appears in the list below. Match loosely to what they describe (e.g. "my knees" → a knee-friendly option you offer).
+- Set done=true ONLY once you have BOTH a first name AND a confirmed exercise from the list. When done, put its id in exerciseId and make your reply tell them you're starting the pose check now.
+- If they're unsure what to do, warmly suggest two or three options from the list.
+- Keep firstName populated with the name as soon as you learn it.${known}
+
+Available exercises (id: name):
+${list}`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5', max_tokens: 400, system,
+      tools: [{
+        name: 'coach',
+        description: 'Say the next line out loud, and hand off to the pose check when ready.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            reply: { type: 'string', description: 'What to say out loud (1-2 short sentences).' },
+            firstName: { type: 'string', description: "The person's first name once known, else empty string." },
+            done: { type: 'boolean', description: 'True only when name AND a confirmed exercise are set and we should start the pose check.' },
+            exerciseId: { type: 'string', description: 'The chosen exercise id from the list, required when done is true.' },
+          },
+          required: ['reply', 'done'],
+        },
+      }],
+      tool_choice: { type: 'tool', name: 'coach' },
+      messages: messages.slice(-16).map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: String(m.content || '').slice(0, 1200),
+      })),
+    }),
+  });
+  if (!res.ok) throw new HttpError(502, `Anthropic error ${res.status}`);
+  const data = await res.json();
+  const tool = (data.content || []).find((c) => c.type === 'tool_use');
+  if (!tool) throw new HttpError(502, 'AI did not return a reply');
+  return json(200, tool.input);
+}
+
 // AWS Polly generative TTS → base64 mp3 the kiosk plays. "Ruth" = warm US voice.
 async function handleKioskSpeak(event) {
   const { text, voice = 'Ruth', engine = 'generative' } = parseBody(event);
@@ -489,6 +548,7 @@ export const handler = async (event) => {
     if (path.endsWith('/marketing/email/preview') && method === 'POST') return await handleEmailPreview(event);
     if (path.endsWith('/marketing/upload-image') && method === 'POST') return await handleUploadImage(event);
     if (path.endsWith('/marketing/creative/generate') && method === 'POST') return await handleCreativeGenerate(event);
+    if (path.endsWith('/marketing/kiosk/chat') && method === 'POST') return await handleKioskChat(event);
     if (path.endsWith('/marketing/kiosk/speak') && method === 'POST') return await handleKioskSpeak(event);
     if (path.endsWith('/marketing/email/history') && method === 'GET') return await handleEmailHistory();
 
