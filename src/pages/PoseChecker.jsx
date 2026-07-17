@@ -39,7 +39,8 @@ export default function PoseChecker() {
   const goBack = () => navigate('/');
 
   // Check for pre-selected exercise from URL (?exercise=fixit-squats)
-  const urlExerciseId = new URLSearchParams(window.location.hash.split('?')[1] || '').get('exercise');
+  const urlExerciseId = new URLSearchParams(window.location.search).get('exercise')
+    || new URLSearchParams(window.location.hash.split('?')[1] || '').get('exercise');
   const preSelectedExercise = urlExerciseId ? ALL_POSE_EXERCISES.find(e => e.id === urlExerciseId) : null;
 
   // Flow: 'select' → 'camera' → 'report'

@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send, Palette } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send, Palette, Mic } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClinicProvider, useClinic } from './contexts/ClinicContext';
@@ -43,6 +43,7 @@ const Subscription = lazy(() => import('./pages/Subscription'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Health = lazy(() => import('./pages/Health'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const VoiceKiosk = lazy(() => import('./pages/VoiceKiosk'));
 const Subscribers = lazy(() => import('./pages/Subscribers'));
 const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns'));
 const Creatives = lazy(() => import('./pages/Creatives'));
@@ -110,6 +111,7 @@ const ADMIN_TABS = [
   { to: '/', icon: Shield, labelKey: 'nav:tabs.admin' },
   { to: '/exercises', icon: BookOpen, labelKey: 'nav:tabs.library' },
   { to: '/kiosk', icon: Camera, labelKey: 'nav:tabs.kiosk' },
+  { to: '/voice', icon: Mic, labelKey: 'Voice AI' },
   // Marketing pipeline (labelKey falls back to the string when no i18n key exists)
   { to: '/subscribers', icon: Users, labelKey: 'Subscribers' },
   { to: '/email', icon: Mail, labelKey: 'Email' },
@@ -352,6 +354,7 @@ function AppLayout() {
                 <Route path="/exercises/:exerciseId/record" element={<RecordSession />} />
                 <Route path="/pose" element={<PoseChecker />} />
                 <Route path="/kiosk" element={<ClinicKiosk />} />
+                <Route path="/voice" element={<VoiceKiosk />} />
                 <Route path="/subscribers" element={<Subscribers />} />
                 <Route path="/email" element={<EmailCampaigns />} />
                 <Route path="/creatives" element={<Creatives />} />
