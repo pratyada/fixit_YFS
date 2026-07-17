@@ -46,6 +46,7 @@ const FROM = process.env.MARKETING_FROM_EMAIL || 'yourformsux@gmail.com';
 const REPLY_TO = process.env.MARKETING_REPLY_TO || FROM;
 const ADDRESS = process.env.MARKETING_ADDRESS || 'FIXIT, Toronto, ON, Canada';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY || '';
 
 const CORS = {
   'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
@@ -494,6 +495,34 @@ ${list}`;
   return json(200, tool.input);
 }
 
+// Mint a short-lived Deepgram token so the kiosk browser can stream mic audio
+// DIRECTLY to Deepgram (low latency, our API key never leaves the server). Also
+// returns the subscriber first-name roster to seed keyterm boosting — the single
+// biggest lever for catching names in heavy accents (near-closed-set matching).
+async function handleKioskSttToken() {
+  if (!DEEPGRAM_API_KEY) throw new HttpError(400, 'DEEPGRAM_API_KEY not set — configure the Lambda to enable premium speech recognition');
+  const res = await fetch('https://api.deepgram.com/v1/auth/grant', {
+    method: 'POST',
+    headers: { Authorization: `Token ${DEEPGRAM_API_KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ ttl_seconds: 60 }),
+  });
+  if (!res.ok) throw new HttpError(502, `Deepgram grant ${res.status}`);
+  const { access_token, expires_in } = await res.json();
+  // Roster of known names → keyterms (Deepgram caps ~100). Optional; never fatal.
+  let keyterms = [];
+  try {
+    const subs = await scanAll(SUBSCRIBERS, { ProjectionExpression: '#n', ExpressionAttributeNames: { '#n': 'name' } });
+    const names = new Set();
+    for (const s of subs) {
+      for (const w of String(s.name || '').trim().split(/\s+/)) {
+        if (w.length > 1) names.add(w);
+      }
+    }
+    keyterms = [...names].slice(0, 90);
+  } catch { /* roster is a boost, not a requirement */ }
+  return json(200, { token: access_token, expiresIn: expires_in, keyterms });
+}
+
 // AWS Polly generative TTS → base64 mp3 the kiosk plays. "Ruth" = warm US voice.
 async function handleKioskSpeak(event) {
   const { text, voice = 'Ruth', engine = 'generative' } = parseBody(event);
@@ -548,6 +577,7 @@ export const handler = async (event) => {
     if (path.endsWith('/marketing/email/preview') && method === 'POST') return await handleEmailPreview(event);
     if (path.endsWith('/marketing/upload-image') && method === 'POST') return await handleUploadImage(event);
     if (path.endsWith('/marketing/creative/generate') && method === 'POST') return await handleCreativeGenerate(event);
+    if (path.endsWith('/marketing/kiosk/stt-token') && method === 'POST') return await handleKioskSttToken();
     if (path.endsWith('/marketing/kiosk/chat') && method === 'POST') return await handleKioskChat(event);
     if (path.endsWith('/marketing/kiosk/speak') && method === 'POST') return await handleKioskSpeak(event);
     if (path.endsWith('/marketing/email/history') && method === 'GET') return await handleEmailHistory();

@@ -59,6 +59,80 @@ export async function chat(messages, exercises, { subscriber, signal } = {}) {
   return res.json();
 }
 
+// Premium streaming STT via Deepgram Nova-3. Far better on accents & names than
+// the browser recognizer, and it uses proper end-of-utterance detection instead
+// of a dumb silence timer. Mints a short-lived token from our Lambda (which also
+// returns the subscriber name roster for keyterm boosting), then streams mic
+// audio straight to Deepgram over WebSocket. Falls back to listen() if Deepgram
+// isn't configured or the browser can't record.
+export async function listenStream({ onInterim, keyterms = [], timeout = 15000, silenceMs = 1100, signal } = {}) {
+  const idToken = await auth.currentUser?.getIdToken();
+  let grant;
+  try {
+    const res = await fetch(`${API_BASE}/api/marketing/kiosk/stt-token`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) },
+    });
+    if (!res.ok) throw new Error('stt-token ' + res.status);
+    grant = await res.json();
+  } catch {
+    return listen({ onInterim, timeout, signal });   // no Deepgram → browser recognizer
+  }
+  if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported?.('audio/webm')) {
+    return listen({ onInterim, timeout, signal });
+  }
+  const terms = (keyterms.length ? keyterms : (grant.keyterms || [])).slice(0, 90);
+
+  return new Promise((resolve, reject) => {
+    let stream, mr, ws, finalText = '', settled = false, guard;
+    const cleanup = () => {
+      clearTimeout(guard);
+      try { if (mr && mr.state !== 'inactive') mr.stop(); } catch { /* */ }
+      try { if (ws && ws.readyState <= 1) ws.close(); } catch { /* */ }
+      try { stream?.getTracks().forEach((t) => t.stop()); } catch { /* */ }
+    };
+    const finish = (text) => { if (settled) return; settled = true; cleanup(); resolve((text || '').trim()); };
+
+    if (signal) signal.addEventListener('abort', () => finish(''), { once: true });
+    guard = setTimeout(() => finish(finalText), timeout);
+
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+      .then((s) => {
+        stream = s;
+        const params = new URLSearchParams({
+          model: 'nova-3', language: 'en', smart_format: 'true',
+          interim_results: 'true', endpointing: '400', utterance_end_ms: String(silenceMs), vad_events: 'true',
+        });
+        for (const t of terms) params.append('keyterm', t);
+        // JWT goes in the query string (too long for the WS subprotocol header).
+        ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params.toString()}&access_token=${grant.token}`);
+        ws.onopen = () => {
+          try {
+            mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            mr.ondataavailable = (e) => { if (e.data.size && ws.readyState === 1) ws.send(e.data); };
+            mr.start(250);
+          } catch { finish(finalText); }
+        };
+        ws.onmessage = (evt) => {
+          let msg; try { msg = JSON.parse(evt.data); } catch { return; }
+          if (msg.type === 'Results') {
+            const t = msg.channel?.alternatives?.[0]?.transcript || '';
+            if (t) {
+              if (msg.is_final) finalText = (finalText + ' ' + t).trim();
+              onInterim?.((finalText + ' ' + (msg.is_final ? '' : t)).trim());
+            }
+            if (msg.speech_final && finalText) finish(finalText);   // utterance ended
+          } else if (msg.type === 'UtteranceEnd' && finalText) {
+            finish(finalText);
+          }
+        };
+        ws.onerror = () => finish(finalText);
+        ws.onclose = () => finish(finalText);
+      })
+      .catch((err) => { cleanup(); reject(err); });
+  });
+}
+
 // Listen once via the browser (Chrome desktop). Resolves with the transcript.
 // onInterim(text) streams partial words; onAmplitude(0..1) drives the orb.
 export function listen({ onInterim, onAmplitude, timeout = 9000, signal } = {}) {

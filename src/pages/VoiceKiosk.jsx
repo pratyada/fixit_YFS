@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
-import { speak, listen, wakeWord, chat } from '../lib/voice';
+import { speak, listenStream, wakeWord, chat } from '../lib/voice';
 
 const EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES];
 
@@ -120,7 +120,9 @@ export default function VoiceKiosk() {
     await new Promise((r) => setTimeout(r, 300)); // let the speaker + mic settle before listening
     if (aborted()) return '';
     setState('listening');
-    const t = await listen({ onInterim: setHeard, signal: abortRef.current?.signal });
+    // Deepgram streaming STT (accents + names) with proper end-of-utterance
+    // detection; falls back to the browser recognizer if Deepgram isn't set up.
+    const t = await listenStream({ onInterim: setHeard, signal: abortRef.current?.signal });
     setState('thinking');
     return t;
   }, []);
