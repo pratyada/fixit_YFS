@@ -5,6 +5,11 @@ import { getAllUsers, updateUserRole, updateUserRoles, assignPatientToPractition
 import { getAllClinics, createClinic, updateClinic, SUPER_ADMIN_EMAIL } from '../lib/clinicConfig';
 import { useAuth } from '../contexts/AuthContext';
 
+// Module-scope cache: the users list is expensive (it downloads the whole
+// collection) and rarely changes between visits, so keep the last fetch around.
+// Re-opening Admin shows it instantly while a fresh copy loads in the background.
+let usersCache = null;
+
 const ROLES = ['admin', 'practitioner', 'patient'];
 const ROLE_COLORS = {
   admin: { bg: '#EDE7F6', color: '#5E35B1', icon: Shield },
@@ -17,8 +22,8 @@ export default function AdminDashboard() {
   const { session } = useAuth();
   const isSuperAdmin = session?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
   const [tab, setTab] = useState('users'); // 'users' | 'kiosk' | 'aiTraining' | 'clinics'
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState(usersCache || []);
+  const [loading, setLoading] = useState(!usersCache);
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [expandedUser, setExpandedUser] = useState(null);
@@ -43,8 +48,10 @@ export default function AdminDashboard() {
   const [clinicForm, setClinicForm] = useState({});
 
   const loadUsers = async () => {
-    setLoading(true);
+    // Only block the UI on a spinner when we have nothing cached to show.
+    if (!usersCache) setLoading(true);
     const all = await getAllUsers();
+    usersCache = all;
     setUsers(all);
     setLoading(false);
   };

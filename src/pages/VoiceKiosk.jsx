@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
 import { speak, listen, wakeWord, chat } from '../lib/voice';
@@ -196,6 +197,15 @@ export default function VoiceKiosk() {
       <div style={{ position: 'absolute', top: 26, fontSize: '0.95rem', letterSpacing: '1px' }}>
         <span style={{ fontWeight: 700 }}>FIXIT</span> <span style={{ opacity: 0.55, fontFamily: 'system-ui' }}>by YourFormSux</span>
       </div>
+
+      {/* Exit back to the admin panel — kiosk is full-screen so this is the only way out */}
+      <button onClick={() => { stop(); navigate('/'); }} style={{
+        position: 'absolute', top: 20, left: 20, display: 'flex', alignItems: 'center', gap: '6px',
+        background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfe0d8',
+        borderRadius: '999px', padding: '8px 15px', fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'system-ui',
+      }}>
+        <ArrowLeft size={14} /> Admin
+      </button>
 
       <Orb stateRef={stateRef} ampRef={ampRef} />
 
