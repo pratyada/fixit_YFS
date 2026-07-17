@@ -191,24 +191,42 @@ async function importSubscribers(rows, source = 'import') {
 const DEFAULT_AUTHOR = 'The FIXIT Health Team';
 const DEFAULT_AUTHOR_TITLE = 'Evidence-based physiotherapy, chiropractic & performance';
 
-function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroImageUrl = '', authorName = DEFAULT_AUTHOR, authorTitle = DEFAULT_AUTHOR_TITLE }) {
+// Per-email brand identity. 'fixit' = the product; 'yfs' = the parent brand
+// (community/events, no FIXIT); 'personal' = a warm note from the founder.
+function brandTheme(brand) {
+  if (brand === 'yfs') {
+    return {
+      header: `<tr><td style="background:linear-gradient(135deg,#708E86,#4E4E53);padding:24px 32px">
+    <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff">YourFormSux</span>
+  </td></tr>`,
+      footerLine: `You're receiving this because you subscribed to YourFormSux updates.`,
+      showSignature: true,
+    };
+  }
+  if (brand === 'personal') {
+    return {
+      header: '',   // no brand bar — reads like a personal note
+      footerLine: `You're receiving this because you're on my personal list.`,
+      showSignature: true,
+    };
+  }
+  return {   // 'fixit' (default)
+    header: `<tr><td style="background:linear-gradient(135deg,#708E86,#4E4E53);padding:24px 32px">
+    <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff">FIXIT</span>
+    <span style="font-size:12px;color:rgba(255,255,255,0.75);margin-left:8px">by YourFormSux</span>
+  </td></tr>`,
+    footerLine: `You're receiving this because you subscribed to FIXIT — evidence-based training & recovery.`,
+    showSignature: true,
+  };
+}
+
+function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroImageUrl = '', authorName = DEFAULT_AUTHOR, authorTitle = DEFAULT_AUTHOR_TITLE, brand = 'fixit' }) {
+  const theme = brandTheme(brand);
   const hero = heroImageUrl
     ? `<tr><td><img src="${heroImageUrl}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto"></td></tr>`
     : '';
   const monogram = 'YFS'; // YourFormSux brand mark in the signature
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
-<body style="margin:0;background:#eef2f1;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#3f4a47;-webkit-font-smoothing:antialiased">
-<span style="display:none;max-height:0;overflow:hidden;opacity:0">${preheader}</span>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f1;padding:28px 0">
-<tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 6px 24px rgba(78,78,83,0.08)">
-  <tr><td style="background:linear-gradient(135deg,#708E86,#4E4E53);padding:24px 32px">
-    <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff">FIXIT</span>
-    <span style="font-size:12px;color:rgba(255,255,255,0.75);margin-left:8px">by YourFormSux</span>
-  </td></tr>
-  ${hero}
-  <tr><td style="padding:32px 32px 8px;font-size:16px;line-height:1.7;color:#3f4a47">${bodyHtml}</td></tr>
-  <tr><td style="padding:4px 32px 28px">
+  const signature = theme.showSignature ? `<tr><td style="padding:4px 32px 28px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eef0ef"><tr>
       <td style="padding-top:18px;width:44px;vertical-align:top">
         <div style="width:44px;height:44px;border-radius:50%;background:#708E86;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.5px;text-align:center;line-height:44px">${monogram}</div>
@@ -218,9 +236,19 @@ function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroI
         <div style="font-size:12px;color:#8a938f">${authorTitle}</div>
       </td>
     </tr></table>
-  </td></tr>
+  </td></tr>` : '';
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
+<body style="margin:0;background:#eef2f1;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#3f4a47;-webkit-font-smoothing:antialiased">
+<span style="display:none;max-height:0;overflow:hidden;opacity:0">${preheader}</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f1;padding:28px 0">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 6px 24px rgba(78,78,83,0.08)">
+  ${theme.header}
+  ${hero}
+  <tr><td style="padding:32px 32px 8px;font-size:16px;line-height:1.7;color:#3f4a47">${bodyHtml}</td></tr>
+  ${signature}
   <tr><td style="padding:18px 32px;background:#f7faf9;border-top:1px solid #eef0ef;font-size:11px;color:#98a2a0;text-align:center;line-height:1.6">
-    <p style="margin:0 0 6px">You're receiving this because you subscribed to FIXIT — evidence-based training & recovery.</p>
+    <p style="margin:0 0 6px">${theme.footerLine}</p>
     <p style="margin:0 0 6px">${ADDRESS}</p>
     <p style="margin:0"><a href="${unsubscribeUrl}" style="color:#708E86;font-weight:600">Unsubscribe</a> &nbsp;·&nbsp; <a href="${APP_URL}" style="color:#708E86;font-weight:600">${APP_URL.replace(/^https?:\/\//, '')}</a></p>
   </td></tr>
@@ -238,7 +266,7 @@ function injectTracking(htmlBody, emailId, email, base) {
 }
 
 async function handleEmailSend(event) {
-  const { type = 'all', to, subject, bodyHtml, preheader = '', category, heroImageUrl = '', authorName, authorTitle } = parseBody(event);
+  const { type = 'all', to, subject, bodyHtml, preheader = '', category, heroImageUrl = '', authorName, authorTitle, brand = 'fixit' } = parseBody(event);
   if (!subject || !bodyHtml) throw new HttpError(400, 'subject and bodyHtml required');
   const base = selfBase(event);
 
@@ -258,7 +286,7 @@ async function handleEmailSend(event) {
     try {
       const unsub = `${base}/api/unsubscribe?email=${enc(sub.email)}&token=${enc(sub.unsubscribeToken || '')}`;
       const personalized = bodyHtml.replaceAll('{{firstName}}', sub.name || 'there');
-      const wrapped = brandedEmail({ subject, preheader, bodyHtml: personalized, unsubscribeUrl: unsub, heroImageUrl, authorName, authorTitle });
+      const wrapped = brandedEmail({ subject, preheader, bodyHtml: personalized, unsubscribeUrl: unsub, heroImageUrl, authorName, authorTitle, brand });
       const tracked = injectTracking(wrapped, emailId, sub.email, base);
       await ses.send(new SendEmailCommand({
         Source: FROM,
@@ -372,11 +400,11 @@ Be credible and specific — real numbers, real mechanisms. Do NOT include the h
 // Full branded email HTML for the admin preview — identical to what's sent
 // (with a sample name / unsubscribe), so what you see is what recipients get.
 async function handleEmailPreview(event) {
-  const { subject = '(subject)', preheader = '', bodyHtml = '', heroImageUrl = '', authorName, authorTitle } = parseBody(event);
+  const { subject = '(subject)', preheader = '', bodyHtml = '', heroImageUrl = '', authorName, authorTitle, brand = 'fixit' } = parseBody(event);
   const html = brandedEmail({
     subject, preheader,
     bodyHtml: (bodyHtml || '').replaceAll('{{firstName}}', 'there'),
-    unsubscribeUrl: '#', heroImageUrl, authorName, authorTitle,
+    unsubscribeUrl: '#', heroImageUrl, authorName, authorTitle, brand,
   });
   return json(200, { html });
 }

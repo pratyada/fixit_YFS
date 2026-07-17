@@ -39,6 +39,7 @@ export default function EmailCampaigns() {
   const [preheader, setPreheader] = useState(() => loadDraft().preheader || '');
   const [bodyHtml, setBodyHtml] = useState(() => loadDraft().bodyHtml || '');
   const [heroImageUrl, setHeroImageUrl] = useState(() => loadDraft().heroImageUrl || '');
+  const [brand, setBrand] = useState(() => loadDraft().brand || 'fixit'); // fixit | yfs | personal
   const [audience, setAudience] = useState('all');
   const [category, setCategory] = useState('');
   const [single, setSingle] = useState('');
@@ -78,10 +79,10 @@ export default function EmailCampaigns() {
   // Auto-save the draft (debounced) whenever any field changes.
   useEffect(() => {
     const t = setTimeout(() => {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ topic, subject, preheader, bodyHtml, heroImageUrl }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ topic, subject, preheader, bodyHtml, heroImageUrl, brand }));
     }, 300);
     return () => clearTimeout(t);
-  }, [topic, subject, preheader, bodyHtml, heroImageUrl]);
+  }, [topic, subject, preheader, bodyHtml, heroImageUrl, brand]);
 
   const clearDraft = () => {
     if (!confirm('Clear this draft and start fresh?')) return;
@@ -106,7 +107,7 @@ export default function EmailCampaigns() {
     if (!bodyHtml.trim()) { setErr('Nothing to preview yet'); return; }
     setPreviewing(true); setErr('');
     try {
-      const r = await marketing.previewEmail({ subject, preheader, bodyHtml, heroImageUrl });
+      const r = await marketing.previewEmail({ subject, preheader, bodyHtml, heroImageUrl, brand });
       setPreviewHtml(r.html);
     } catch (e) { setErr(e.message); }
     finally { setPreviewing(false); }
@@ -120,7 +121,7 @@ export default function EmailCampaigns() {
     setSending(true); setErr(''); setMsg('');
     try {
       const r = await marketing.sendEmail({
-        type: audience, subject, preheader, bodyHtml, heroImageUrl,
+        type: audience, subject, preheader, bodyHtml, heroImageUrl, brand,
         category: audience === 'category' ? category : undefined,
         to: audience === 'single' ? single : undefined,
       });
@@ -156,6 +157,25 @@ export default function EmailCampaigns() {
       <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <div><label style={lbl}>Subject</label><input style={inp} value={subject} onChange={(e) => edited(setSubject)(e.target.value)} /></div>
         <div><label style={lbl}>Preheader (inbox preview)</label><input style={inp} value={preheader} onChange={(e) => edited(setPreheader)(e.target.value)} /></div>
+        <div>
+          <label style={lbl}>Brand — header, footer &amp; sign-off</label>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {[
+              { key: 'fixit', label: 'FIXIT by YourFormSux', hint: 'the product' },
+              { key: 'yfs', label: 'YourFormSux', hint: 'community / events' },
+              { key: 'personal', label: 'Personal', hint: 'a note from you' },
+            ].map((b) => (
+              <button key={b.key} onClick={() => edited(setBrand)(b.key)} style={{
+                flex: '1 1 150px', textAlign: 'left', padding: '9px 12px', borderRadius: '10px', cursor: 'pointer',
+                border: `1.5px solid ${brand === b.key ? 'var(--color-secondary)' : 'var(--color-border)'}`,
+                background: brand === b.key ? 'var(--color-bg-alt)' : 'transparent',
+              }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: brand === b.key ? 'var(--color-secondary)' : 'var(--color-text)' }}>{b.label}</div>
+                <div style={{ fontSize: '0.66rem', color: 'var(--color-text)' }}>{b.hint}</div>
+              </button>
+            ))}
+          </div>
+        </div>
         <div>
           <label style={lbl}>Hero image (top banner, optional)</label>
           <div style={{ display: 'flex', gap: '8px' }}>
