@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Camera, CameraOff, RefreshCw, AlertCircle, CheckCircle2, Grid3x3, Square, Search, ChevronRight, FlipHorizontal, RotateCcw, Check } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from 'chart.js';
+
+// PoseChecker is its own lazy chunk (the voice kiosk jumps straight to /pose),
+// so Chart.js must be registered here — otherwise the timeline <Line> throws
+// "category is not a registered scale" and crashes the report.
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 import { analyzeMovement } from '../utils/movementAnalysis';
 import { speak } from '../lib/voice';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
