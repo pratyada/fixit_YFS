@@ -193,6 +193,9 @@ const DEFAULT_AUTHOR_TITLE = 'Evidence-based physiotherapy, chiropractic & perfo
 
 // Per-email brand identity. 'fixit' = the product; 'yfs' = the parent brand
 // (community/events, no FIXIT); 'personal' = a warm note from the founder.
+// Each brand drives the header, footer line, signature, AND the footer site
+// link — so switching brand changes the WHOLE email, not just the header.
+const YFS_URL = 'https://yourformsux.com';
 function brandTheme(brand) {
   if (brand === 'yfs') {
     return {
@@ -201,6 +204,8 @@ function brandTheme(brand) {
   </td></tr>`,
       footerLine: `You're receiving this because you subscribed to YourFormSux updates.`,
       showSignature: true,
+      authorName: 'The YourFormSux Team', authorTitle: 'Community · Events · Training',
+      siteUrl: YFS_URL, siteLabel: 'yourformsux.com',
     };
   }
   if (brand === 'personal') {
@@ -208,6 +213,8 @@ function brandTheme(brand) {
       header: '',   // no brand bar — reads like a personal note
       footerLine: `You're receiving this because you're on my personal list.`,
       showSignature: true,
+      authorName: 'Prateek', authorTitle: 'YourFormSux',
+      siteUrl: YFS_URL, siteLabel: 'yourformsux.com',
     };
   }
   return {   // 'fixit' (default)
@@ -217,11 +224,16 @@ function brandTheme(brand) {
   </td></tr>`,
     footerLine: `You're receiving this because you subscribed to FIXIT — evidence-based training & recovery.`,
     showSignature: true,
+    authorName: DEFAULT_AUTHOR, authorTitle: DEFAULT_AUTHOR_TITLE,
+    siteUrl: APP_URL, siteLabel: APP_URL.replace(/^https?:\/\//, ''),
   };
 }
 
-function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroImageUrl = '', authorName = DEFAULT_AUTHOR, authorTitle = DEFAULT_AUTHOR_TITLE, brand = 'fixit' }) {
+function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroImageUrl = '', authorName, authorTitle, brand = 'fixit' }) {
   const theme = brandTheme(brand);
+  // Fall back to the brand's defaults when the composer didn't override them.
+  authorName = authorName || theme.authorName;
+  authorTitle = authorTitle || theme.authorTitle;
   const hero = heroImageUrl
     ? `<tr><td><img src="${heroImageUrl}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto"></td></tr>`
     : '';
@@ -250,7 +262,7 @@ function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroI
   <tr><td style="padding:18px 32px;background:#f7faf9;border-top:1px solid #eef0ef;font-size:11px;color:#98a2a0;text-align:center;line-height:1.6">
     <p style="margin:0 0 6px">${theme.footerLine}</p>
     <p style="margin:0 0 6px">${ADDRESS}</p>
-    <p style="margin:0"><a href="${unsubscribeUrl}" style="color:#708E86;font-weight:600">Unsubscribe</a> &nbsp;·&nbsp; <a href="${APP_URL}" style="color:#708E86;font-weight:600">${APP_URL.replace(/^https?:\/\//, '')}</a></p>
+    <p style="margin:0"><a href="${unsubscribeUrl}" style="color:#708E86;font-weight:600">Unsubscribe</a> &nbsp;·&nbsp; <a href="${theme.siteUrl}" style="color:#708E86;font-weight:600">${theme.siteLabel}</a></p>
   </td></tr>
 </table></td></tr></table></body></html>`;
 }
