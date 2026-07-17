@@ -582,14 +582,7 @@ ${list}`;
 // biggest lever for catching names in heavy accents (near-closed-set matching).
 async function handleKioskSttToken() {
   if (!DEEPGRAM_API_KEY) throw new HttpError(400, 'DEEPGRAM_API_KEY not set — configure the Lambda to enable premium speech recognition');
-  const res = await fetch('https://api.deepgram.com/v1/auth/grant', {
-    method: 'POST',
-    headers: { Authorization: `Token ${DEEPGRAM_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ ttl_seconds: 60 }),
-  });
-  if (!res.ok) throw new HttpError(502, `Deepgram grant ${res.status}`);
-  const { access_token, expires_in } = await res.json();
-  // Roster of known names → keyterms (Deepgram caps ~100). Optional; never fatal.
+  // Roster of known names → keyterms (Deepgram caps ~100). Used in every mode.
   let keyterms = [];
   try {
     const roster = await getRoster();
@@ -599,7 +592,21 @@ async function handleKioskSttToken() {
     }
     keyterms = [...words].slice(0, 90);
   } catch { /* roster is a boost, not a requirement */ }
-  return json(200, { token: access_token, expiresIn: expires_in, keyterms });
+  // Prefer a short-lived grant token (safest for the browser). Some keys lack
+  // token-grant permission (403); this endpoint is admin-authenticated, so fall
+  // back to handing the API key to the kiosk directly (used via WS subprotocol).
+  try {
+    const res = await fetch('https://api.deepgram.com/v1/auth/grant', {
+      method: 'POST',
+      headers: { Authorization: `Token ${DEEPGRAM_API_KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ ttl_seconds: 60 }),
+    });
+    if (res.ok) {
+      const { access_token, expires_in } = await res.json();
+      return json(200, { token: access_token, expiresIn: expires_in, mode: 'token', keyterms });
+    }
+  } catch { /* fall through to key mode */ }
+  return json(200, { apiKey: DEEPGRAM_API_KEY, mode: 'key', keyterms });
 }
 
 // AWS Polly generative TTS → base64 mp3 the kiosk plays. "Ruth" = warm US voice.

@@ -107,8 +107,13 @@ export async function listenStream({ onInterim, keyterms = [], timeout = 15000, 
           interim_results: 'true', endpointing: '400', utterance_end_ms: String(silenceMs), vad_events: 'true',
         });
         for (const t of terms) params.append('keyterm', t);
-        // JWT goes in the query string (too long for the WS subprotocol header).
-        ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params.toString()}&access_token=${grant.token}`);
+        const wsUrl = `wss://api.deepgram.com/v1/listen?${params.toString()}`;
+        // Two auth modes from the server: a short-lived JWT (goes in the query
+        // string — too long for the WS header), or the raw API key (fits the
+        // subprotocol header) when the key can't mint grant tokens.
+        ws = grant.token
+          ? new WebSocket(`${wsUrl}&access_token=${grant.token}`)
+          : new WebSocket(wsUrl, ['token', grant.apiKey]);
         ws.onopen = () => {
           try {
             mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
