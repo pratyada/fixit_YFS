@@ -103,6 +103,11 @@ export default function PoseChecker() {
   const maxRecordRef = useRef(null); // auto-stop timer
   const MAX_RECORD_SECONDS = 30;
 
+  // Hands-free (voice kiosk) orchestration
+  const [voiceMsg, setVoiceMsg] = useState('');
+  const hfStartedRef = useRef(false);
+  const hfFns = useRef({});
+
   const angleName = ANGLES[currentAngle];
 
   // ─── Camera controls ───
@@ -290,6 +295,9 @@ export default function PoseChecker() {
     }
   };
 
+  // Latest closures for the hands-free orchestrator (avoids stale angleName).
+  hfFns.current = { startRecording, stopRecording, finishAndAnalyze };
+
   const flipCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
@@ -386,6 +394,35 @@ export default function PoseChecker() {
   }, [cameraReady, detector, showGrid, recording, angleName]);
 
   useEffect(() => { return () => stopCamera(); }, [stopCamera]);
+
+  // ─── Hands-free (voice kiosk): narrate + auto-record both angles, zero taps ───
+  useEffect(() => {
+    if (!voiceMode || !cameraReady || hfStartedRef.current) return;
+    hfStartedRef.current = true;
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const say = async (m) => { setVoiceMsg(m); try { await speak(m); } catch { await wait(1600); } };
+    (async () => {
+      const REC_MS = 6000;
+      const prompts = [
+        "Let's begin. Face the camera and stand back so I can see your whole body. Recording your front view now — hold your form.",
+        "Perfect. Now turn to your side, and hold steady. Recording now.",
+      ];
+      await say("The camera's on. I'll guide you through it — no need to touch anything.");
+      for (let i = 0; i < ANGLES.length; i++) {
+        setCurrentAngle(i);
+        await wait(220);                 // let the detection loop re-bind to this angle
+        await say(prompts[i]);
+        await wait(150);
+        hfFns.current.startRecording();
+        await wait(REC_MS);
+        hfFns.current.stopRecording();
+      }
+      await say("Got it — analyzing your form now.");
+      await wait(300);
+      hfFns.current.finishAndAnalyze();  // speaks the score, then returns to the kiosk
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceMode, cameraReady]);
 
   const formatTime = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
   const scoreColor = (s) => s >= 80 ? '#4CAF50' : s >= 60 ? '#FFC107' : s >= 40 ? '#FF9800' : '#F44336';
@@ -643,7 +680,16 @@ export default function PoseChecker() {
           zIndex: 10,
           flexShrink: 0,
         }}>
-          {!recording && hasCurrentRecording ? (
+          {voiceMode ? (
+            // Hands-free: no buttons — just the coach's spoken instruction on screen
+            <div style={{
+              maxWidth: '560px', textAlign: 'center', color: 'rgba(255,255,255,0.92)',
+              fontSize: '1rem', lineHeight: 1.45, minHeight: '2.6em',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {voiceMsg || 'Starting…'}
+            </div>
+          ) : !recording && hasCurrentRecording ? (
             // After recording an angle: retake or next/submit
             <>
               <button onClick={retakeAngle} style={{
