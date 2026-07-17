@@ -457,8 +457,8 @@ export const handler = async (event) => {
   try {
     // ── Public ──
     if (method === 'POST' && path === '/api/subscribe') {
-      const { email, name } = parseBody(event);
-      return json(200, { ok: true, ...(await upsertSubscriber({ email, name, source: 'website' })) });
+      const { email, name, category, source } = parseBody(event);
+      return json(200, { ok: true, ...(await upsertSubscriber({ email, name, category: category || '', source: source || 'website' })) });
     }
     if (method === 'GET' && path === '/api/unsubscribe') {
       const email = normEmail(q.email);

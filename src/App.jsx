@@ -6,6 +6,7 @@ import ConsentBanner from './components/ConsentBanner';
 // crawl renders them synchronously — no Suspense race).
 import Guides from './pages/Guides';
 import GuideDetail from './pages/GuideDetail';
+import Rsvp from './pages/Rsvp';
 
 // The ENTIRE authenticated app — providers (Clinic/Auth/Subscription) and every
 // app page — lives behind this lazy boundary. That keeps the Firebase SDK
@@ -20,6 +21,8 @@ export default function App() {
   if (pathname === '/guides' || pathname.startsWith('/guides/')) {
     return <PublicShell pathname={pathname} />;
   }
+  // Public RSVP page — no auth, drops the email straight into the subscriber list.
+  if (pathname === '/rsvp') return <Rsvp />;
 
   return (
     <Suspense fallback={<BootSplash />}>
