@@ -74,21 +74,26 @@ export function wakeWord(word, onWake) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return () => {};
   const w = word.toLowerCase();
-  let rec, stopped = false;
+  let rec, stopped = false, timer;
   const start = () => {
+    if (stopped) return;
     rec = new SR(); rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = true;
     rec.onresult = (e) => {
       for (const r of e.results) {
         const t = r[0].transcript.toLowerCase();
-        if (t.includes(w) || t.includes('fix it')) { try { rec.stop(); } catch { /* */ } onWake(); return; }
+        if (t.includes(w) || t.includes('fix it') || t.includes('fixed')) {
+          stopped = true; clearTimeout(timer);           // stop BEFORE the conversation grabs the mic
+          try { rec.stop(); } catch { /* */ }
+          onWake(); return;
+        }
       }
     };
     rec.onerror = () => {};
-    rec.onend = () => { if (!stopped) setTimeout(start, 400); };
+    rec.onend = () => { if (!stopped) timer = setTimeout(() => { if (!stopped) start(); }, 500); };
     try { rec.start(); } catch { /* */ }
   };
   start();
-  return () => { stopped = true; try { rec?.stop(); } catch { /* */ } };
+  return () => { stopped = true; clearTimeout(timer); try { rec?.stop(); } catch { /* */ } };
 }
 
 async function startMic(onAmplitude) {

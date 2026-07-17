@@ -112,9 +112,12 @@ export default function VoiceKiosk() {
   }, []);
 
   const hear = useCallback(async () => {
+    await new Promise((r) => setTimeout(r, 300)); // let the speaker + mic settle before listening
     setState('listening');
-    const t = await listen({ onInterim: setHeard, onAmplitude: (a) => { ampRef.current = a; } });
-    ampRef.current = 0; setState('thinking');
+    // Note: no mic analyser here — running getUserMedia alongside SpeechRecognition
+    // can starve the recognizer. The orb still animates its "listening" state.
+    const t = await listen({ onInterim: setHeard });
+    setState('thinking');
     return t;
   }, []);
 
@@ -138,8 +141,9 @@ export default function VoiceKiosk() {
       await say(`Great choice — the ${exercise.name}. Stand back so the camera can see your whole body, and I'll walk you through it. Starting your pose check now.`);
       setState('idle');
       navigate('/pose?exercise=' + exercise.id);
-    } catch {
-      await say("Sorry, something went wrong with the microphone. Please check the mic and say FIXIT to try again.").catch(() => {});
+    } catch (err) {
+      setState('idle');
+      setCaption('Mic issue: ' + (err?.message || 'unknown') + '. Tap “Tap to start” to retry.');
     } finally {
       runningRef.current = false; setAwake(false); setState('idle');
     }
