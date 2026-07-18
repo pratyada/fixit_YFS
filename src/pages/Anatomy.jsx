@@ -1,6 +1,7 @@
 import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
+import { Plane, Vector3 } from 'three';
 import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity, Sparkles } from 'lucide-react';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
@@ -62,6 +63,16 @@ const STRUCTURES = [
 ];
 const STRUCT_BY_ID = Object.fromEntries(STRUCTURES.map((s) => [s.id, s]));
 
+// Explode direction per structure = outward from the model centre.
+const MODEL_CENTER = [0, -0.1, 0];
+const EXPLODE_DIR = Object.fromEntries(STRUCTURES.map((s) => {
+  const c = s.parts.reduce((a, p) => [a[0] + p.pos[0], a[1] + p.pos[1], a[2] + p.pos[2]], [0, 0, 0]).map((v) => v / s.parts.length);
+  let d = [c[0] - MODEL_CENTER[0], c[1] - MODEL_CENTER[1], c[2] - MODEL_CENTER[2]];
+  const len = Math.hypot(d[0], d[1], d[2]) || 1;
+  d = d.map((v) => v / len);
+  return [s.id, d];
+}));
+
 /* GLB_INTEGRATION — to swap in a real segmented knee:
    1) drop a Draco/KTX2 GLB at public/models/knee.glb with separately-named meshes
    2) map its mesh names → our structure ids in GLB_NAME_MAP below
@@ -85,10 +96,11 @@ function Geo({ p }) {
   return null;
 }
 
-function Structure({ s, selected, anySelected, visible, injuryStatus, onSelect }) {
+function Structure({ s, selected, anySelected, visible, injuryStatus, explode, clipPlanes, onSelect }) {
   const matRefs = useRef([]);
   const [hover, setHover] = useState(false);
   const ghost = anySelected && !selected;
+  const off = explode ? EXPLODE_DIR[s.id].map((v) => v * explode * 1.7) : [0, 0, 0];
   useFrame(({ clock }) => {
     if (!selected) return;
     const p = 0.5 + 0.35 * Math.sin(clock.elapsedTime * 4);
@@ -103,6 +115,7 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, onSelect }
   const translucent = s.translucent && !selected && !injColor;
   return (
     <group
+      position={off}
       onClick={(e) => { e.stopPropagation(); onSelect(s.id); }}
       onPointerOver={(e) => { e.stopPropagation(); setHover(true); document.body.style.cursor = 'pointer'; }}
       onPointerOut={() => { setHover(false); document.body.style.cursor = 'auto'; }}
@@ -115,6 +128,7 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, onSelect }
             color={selected ? '#f4e5e0' : base}
             emissive={emissive} emissiveIntensity={emissiveInt}
             roughness={0.5} metalness={0.05}
+            clippingPlanes={clipPlanes}
             transparent={ghost || translucent} opacity={ghost ? 0.09 : translucent ? 0.5 : 1} depthWrite={!ghost && !translucent}
           />
         </mesh>
@@ -123,10 +137,10 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, onSelect }
   );
 }
 
-function Scene({ selectedId, setSelectedId, layers, injuryMap }) {
+function Scene({ selectedId, setSelectedId, layers, injuryMap, explode, clipPlanes }) {
   const selected = STRUCT_BY_ID[selectedId];
   return (
-    <Canvas camera={{ position: [3.6, 0.8, 4.6], fov: 42 }} dpr={[1, 2]} gl={{ antialias: true }} onPointerMissed={() => setSelectedId(null)}>
+    <Canvas camera={{ position: [3.6, 0.8, 4.6], fov: 42 }} dpr={[1, 2]} gl={{ antialias: true, localClippingEnabled: true }} onPointerMissed={() => setSelectedId(null)}>
       <color attach="background" args={['#0c0f12']} />
       <ambientLight intensity={0.55} />
       <directionalLight position={[4, 6, 5]} intensity={1.15} />
@@ -134,7 +148,8 @@ function Scene({ selectedId, setSelectedId, layers, injuryMap }) {
       <Suspense fallback={null}>
         {STRUCTURES.map((s) => (
           <Structure key={s.id} s={s} selected={s.id === selectedId} anySelected={!!selectedId}
-            visible={layers[s.layer]} injuryStatus={injuryMap[s.id]?.status || null} onSelect={setSelectedId} />
+            visible={layers[s.layer]} injuryStatus={injuryMap[s.id]?.status || null}
+            explode={explode} clipPlanes={clipPlanes} onSelect={setSelectedId} />
         ))}
         {/* persistent injury tags (hidden while a structure is isolated) */}
         {!selectedId && Object.entries(injuryMap).map(([id, inj]) => {
@@ -158,6 +173,7 @@ function Scene({ selectedId, setSelectedId, layers, injuryMap }) {
 
 const inp = { width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '0.82rem', boxSizing: 'border-box' };
 const chip = (active, color) => ({ padding: '5px 11px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${active ? color : 'var(--color-border)'}`, background: active ? color + '22' : 'white', color: active ? color : 'var(--color-text)' });
+const ctlBtn = (active) => ({ padding: '5px 10px', borderRadius: '999px', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer', border: `1px solid ${active ? '#57b6c4' : 'rgba(255,255,255,0.18)'}`, background: active ? 'rgba(87,182,196,0.2)' : 'rgba(0,0,0,0.35)', color: active ? '#9fe3ec' : 'rgba(255,255,255,0.75)', backdropFilter: 'blur(6px)' });
 
 export default function Anatomy() {
   const [patients, setPatients] = useState([]);
@@ -165,6 +181,15 @@ export default function Anatomy() {
   const [injuries, setInjuries] = useState([]);          // for selected patient
   const [selectedId, setSelectedId] = useState(null);
   const [layers, setLayers] = useState({ muscle: true, tendon: true, ligament: true, cartilage: true, nerve: true, vessel: true, bone: true });
+  const [explode, setExplode] = useState(0);            // 0..1 exploded view
+  const [crossOn, setCrossOn] = useState(false);        // cross-section on/off
+  const [crossAxis, setCrossAxis] = useState('z');
+  const [crossPos, setCrossPos] = useState(0);
+  const clipPlanes = useMemo(() => {
+    if (!crossOn) return [];
+    const n = crossAxis === 'x' ? new Vector3(1, 0, 0) : crossAxis === 'y' ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1);
+    return [new Plane(n, crossPos)];
+  }, [crossOn, crossAxis, crossPos]);
   const [form, setForm] = useState(null);                // new-injury draft
   const [busy, setBusy] = useState(false);
   const [aiNote, setAiNote] = useState('');              // free-text clinical note
@@ -264,7 +289,7 @@ export default function Anatomy() {
       <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap' }}>
         {/* viewport */}
         <div style={{ position: 'relative', flex: '1 1 440px', minWidth: '300px', height: '74vh', minHeight: '440px', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--color-border)', background: '#0c0f12' }}>
-          <Scene selectedId={selectedId} setSelectedId={setSelectedId} layers={layers} injuryMap={injuryMap} />
+          <Scene selectedId={selectedId} setSelectedId={setSelectedId} layers={layers} injuryMap={injuryMap} explode={explode} clipPlanes={clipPlanes} />
           <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: '6px', flexWrap: 'wrap', maxWidth: '80%' }}>
             {Object.keys(LAYER_LABELS).map((k) => (
               <button key={k} onClick={() => setLayers((l) => ({ ...l, [k]: !l[k] }))} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.66rem', fontWeight: 700, padding: '5px 10px', borderRadius: '999px', cursor: 'pointer', border: `1px solid ${layers[k] ? LAYER_COLORS[k] : 'rgba(255,255,255,0.15)'}`, background: layers[k] ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.3)', color: layers[k] ? '#fff' : 'rgba(255,255,255,0.4)', backdropFilter: 'blur(6px)' }}>
@@ -275,9 +300,24 @@ export default function Anatomy() {
           {selectedId && (
             <button onClick={() => { setSelectedId(null); setForm(null); }} style={{ position: 'absolute', top: 12, right: 12, display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, padding: '6px 12px', borderRadius: '999px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.4)', color: '#fff', backdropFilter: 'blur(6px)' }}><RotateCcw size={12} /> Show all</button>
           )}
-          {/* legend */}
-          <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', gap: '10px', fontSize: '0.62rem', color: 'rgba(255,255,255,0.7)', fontFamily: 'system-ui' }}>
-            {Object.entries(STATUS).map(([k, v]) => <span key={k} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: v.c }} />{v.label}</span>)}
+          {/* bottom bar: view tools + status legend */}
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 14px', background: 'linear-gradient(0deg, rgba(6,10,12,0.9), transparent)', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.66rem', fontWeight: 700, color: '#cfe0e4' }}>
+                Explode
+                <input type="range" min="0" max="1" step="0.01" value={explode} onChange={(e) => setExplode(+e.target.value)} style={{ width: 84, accentColor: '#57b6c4' }} />
+              </label>
+              <button onClick={() => setCrossOn((v) => !v)} style={ctlBtn(crossOn)}>Cross-section</button>
+              {crossOn && (
+                <>
+                  {['x', 'y', 'z'].map((a) => <button key={a} onClick={() => setCrossAxis(a)} style={ctlBtn(crossAxis === a)}>{a.toUpperCase()}</button>)}
+                  <input type="range" min="-1.8" max="1.8" step="0.02" value={crossPos} onChange={(e) => setCrossPos(+e.target.value)} style={{ width: 84, accentColor: '#57b6c4' }} />
+                </>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', fontSize: '0.62rem', color: 'rgba(255,255,255,0.7)', fontFamily: 'system-ui' }}>
+              {Object.entries(STATUS).map(([k, v]) => <span key={k} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: v.c }} />{v.label}</span>)}
+            </div>
           </div>
         </div>
 
