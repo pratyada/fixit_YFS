@@ -114,6 +114,11 @@ async function main() {
     });
 
     for (const route of SITEMAP_ROUTES) {
+      // The app root is behind auth. Prerendering it bakes a stale login-page
+      // snapshot into index.html, which flashes for logged-in users on first
+      // load ("doesn't open until refresh"). Ship the clean branded shell for
+      // '/' instead — React boots to the right page (dashboard or login).
+      if (route.path === '/') { console.log('[prerender] — skipped / (authed app shell)'); continue; }
       const page = await browser.newPage();
       try {
         await page.goto(`http://localhost:${PORT}${route.path}`, {
