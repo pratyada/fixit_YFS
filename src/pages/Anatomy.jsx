@@ -7,7 +7,7 @@ import { listenStream } from '../lib/voice';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
 import {
-  getAllUsers, getAnatomyInjuries, addAnatomyInjury, updateAnatomyInjury, deleteAnatomyInjury,
+  getAllUsers, getAnatomyInjuries, addAnatomyInjury, updateAnatomyInjury, deleteAnatomyInjury, getSessions,
 } from '../lib/firestore';
 import { marketing } from '../lib/marketingApi';
 
@@ -193,6 +193,7 @@ export default function Anatomy() {
   const [patients, setPatients] = useState([]);
   const [patientId, setPatientId] = useState('');
   const [injuries, setInjuries] = useState([]);          // for selected patient
+  const [sessions, setSessions] = useState([]);          // patient's pose-check sessions (real rehab data)
   const [selectedId, setSelectedId] = useState(null);
   const [layers, setLayers] = useState({ muscle: true, tendon: true, ligament: true, cartilage: true, nerve: true, vessel: true, bone: true });
   const [explode, setExplode] = useState(0);            // 0..1 exploded view
@@ -223,7 +224,18 @@ export default function Anatomy() {
     if (!uid) { setInjuries([]); return; }
     getAnatomyInjuries(uid).then(setInjuries).catch(() => setInjuries([]));
   };
-  useEffect(() => { loadInjuries(patientId); }, [patientId]);
+  useEffect(() => {
+    loadInjuries(patientId);
+    if (patientId) getSessions(patientId).then(setSessions).catch(() => setSessions([])); else setSessions([]);
+  }, [patientId]);
+
+  // Real rehab signal: latest pose-check score across an injury's linked exercises.
+  const rehabFor = (inj) => {
+    const ids = new Set((inj.exercises || []).map((e) => e.id));
+    const matched = sessions.filter((s) => ids.has(s.exerciseId) && typeof s.aiScore === 'number');
+    if (!matched.length) return null;                    // sessions are desc by createdAt
+    return { latest: matched[0].aiScore, count: matched.length, delta: matched[0].aiScore - matched[matched.length - 1].aiScore };
+  };
 
   const injuryMap = useMemo(() => Object.fromEntries(injuries.map((i) => [i.structureId, i])), [injuries]);
   const selected = STRUCT_BY_ID[selectedId];
@@ -446,6 +458,20 @@ export default function Anatomy() {
                     {inj.exercises.map((ex) => <span key={ex.id} style={{ fontSize: '0.64rem', padding: '2px 8px', borderRadius: '999px', background: 'var(--color-bg-alt)', color: 'var(--color-text)' }}>🏋 {ex.name}</span>)}
                   </div>
                 )}
+                {/* real rehab signal from pose-check scores */}
+                {(() => {
+                  const r = rehabFor(inj);
+                  if (!r) return null;
+                  const sc = r.latest >= 80 ? '#2e7d32' : r.latest >= 60 ? '#b8860b' : '#c0392b';
+                  return (
+                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text)', margin: '6px 0', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <Activity size={11} /> Rehab form <b style={{ color: sc }}>{r.latest}</b>
+                      {r.delta ? <span style={{ color: r.delta > 0 ? '#2e7d32' : '#c0392b', fontWeight: 700 }}>{r.delta > 0 ? '↑' : '↓'}{Math.abs(r.delta)}</span> : null}
+                      <span style={{ opacity: 0.7 }}>· {r.count} check{r.count > 1 ? 's' : ''}</span>
+                      {r.latest >= 80 && inj.status !== 'recovered' && <span style={{ color: '#2e7d32', fontWeight: 700 }}>— strong, consider advancing</span>}
+                    </div>
+                  );
+                })()}
                 {/* healing progress bar */}
                 <div style={{ display: 'flex', gap: '3px', margin: '8px 0 6px' }}>
                   {STATUS_ORDER.map((st) => <div key={st} style={{ flex: 1, height: '5px', borderRadius: '3px', background: STATUS_ORDER.indexOf(st) <= STATUS_ORDER.indexOf(inj.status) ? STATUS[inj.status].c : 'var(--color-border)' }} />)}
