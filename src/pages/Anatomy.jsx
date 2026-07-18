@@ -2,6 +2,8 @@ import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
 import { Plane, Vector3 } from 'three';
+import '@google/model-viewer'; // registers <model-viewer> for AR / phone viewing
+import { Box, X } from 'lucide-react';
 import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity, Sparkles, Mic, Printer } from 'lucide-react';
 import { listenStream } from '../lib/voice';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
@@ -245,6 +247,7 @@ export default function Anatomy() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMsg, setAiMsg] = useState('');
   const [listening, setListening] = useState(false);
+  const [arOpen, setArOpen] = useState(false);
 
   useEffect(() => {
     getAllUsers().then((all) => setPatients(all.filter((u) => {
@@ -382,11 +385,32 @@ export default function Anatomy() {
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
           <Bone size={22} /> Anatomy Consult <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-accent)', border: '1px solid var(--color-border)', padding: '2px 8px', borderRadius: '999px' }}>Knee</span>
         </h1>
-        <select value={patientId} onChange={(e) => { setPatientId(e.target.value); setSelectedId(null); setForm(null); }} style={{ ...inp, width: 'auto', fontWeight: 600 }}>
-          <option value="">Demo (no patient)</option>
-          {patients.map((p) => <option key={p.id} value={p.id}>{p.name || p.email}</option>)}
-        </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button onClick={() => setArOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--color-border)', background: 'white', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-secondary)' }}><Box size={15} /> View in AR</button>
+          <select value={patientId} onChange={(e) => { setPatientId(e.target.value); setSelectedId(null); setForm(null); }} style={{ ...inp, width: 'auto', fontWeight: 600 }}>
+            <option value="">Demo (no patient)</option>
+            {patients.map((p) => <option key={p.id} value={p.id}>{p.name || p.email}</option>)}
+          </select>
+        </div>
       </div>
+
+      {arOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(6,10,12,0.96)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', color: '#e9eef1' }}>
+            <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1.1rem' }}>Knee — 3D / AR</div>
+            <button onClick={() => setArOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)', color: '#e9eef1', borderRadius: '999px', padding: '7px 14px', cursor: 'pointer', fontSize: '0.8rem' }}><X size={14} /> Close</button>
+          </div>
+          <model-viewer
+            src="/models/knee.glb" alt="3D knee anatomy"
+            camera-controls auto-rotate ar ar-modes="webxr scene-viewer quick-look"
+            shadow-intensity="1" exposure="1.05" camera-orbit="30deg 75deg 4m"
+            style={{ flex: 1, width: '100%', background: '#0c0f12' }}
+          ></model-viewer>
+          <div style={{ textAlign: 'center', color: '#9fb0ba', fontSize: '0.78rem', padding: '12px 18px 20px' }}>
+            On a phone or tablet, tap the <b>AR</b> icon to place the knee in the room. On desktop, drag to rotate.
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap' }}>
         {/* viewport */}
