@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+</head>
+<body>
+<title>FIXIT Voice AI Kiosk — The Experience</title>
+<style>
+  :root{
+    --bg:#0e1310; --bg2:#141b17; --panel:#18211c; --line:#26332b;
+    --ink:#eaf2ec; --soft:#9db0a6; --faint:#6d7f75;
+    --sage:#7ea08f; --idle:#708E86; --listen:#4f93a0; --think:#d3ac57; --speak:#7ea08f;
+    --gold:#d3ac57;
+    --serif:'Tenor Sans','Optima','Palatino Linotype',Georgia,serif;
+    --sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+      radial-gradient(120% 80% at 50% -10%, #1b2620 0%, transparent 60%),
+      linear-gradient(180deg,#0e1310,#0b0f0d);
+    color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;
+    overflow-x:hidden;}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 22px;}
+  h1,h2,h3{font-family:var(--serif);font-weight:400;letter-spacing:-.01em;line-height:1.12;text-wrap:balance;}
+  .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.34em;text-transform:uppercase;color:var(--sage);}
+
+  /* ── HERO ── */
+  .hero{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;gap:26px;padding:60px 22px;position:relative;}
+  .brand{position:absolute;top:26px;left:50%;transform:translateX(-50%);font-size:.9rem;letter-spacing:1px;color:var(--soft);}
+  .brand b{color:var(--ink);font-weight:700;letter-spacing:2px}
+  canvas#orb{width:min(58vw,300px);height:min(58vw,300px);display:block}
+  .hero h1{font-size:clamp(2.3rem,6.5vw,4.2rem);margin:0;max-width:12ch}
+  .hero p{font-size:clamp(1.05rem,2.4vw,1.3rem);color:var(--soft);max-width:34ch;margin:0}
+  .cap{font-family:var(--mono);font-size:.82rem;color:var(--sage);min-height:1.4em;letter-spacing:.02em;
+    transition:opacity .4s;}
+  .statechip{font-family:var(--mono);font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:var(--faint);}
+  .scroll-hint{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:var(--faint);
+    font-family:var(--mono);font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;
+    animation:bob 2.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0);opacity:.5}50%{transform:translateX(-50%) translateY(6px);opacity:1}}
+
+  /* ── SECTION HEADERS ── */
+  .band{padding:70px 0 20px;text-align:center}
+  .band h2{font-size:clamp(1.7rem,4vw,2.6rem);margin:.3em 0 .2em}
+  .band p{color:var(--soft);max-width:46ch;margin:0 auto}
+
+  /* ── JOURNEY ── */
+  .journey{position:relative;padding:20px 0 40px}
+  .journey::before{content:"";position:absolute;left:33px;top:0;bottom:0;width:2px;
+    background:linear-gradient(180deg,transparent,var(--line) 6%,var(--line) 94%,transparent);}
+  @media(max-width:640px){.journey::before{left:23px}}
+  .step{position:relative;display:grid;grid-template-columns:68px 1fr;gap:14px;padding:22px 0;
+    opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease;}
+  @media(max-width:640px){.step{grid-template-columns:48px 1fr}}
+  .step.in{opacity:1;transform:none}
+  .dot{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-size:1.25rem;color:#0e1310;font-weight:700;z-index:1;
+    box-shadow:0 0 0 6px #0e1310, 0 0 30px -4px var(--st);background:var(--st);}
+  @media(max-width:640px){.dot{width:42px;height:42px;font-size:1.05rem}}
+  .card{background:linear-gradient(180deg,var(--panel),#141b17);border:1px solid var(--line);
+    border-radius:18px;padding:20px 22px;box-shadow:0 18px 40px -24px #000;}
+  .card .who{font-family:var(--mono);font-size:.64rem;letter-spacing:.24em;text-transform:uppercase;color:var(--st);margin-bottom:6px}
+  .card h3{font-size:1.24rem;margin:0 0 6px}
+  .card .desc{color:var(--soft);font-size:.94rem;margin:0 0 14px}
+  .bubble{display:flex;gap:10px;align-items:flex-start;margin-top:10px}
+  .bubble .ic{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--st);opacity:.9;
+    display:flex;align-items:center;justify-content:center;font-size:13px}
+  .bubble .txt{background:#0f1613;border:1px solid var(--line);border-radius:4px 14px 14px 14px;
+    padding:10px 14px;font-size:.95rem;color:var(--ink)}
+  .bubble.user{flex-direction:row-reverse}
+  .bubble.user .txt{border-radius:14px 4px 14px 14px;background:#13201b;color:#cfe6da}
+  .bubble.user .ic{background:#3a4a42}
+
+  /* mockups */
+  .frame{margin-top:14px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0b100d}
+  .cam{aspect-ratio:16/10;position:relative;background:radial-gradient(120% 90% at 50% 20%,#1a231e,#0b100d)}
+  .cam .rec{position:absolute;top:10px;left:12px;font-family:var(--mono);font-size:.6rem;letter-spacing:.2em;
+    color:#e88;display:flex;align-items:center;gap:6px}
+  .cam .rec::before{content:"";width:8px;height:8px;border-radius:50%;background:#e05a5a;animation:pulse 1.2s infinite}
+  @keyframes pulse{50%{opacity:.25}}
+  .cam .ang{position:absolute;bottom:10px;right:12px;font-family:var(--mono);font-size:.6rem;color:var(--soft);letter-spacing:.16em}
+  .skel{position:absolute;inset:0;margin:auto;width:44%;height:78%}
+  .skel line{stroke:var(--listen);stroke-width:2.4;stroke-linecap:round;opacity:.85}
+  .skel circle{fill:var(--think)}
+
+  /* score card */
+  .score{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;padding:16px;
+    background:#0f1613;border:1px solid var(--line);border-radius:14px;margin-top:14px}
+  .ring{width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-size:1.9rem;color:var(--ink);
+    background:conic-gradient(var(--gold) 78%, #223029 0);position:relative}
+  .ring::after{content:"";position:absolute;inset:8px;border-radius:50%;background:#0f1613}
+  .ring span{position:relative;z-index:1}
+  .cats{display:flex;flex-direction:column;gap:6px}
+  .cat{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--soft)}
+  .cat .bar{flex:1;height:6px;border-radius:3px;background:#223029;overflow:hidden}
+  .cat .bar i{display:block;height:100%;background:var(--sage);border-radius:3px}
+  .cat b{color:var(--ink);font-variant-numeric:tabular-nums;width:26px;text-align:right}
+
+  /* ── CLOSER ── */
+  .closer{text-align:center;padding:80px 22px 40px}
+  .closer h2{font-size:clamp(1.8rem,4vw,2.7rem);margin-bottom:.4em}
+  .pills{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:640px;margin:26px auto 0}
+  .pill{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:9px 16px;
+    font-size:.82rem;color:var(--soft)}
+  .pill b{color:var(--ink);font-weight:600}
+  footer{text-align:center;color:var(--faint);font-size:.72rem;padding:40px 22px 60px;font-family:var(--mono);letter-spacing:.04em}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.step{opacity:1;transform:none}}
+</style>
+
+<section class="hero">
+  <div class="brand"><b>FIXIT</b> &nbsp;by YourFormSux</div>
+  <canvas id="orb" width="600" height="600"></canvas>
+  <div>
+    <div class="statechip" id="chip">idle</div>
+    <div class="cap" id="cap">Say “FIXIT” to begin</div>
+  </div>
+  <h1>The hands-free AI form coach.</h1>
+  <p>A customer walks up, speaks, and gets a physio-grade form check — no staff, no app, no touching the screen.</p>
+  <div class="scroll-hint">scroll — the full experience ↓</div>
+</section>
+
+<div class="band">
+  <div class="eyebrow">The customer journey</div>
+  <h2>Seven moments, zero friction</h2>
+  <p>Everything below happens through voice and a camera. Here is exactly what a customer sees and hears, start to finish.</p>
+</div>
+
+<div class="wrap">
+  <div class="journey" id="journey">
+
+    <div class="step" style="--st:var(--idle)">
+      <div class="dot">1</div>
+      <div class="card">
+        <div class="who">Wake · voice</div>
+        <h3>They say the word</h3>
+        <p class="desc">The screen rests as a calm, breathing orb. The customer just says the wake word — nothing to tap, nothing to install.</p>
+        <div class="bubble user"><div class="ic">🗣️</div><div class="txt">“FIXIT.”</div></div>
+        <div class="bubble"><div class="ic">◍</div><div class="txt">Hey there, welcome to FIXIT by YourFormSux. I’ll use the camera to check your form — what’s your first name?</div></div>
+      </div>
+    </div>
+
+    <div class="step" style="--st:var(--listen)">
+      <div class="dot">2</div>
+      <div class="card">
+        <div class="who">Identify · listening</div>
+        <h3>It knows who they are</h3>
+        <p class="desc">Premium speech recognition catches the name even with an accent, then matches it against your member list — so it greets them correctly and personally.</p>
+        <div class="bubble user"><div class="ic">🗣️</div><div class="txt">“I’m Prateek.”</div></div>
+        <div class="bubble"><div class="ic">◍</div><div class="txt">Great to see you, Prateek — did I get that right? Welcome back.</div></div>
+      </div>
+    </div>
+
+    <div class="step" style="--st:var(--think)">
+      <div class="dot">3</div>
+      <div class="card">
+        <div class="who">Choose · conversation</div>
+        <h3>They pick what to work on</h3>
+        <p class="desc">A real conversation, not a menu. The coach understands plain language and confirms the exercise.</p>
+        <div class="bubble user"><div class="ic">🗣️</div><div class="txt">“Can you check my deadlift?”</div></div>
+        <div class="bubble"><div class="ic">◍</div><div class="txt">Great choice — the deadlift. Stand back so the camera can see your whole body, and I’ll walk you through it.</div></div>
+      </div>
+    </div>
+
+    <div class="step" style="--st:var(--listen)">
+      <div class="dot">4</div>
+      <div class="card">
+        <div class="who">Record · camera + AI vision</div>
+        <h3>The camera captures the movement</h3>
+        <p class="desc">Front and side views, with real-time body tracking — the same motion-capture tech elite clinics use, running live in the browser.</p>
+        <div class="frame"><div class="cam">
+          <div class="rec">REC</div>
+          <svg class="skel" viewBox="0 0 100 180" preserveAspectRatio="xMidYMid meet">
+            <line x1="50" y1="20" x2="50" y2="80"/><line x1="50" y1="34" x2="30" y2="60"/>
+            <line x1="50" y1="34" x2="70" y2="60"/><line x1="50" y1="80" x2="34" y2="128"/>
+            <line x1="50" y1="80" x2="66" y2="128"/><line x1="34" y1="128" x2="30" y2="172"/>
+            <line x1="66" y1="128" x2="70" y2="172"/>
+            <circle cx="50" cy="14" r="7"/><circle cx="50" cy="80" r="4"/>
+            <circle cx="34" cy="128" r="4"/><circle cx="66" cy="128" r="4"/>
+          </svg>
+          <div class="ang">FRONT · SIDE</div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="step" style="--st:var(--think)">
+      <div class="dot">5</div>
+      <div class="card">
+        <div class="who">Analyze · thinking</div>
+        <h3>It scores the form</h3>
+        <p class="desc">Range of motion, posture, stability, joint angles and movement pattern — analyzed in seconds against clinical benchmarks.</p>
+        <div class="bubble"><div class="ic">◍</div><div class="txt">Analyzing your form…</div></div>
+      </div>
+    </div>
+
+    <div class="step" style="--st:var(--speak)">
+      <div class="dot">6</div>
+      <div class="card">
+        <div class="who">Result · spoken + on-screen</div>
+        <h3>They hear their score</h3>
+        <p class="desc">The full breakdown appears on screen, and the coach reads the headline result aloud — encouraging, specific, and actionable.</p>
+        <div class="score">
+          <div class="ring"><span>78</span></div>
+          <div class="cats">
+            <div class="cat">Range of motion <span class="bar"><i style="width:84%"></i></span><b>84</b></div>
+            <div class="cat">Posture <span class="bar"><i style="width:72%"></i></span><b>72</b></div>
+            <div class="cat">Stability <span class="bar"><i style="width:80%"></i></span><b>80</b></div>
+          </div>
+        </div>
+        <div class="bubble"><div class="ic">◍</div><div class="txt">Prateek, nice work — you scored 78. Your range of motion looked strong. One thing to watch next time: keep your knees tracking over your toes.</div></div>
+      </div>
+    </div>
+
+    <div class="step" style="--st:var(--idle)">
+      <div class="dot">7</div>
+      <div class="card">
+        <div class="who">Loop · ready for the next</div>
+        <h3>Back to rest, instantly</h3>
+        <p class="desc">The score is saved to their history (so next time it says “last visit you hit 78 — let’s beat it”), and the orb returns to calm, ready for whoever’s next.</p>
+        <div class="bubble"><div class="ic">◍</div><div class="txt">Saved. Say FIXIT whenever you’re ready for another check.</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<section class="closer">
+  <div class="eyebrow">Why it works</div>
+  <h2>A clinic that never clocks out.</h2>
+  <div class="pills">
+    <div class="pill">🎙️ <b>Fully hands-free</b> — voice in, voice out</div>
+    <div class="pill">🧠 <b>Knows every member</b> by name &amp; history</div>
+    <div class="pill">📹 <b>Any screen</b> with a webcam &amp; mic</div>
+    <div class="pill">🌍 <b>Understands accents</b> &amp; names</div>
+    <div class="pill">🩺 <b>Physio-grade</b> movement scoring</div>
+    <div class="pill">👥 <b>No staff required</b></div>
+  </div>
+</section>
+
+<footer>FIXIT by YourFormSux · Voice AI Kiosk · experience walkthrough</footer>
+
+<script>
+(function(){
+  // ── Living orb (mirrors the real kiosk) — cycles through the states with captions ──
+  var PAL={idle:['#c2d6cd','#708E86','112,142,134'],listening:['#b5dde4','#4f93a0','79,147,160'],
+           thinking:['#f0d99a','#d3ac57','211,172,87'],speaking:['#d3e6dd','#7ea08f','160,185,175']};
+  var SCRIPT=[
+    {s:'idle',t:'Say “FIXIT” to begin'},
+    {s:'listening',t:'“I’m Prateek.”'},
+    {s:'thinking',t:'Matching you to our members…'},
+    {s:'speaking',t:'Great to see you, Prateek!'},
+    {s:'listening',t:'“Check my deadlift.”'},
+    {s:'thinking',t:'Analyzing your form…'},
+    {s:'speaking',t:'Nice work — you scored 78.'}
+  ];
+  var c=document.getElementById('orb'),g=c.getContext('2d');
+  var cap=document.getElementById('cap'),chip=document.getElementById('chip');
+  var t=0,idx=0,amp=0,ampT=0,state='idle';
+  function setStep(i){idx=i%SCRIPT.length;state=SCRIPT[idx].s;chip.textContent=state;
+    cap.style.opacity=0;setTimeout(function(){cap.textContent=SCRIPT[idx].t;cap.style.opacity=1;},380);}
+  setStep(0);setInterval(function(){setStep(idx+1);},2600);
+  function draw(){
+    var W=c.width,H=c.height,cx=W/2,cy=H/2,p=PAL[state]||PAL.idle;
+    // fake amplitude pulse for listening/speaking
+    var target=(state==='listening'||state==='speaking')?(0.4+0.4*Math.abs(Math.sin(t*4))):0;
+    ampT+=(target-ampT)*0.15;amp=ampT;t+=0.016;
+    g.clearRect(0,0,W,H);
+    var base=Math.min(W,H)*0.17;
+    var breathe=state==='idle'?Math.sin(t*1.1)*0.03:0;
+    var react=(state==='listening'||state==='speaking')?amp*0.5:0;
+    var spin=state==='thinking'?t*1.7:t*0.35;
+    var R=base*(1+breathe+react);
+    if(state==='listening'||state==='speaking'){
+      for(var i=0;i<3;i++){var ph=((t*0.55+i/3)%1);var rr=R*(1+ph*1.7);
+        g.beginPath();g.arc(cx,cy,rr,0,Math.PI*2);
+        g.strokeStyle='rgba('+p[2]+','+(0.22*(1-ph))+')';g.lineWidth=3;g.stroke();}
+    }
+    var pts=90;g.beginPath();
+    for(var k=0;k<=pts;k++){var a=(k/pts)*Math.PI*2;var w=0.08+react*0.55;
+      var wob=Math.sin(a*3+spin)*0.5+Math.sin(a*5-t*1.3)*0.3+Math.sin(a*2+t*0.7)*0.4;
+      var r=R*(1+wob*w);var x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;
+      k===0?g.moveTo(x,y):g.lineTo(x,y);}
+    g.closePath();
+    var grad=g.createRadialGradient(cx-R*0.25,cy-R*0.3,R*0.1,cx,cy,R*1.25);
+    grad.addColorStop(0,p[0]);grad.addColorStop(0.55,p[1]);grad.addColorStop(1,p[1]+'00');
+    g.shadowColor=p[1];g.shadowBlur=30+react*70;g.fillStyle=grad;g.fill();g.shadowBlur=0;
+    g.beginPath();g.arc(cx-R*0.22,cy-R*0.26,R*0.4,0,Math.PI*2);
+    g.fillStyle='rgba(255,255,255,0.10)';g.fill();
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  // ── Scroll reveal for the journey steps ──
+  var steps=document.querySelectorAll('.step');
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:0.2});
+    steps.forEach(function(s){io.observe(s);});
+  }else{steps.forEach(function(s){s.classList.add('in');});}
+})();
+</script>
+
+</body>
+</html>
