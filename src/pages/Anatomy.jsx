@@ -2,7 +2,7 @@ import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import { Plane, Vector3 } from 'three';
-import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity, Sparkles, Mic } from 'lucide-react';
+import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity, Sparkles, Mic, Printer } from 'lucide-react';
 import { listenStream } from '../lib/voice';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
@@ -315,6 +315,34 @@ export default function Anatomy() {
   };
   const toggleEx = (ex) => setForm((f) => ({ ...f, exercises: f.exercises.some((x) => x.id === ex.id) ? f.exercises.filter((x) => x.id !== ex.id) : [...f.exercises, ex] }));
 
+  // Patient takeaway: a clean printable recovery plan.
+  const esc = (s = '') => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const printHandout = () => {
+    const p = patients.find((x) => x.id === patientId);
+    const cards = injuries.map((inj) => {
+      const s = STRUCT_BY_ID[inj.structureId]; const r = rehabFor(inj);
+      return `<div class="inj"><h3>${esc(inj.structureName)} <span class="pill" style="background:${STATUS[inj.status].c}22;color:${STATUS[inj.status].c}">${STATUS[inj.status].label}</span></h3>
+        <p class="t">${esc(inj.injuryType)}${inj.grade ? ` · Grade ${esc(inj.grade)}` : ''}${inj.side ? ` · ${esc(inj.side)}` : ''}</p>
+        <p class="d">${esc(s?.desc || '')}</p>
+        ${inj.note ? `<p><b>Note:</b> ${esc(inj.note)}</p>` : ''}
+        ${inj.exercises?.length ? `<p><b>Your exercises:</b> ${inj.exercises.map((e) => esc(e.name)).join(', ')}</p>` : ''}
+        ${r ? `<p><b>Latest form score:</b> ${r.latest}/100 · ${r.count} check${r.count > 1 ? 's' : ''}</p>` : ''}</div>`;
+    }).join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>FIXIT recovery plan</title>
+      <style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#2b3531;max-width:640px;margin:32px auto;padding:0 20px}
+      h1{font-size:22px;margin:0}.sub{color:#6b746f;font-size:13px;margin:2px 0 20px}
+      .inj{border:1px solid #e0dacd;border-radius:12px;padding:14px 16px;margin:10px 0}
+      .inj h3{margin:0 0 4px;font-size:16px}.pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;vertical-align:middle}
+      .t{color:#708E86;font-weight:600;margin:2px 0}.d{color:#44504c;font-size:13px;margin:4px 0}
+      p{font-size:13px;margin:4px 0}.foot{color:#98a2a0;font-size:11px;margin-top:24px;border-top:1px solid #eee;padding-top:10px}</style></head>
+      <body><h1>FIXIT · Your recovery plan</h1><div class="sub">Prepared for ${esc(p?.name || 'you')} · ${new Date().toLocaleDateString()}</div>
+      ${cards || '<p>No injuries recorded yet.</p>'}
+      <p class="foot">Patient-education material from your practitioner — not a diagnosis. Follow your clinician's guidance.</p></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) { alert('Allow pop-ups to print the handout.'); return; }
+    w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 350);
+  };
+
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
@@ -441,7 +469,12 @@ export default function Anatomy() {
 
           {/* injuries + healing loop */}
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={12} /> Injuries &amp; recovery {injuries.length ? `(${injuries.length})` : ''}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={12} /> Injuries &amp; recovery {injuries.length ? `(${injuries.length})` : ''}</div>
+              {injuries.length > 0 && (
+                <button onClick={printHandout} title="Print patient handout" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.66rem', fontWeight: 700, padding: '4px 9px', borderRadius: '999px', cursor: 'pointer', border: '1px solid var(--color-border)', background: 'white', color: 'var(--color-text)' }}><Printer size={12} /> Handout</button>
+              )}
+            </div>
             {!patientId ? (
               <div style={{ fontSize: '0.78rem', color: 'var(--color-text)', fontStyle: 'italic', padding: '4px 0' }}>Pick a patient to build their recovery record.</div>
             ) : injuries.length === 0 ? (
