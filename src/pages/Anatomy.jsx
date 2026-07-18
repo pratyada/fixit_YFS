@@ -2,7 +2,8 @@ import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import { Plane, Vector3 } from 'three';
-import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity, Sparkles } from 'lucide-react';
+import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity, Sparkles, Mic } from 'lucide-react';
+import { listenStream } from '../lib/voice';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
 import {
@@ -209,6 +210,7 @@ export default function Anatomy() {
   const [aiNote, setAiNote] = useState('');              // free-text clinical note
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMsg, setAiMsg] = useState('');
+  const [listening, setListening] = useState(false);
 
   useEffect(() => {
     getAllUsers().then((all) => setPatients(all.filter((u) => {
@@ -259,12 +261,13 @@ export default function Anatomy() {
   const removeInjury = async (inj) => { await deleteAnatomyInjury(patientId, inj.id); loadInjuries(patientId); };
 
   // AI: parse a free-text clinical note → mark the structures on the model.
-  const markFromNotes = async () => {
-    if (!patientId || !aiNote.trim()) return;
+  const markFromNotes = async (noteArg) => {
+    const note = (typeof noteArg === 'string' ? noteArg : aiNote).trim();
+    if (!patientId || !note) return;
     setAiBusy(true); setAiMsg('');
     try {
       const { injuries: parsed } = await marketing.parseAnatomy(
-        aiNote.trim(),
+        note,
         STRUCTURES.map((s) => ({ id: s.id, name: s.name })),
         KNEE_EXERCISES,
       );
@@ -285,6 +288,18 @@ export default function Anatomy() {
       setAiNote(''); setSelectedId(parsed[0].structureId);
     } catch (e) { setAiMsg('Could not parse — ' + (e.message || 'try again')); }
     finally { setAiBusy(false); }
+  };
+
+  // Voice: dictate the clinical note, then auto-mark the model.
+  const dictate = async () => {
+    if (listening || aiBusy) return;
+    setListening(true); setAiMsg('Listening… speak the injury');
+    try {
+      const t = await listenStream({ onInterim: (x) => setAiNote(x) });
+      setListening(false);
+      if (t && t.trim()) { setAiNote(t); await markFromNotes(t); }
+      else setAiMsg('Didn’t catch that — try again or type it.');
+    } catch { setListening(false); setAiMsg('Mic unavailable — type the note instead.'); }
   };
   const toggleEx = (ex) => setForm((f) => ({ ...f, exercises: f.exercises.some((x) => x.id === ex.id) ? f.exercises.filter((x) => x.id !== ex.id) : [...f.exercises, ex] }));
 
@@ -344,13 +359,18 @@ export default function Anatomy() {
           {/* AI: mark from clinical notes */}
           {patientId && (
             <div style={{ background: 'linear-gradient(135deg, #14262b, #101b1f)', border: '1px solid #2c4750', borderRadius: '14px', padding: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 700, color: '#7fd0dc', marginBottom: '8px' }}>
-                <Sparkles size={13} /> Mark from notes
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 700, color: '#7fd0dc' }}>
+                  <Sparkles size={13} /> Mark from notes
+                </div>
+                <button onClick={dictate} disabled={aiBusy} title="Dictate" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.66rem', fontWeight: 700, padding: '4px 10px', borderRadius: '999px', cursor: 'pointer', border: `1px solid ${listening ? '#e0655a' : '#2c4750'}`, background: listening ? 'rgba(224,101,90,0.2)' : 'rgba(255,255,255,0.04)', color: listening ? '#f0b8b0' : '#9fb0ba' }}>
+                  <Mic size={12} /> {listening ? 'Listening…' : 'Speak'}
+                </button>
               </div>
               <textarea value={aiNote} onChange={(e) => setAiNote(e.target.value)}
-                placeholder="e.g. ACL grade 3 tear, medial meniscus tear, early arthritis in the knee"
+                placeholder="Type or speak — e.g. “ACL grade 3 tear, medial meniscus tear, early arthritis in the knee”"
                 style={{ width: '100%', minHeight: '58px', boxSizing: 'border-box', resize: 'vertical', borderRadius: '8px', border: '1px solid #2c4750', background: 'rgba(255,255,255,0.04)', color: '#e9eef1', fontSize: '0.82rem', padding: '8px 10px' }} />
-              <button onClick={markFromNotes} disabled={aiBusy || !aiNote.trim()} style={{ marginTop: '8px', width: '100%', padding: '9px', borderRadius: '9px', border: 'none', cursor: aiBusy || !aiNote.trim() ? 'default' : 'pointer', background: 'linear-gradient(135deg,#57b6c4,#3d8593)', color: '#08181b', fontWeight: 800, fontSize: '0.82rem', opacity: aiBusy || !aiNote.trim() ? 0.6 : 1 }}>
+              <button onClick={() => markFromNotes()} disabled={aiBusy || !aiNote.trim()} style={{ marginTop: '8px', width: '100%', padding: '9px', borderRadius: '9px', border: 'none', cursor: aiBusy || !aiNote.trim() ? 'default' : 'pointer', background: 'linear-gradient(135deg,#57b6c4,#3d8593)', color: '#08181b', fontWeight: 800, fontSize: '0.82rem', opacity: aiBusy || !aiNote.trim() ? 0.6 : 1 }}>
                 {aiBusy ? 'Reading the note…' : 'Mark on the model →'}
               </button>
               {aiMsg && <div style={{ marginTop: '8px', fontSize: '0.72rem', color: '#9fb0ba' }}>{aiMsg}</div>}
