@@ -149,9 +149,9 @@ export default function EmailCampaigns() {
         <label style={lbl}>1 · Brand — sets the header, footer, sign-off &amp; the AI's writing voice</label>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {[
-            { key: 'fixit', label: 'FIXIT by YourFormSux', hint: 'clinical product newsletter' },
+            { key: 'fixit', label: 'FIXIT by Musée Initialize', hint: 'the product' },
             { key: 'yfs', label: 'YourFormSux', hint: 'community / events' },
-            { key: 'personal', label: 'Personal', hint: 'a personal note from you' },
+            { key: 'personal', label: 'Ashima (personal)', hint: 'a personal note' },
           ].map((b) => (
             <button key={b.key} onClick={() => edited(setBrand)(b.key)} style={{
               flex: '1 1 150px', textAlign: 'left', padding: '11px 14px', borderRadius: '10px', cursor: 'pointer',
@@ -173,7 +173,7 @@ export default function EmailCampaigns() {
       {/* Step 2: AI draft the topic into the chosen brand's voice */}
       <div style={{ ...card, display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 320px' }}>
-          <label style={lbl}>2 · AI draft — topic <span style={{ fontWeight: 400, color: 'var(--color-text)' }}>(written in the {brand === 'fixit' ? 'FIXIT' : brand === 'yfs' ? 'YourFormSux' : 'Personal'} voice)</span></label>
+          <label style={lbl}>2 · AI draft — topic <span style={{ fontWeight: 400, color: 'var(--color-text)' }}>(written in the {brand === 'fixit' ? 'FIXIT' : brand === 'yfs' ? 'YourFormSux' : 'Ashima'} voice)</span></label>
           <input style={inp} placeholder="e.g. FIFA finale watch party this Sunday" value={topic} onChange={(e) => setTopic(e.target.value)} />
         </div>
         <button onClick={generate} disabled={gen} style={{ ...btn, background: 'var(--color-accent)' }}>

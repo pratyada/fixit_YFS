@@ -213,18 +213,18 @@ function brandTheme(brand) {
       header: '',   // no brand bar — reads like a personal note
       footerLine: `You're receiving this because you're on my personal list.`,
       showSignature: true,
-      authorName: 'Prateek', authorTitle: 'YourFormSux',
+      authorName: 'Ashima', authorTitle: '',
       siteUrl: YFS_URL, siteLabel: 'yourformsux.com',
     };
   }
-  return {   // 'fixit' (default)
+  return {   // 'fixit' (default) — FIXIT is the product by Musée Initialize
     header: `<tr><td style="background:linear-gradient(135deg,#708E86,#4E4E53);padding:24px 32px">
     <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff">FIXIT</span>
-    <span style="font-size:12px;color:rgba(255,255,255,0.75);margin-left:8px">by YourFormSux</span>
+    <span style="font-size:12px;color:rgba(255,255,255,0.75);margin-left:8px">by Musée Initialize</span>
   </td></tr>`,
-    footerLine: `You're receiving this because you subscribed to FIXIT — evidence-based training & recovery.`,
+    footerLine: `You're receiving this because you subscribed to FIXIT — AI health &amp; movement, by Musée Initialize.`,
     showSignature: true,
-    authorName: DEFAULT_AUTHOR, authorTitle: DEFAULT_AUTHOR_TITLE,
+    authorName: 'The FIXIT Team', authorTitle: 'FIXIT · by Musée Initialize',
     siteUrl: APP_URL, siteLabel: APP_URL.replace(/^https?:\/\//, ''),
   };
 }
@@ -373,7 +373,7 @@ async function handleEmailGenerate(event) {
 
   let system;
   if (brand === 'personal') {
-    const who = (authorName && authorName.trim()) || 'the founder of YourFormSux';
+    const who = (authorName && authorName.trim()) || 'Ashima';
     system = `You are writing a SHORT, genuinely PERSONAL email as ${who}, in the first person ("I"/"we"), like writing to a friend or a valued member — NOT a corporate newsletter. Warm, human, a little excited, 90–170 words. NO infographics, NO stat/research boxes, NO clinical jargon, NO headings. Just a few short <p style="margin:0 0 14px">…</p> paragraphs. ${htmlRules}
 ${ctaBtn('Count me in')} — use warm personal button text (e.g. "Count me in", "Save my spot"). Do not write a sign-off/signature; the template adds it as ${who}.`;
   } else if (brand === 'yfs') {

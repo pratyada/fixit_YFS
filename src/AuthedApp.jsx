@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send, Palette, Mic, Bone } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send, Palette, Mic, Bone, CreditCard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClinicProvider, useClinic } from './contexts/ClinicContext';
@@ -46,6 +46,7 @@ const Health = lazy(() => import('./pages/Health'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const VoiceKiosk = lazy(() => import('./pages/VoiceKiosk'));
 const Anatomy = lazy(() => import('./pages/Anatomy'));
+const Billing = lazy(() => import('./pages/Billing'));
 const Subscribers = lazy(() => import('./pages/Subscribers'));
 const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns'));
 const Creatives = lazy(() => import('./pages/Creatives'));
@@ -122,6 +123,7 @@ const ADMIN_TABS = [
   { to: '/creatives', icon: Palette, labelKey: 'Creatives' },
   { to: '/blog', icon: PenTool, labelKey: 'Blog' },
   { to: '/sent', icon: Send, labelKey: 'Sent' },
+  { to: '/billing', icon: CreditCard, labelKey: 'Subscription' },
 ];
 
 // Placeholder for marketing sections not yet built (Email=Phase 2, Blog=Phase 3,
@@ -366,6 +368,7 @@ function AppLayout() {
                 <Route path="/creatives" element={<Creatives />} />
                 <Route path="/blog" element={<MarketingSoon title="Blog" phase={3} />} />
                 <Route path="/sent" element={<SentHistory />} />
+                <Route path="/billing" element={<Billing />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </>
             ) : isPractitioner ? (
