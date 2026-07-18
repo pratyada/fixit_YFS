@@ -572,6 +572,27 @@ ${exList}`;
   return json(200, { injuries });
 }
 
+// Compact clinical summary of a patient from notes + injuries + rehab scores.
+async function handleAnatomySummary(event) {
+  if (!ANTHROPIC_API_KEY) throw new HttpError(400, 'ANTHROPIC_API_KEY not set');
+  const { background = '', injuries = [], sessions = [] } = parseBody(event);
+  const inj = injuries.map((i) => `- ${i.structureName}: ${i.injuryType}${i.grade ? ` grade ${i.grade}` : ''}${i.side ? ` (${i.side})` : ''} — ${i.status}${i.note ? `; ${i.note}` : ''}`).join('\n') || '(none)';
+  const perf = sessions.slice(0, 30).map((s) => `- ${s.exerciseName || s.exerciseId}: ${s.aiScore}`).join('\n') || '(no form checks yet)';
+  const system = `You write a concise clinical patient summary for a physiotherapist reviewing a case before a session. 3-5 short sentences, plain and factual. Cover who they are, active injuries and recovery status, and how their rehab form is trending. Do NOT diagnose or prescribe — summarize what's on record. No preamble, just the summary.`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5', max_tokens: 400, system,
+      messages: [{ role: 'user', content: `Background notes:\n${background || '(none)'}\n\nMarked injuries:\n${inj}\n\nRecent rehab form scores:\n${perf}` }],
+    }),
+  });
+  if (!res.ok) throw new HttpError(502, `Anthropic error ${res.status}`);
+  const data = await res.json();
+  const text = (data.content || []).find((c) => c.type === 'text')?.text || '';
+  return json(200, { summary: text.trim() });
+}
+
 // ── Kiosk (voice) ──
 // Claude-driven coach brain. Takes the full spoken conversation so far and
 // returns the next thing to say out loud — genuinely context-aware (it answers
@@ -730,6 +751,7 @@ export const handler = async (event) => {
     if (path.endsWith('/marketing/upload-image') && method === 'POST') return await handleUploadImage(event);
     if (path.endsWith('/marketing/creative/generate') && method === 'POST') return await handleCreativeGenerate(event);
     if (path.endsWith('/marketing/anatomy/parse') && method === 'POST') return await handleAnatomyParse(event);
+    if (path.endsWith('/marketing/anatomy/summary') && method === 'POST') return await handleAnatomySummary(event);
     if (path.endsWith('/marketing/kiosk/stt-token') && method === 'POST') return await handleKioskSttToken();
     if (path.endsWith('/marketing/kiosk/chat') && method === 'POST') return await handleKioskChat(event);
     if (path.endsWith('/marketing/kiosk/speak') && method === 'POST') return await handleKioskSpeak(event);

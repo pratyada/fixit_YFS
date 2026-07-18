@@ -9,7 +9,7 @@ import { listenStream } from '../lib/voice';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
 import {
-  getAllUsers, getAnatomyInjuries, addAnatomyInjury, updateAnatomyInjury, deleteAnatomyInjury, getSessions,
+  getAllUsers, getAnatomyInjuries, addAnatomyInjury, updateAnatomyInjury, deleteAnatomyInjury, getSessions, updatePatientDossier,
 } from '../lib/firestore';
 import { marketing } from '../lib/marketingApi';
 
@@ -249,6 +249,10 @@ export default function Anatomy() {
   const [aiMsg, setAiMsg] = useState('');
   const [listening, setListening] = useState(false);
   const [arOpen, setArOpen] = useState(false);
+  const [notes, setNotes] = useState('');           // patient background notes
+  const [summary, setSummary] = useState('');       // AI patient summary
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
 
   useEffect(() => {
     getAllUsers().then((all) => setPatients(all.filter((u) => {
@@ -272,6 +276,35 @@ export default function Anatomy() {
     const matched = sessions.filter((s) => ids.has(s.exerciseId) && typeof s.aiScore === 'number');
     if (!matched.length) return null;                    // sessions are desc by createdAt
     return { latest: matched[0].aiScore, count: matched.length, delta: matched[0].aiScore - matched[matched.length - 1].aiScore };
+  };
+
+  // ── Patient dossier: notes + AI summary + assigned exercises & performance ──
+  const patient = useMemo(() => patients.find((p) => p.id === patientId) || null, [patients, patientId]);
+  useEffect(() => { setNotes(patient?.background || ''); setSummary(patient?.aiSummary || ''); }, [patient]);
+  const reloadPatients = () => getAllUsers().then((all) => setPatients(all.filter((u) => {
+    const r = u.roles && Array.isArray(u.roles) ? u.roles : [u.role];
+    return r.includes('patient');
+  }))).catch(() => {});
+  const assignedExercises = useMemo(() => {
+    const m = {};
+    for (const inj of injuries) for (const ex of (inj.exercises || [])) m[ex.id] = ex.name;
+    return Object.entries(m).map(([id, name]) => {
+      const matched = sessions.filter((s) => s.exerciseId === id && typeof s.aiScore === 'number');
+      return { id, name, latest: matched.length ? matched[0].aiScore : null, count: matched.length };
+    });
+  }, [injuries, sessions]);
+  const saveNotes = async () => {
+    if (!patientId) return;
+    setSavingNotes(true);
+    try { await updatePatientDossier(patientId, { background: notes }); reloadPatients(); } finally { setSavingNotes(false); }
+  };
+  const genSummary = async () => {
+    if (!patientId) return;
+    setSummarizing(true);
+    try {
+      const { summary: s } = await marketing.summarizePatient({ background: notes, injuries, sessions: sessions.slice(0, 30) });
+      setSummary(s); await updatePatientDossier(patientId, { aiSummary: s });
+    } catch { /* */ } finally { setSummarizing(false); }
   };
 
   const injuryMap = useMemo(() => Object.fromEntries(injuries.map((i) => [i.structureId, i])), [injuries]);
@@ -454,6 +487,37 @@ export default function Anatomy() {
 
         {/* right rail */}
         <div style={{ flex: '0 0 320px', minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Patient dossier — notes + AI summary + assigned exercises & performance */}
+          {patientId && (
+            <div style={{ background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)', borderRadius: '14px', padding: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--color-secondary)' }}>{patient?.name || patient?.email}</div>
+                <span style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)' }}>Patient</span>
+              </div>
+              <label style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)' }}>Background notes</label>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Injuries, goals, history, contraindications… (admin-only)"
+                style={{ ...inp, minHeight: '52px', resize: 'vertical', marginTop: '4px' }} />
+              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                <button onClick={saveNotes} disabled={savingNotes} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--color-secondary)', color: 'white', fontWeight: 700, fontSize: '0.72rem' }}>{savingNotes ? 'Saving…' : 'Save notes'}</button>
+                <button onClick={genSummary} disabled={summarizing} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', cursor: 'pointer', background: 'white', color: 'var(--color-secondary)', fontWeight: 700, fontSize: '0.72rem' }}><Sparkles size={12} /> {summarizing ? 'Summarizing…' : 'AI summary'}</button>
+              </div>
+              {summary && <div style={{ marginTop: '8px', fontSize: '0.76rem', color: 'var(--color-text)', background: 'white', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '8px 10px', lineHeight: 1.5 }}>{summary}</div>}
+              {assignedExercises.length > 0 && (
+                <div style={{ marginTop: '10px' }}>
+                  <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', marginBottom: '4px' }}>Assigned exercises &amp; performance</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    {assignedExercises.map((ex) => (
+                      <div key={ex.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: 'var(--color-text)' }}>
+                        <span>🏋 {ex.name}</span>
+                        {ex.latest != null ? <span style={{ fontWeight: 700, color: ex.latest >= 80 ? '#2e7d32' : ex.latest >= 60 ? '#b8860b' : '#c0392b' }}>{ex.latest}<span style={{ opacity: 0.5, fontWeight: 400 }}> · {ex.count}✓</span></span> : <span style={{ opacity: 0.5 }}>not done</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* AI: mark from clinical notes */}
           {patientId && (
             <div style={{ background: 'linear-gradient(135deg, #14262b, #101b1f)', border: '1px solid #2c4750', borderRadius: '14px', padding: '14px' }}>

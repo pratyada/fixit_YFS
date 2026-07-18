@@ -122,6 +122,11 @@ export async function addSession(uid, data) {
   });
 }
 
+// ─── Patient dossier — background notes + AI summary on users/{uid} ───
+export async function updatePatientDossier(uid, data) {
+  await updateDoc(doc(db, 'users', uid), { ...data, updatedAt: serverTimestamp() });
+}
+
 // ─── Anatomy injuries (3D consult) — users/{uid}/anatomyInjuries ───
 export async function getAnatomyInjuries(uid) {
   return queryDocs(query(collection(db, 'users', uid, 'anatomyInjuries'), orderBy('createdAt', 'desc')));
