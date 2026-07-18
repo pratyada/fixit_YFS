@@ -122,6 +122,24 @@ export async function addSession(uid, data) {
   });
 }
 
+// ─── Anatomy injuries (3D consult) — users/{uid}/anatomyInjuries ───
+export async function getAnatomyInjuries(uid) {
+  return queryDocs(query(collection(db, 'users', uid, 'anatomyInjuries'), orderBy('createdAt', 'desc')));
+}
+export async function addAnatomyInjury(uid, data) {
+  return addDoc(collection(db, 'users', uid, 'anatomyInjuries'), {
+    status: 'acute', healingLog: [], exercises: [],
+    ...data,
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+  });
+}
+export async function updateAnatomyInjury(uid, id, data) {
+  await updateDoc(doc(db, 'users', uid, 'anatomyInjuries', id), { ...data, updatedAt: serverTimestamp() });
+}
+export async function deleteAnatomyInjury(uid, id) {
+  await deleteDoc(doc(db, 'users', uid, 'anatomyInjuries', id));
+}
+
 export async function updateSession(uid, sessionId, data) {
   await updateDoc(doc(db, 'users', uid, 'sessions', sessionId), {
     ...data,

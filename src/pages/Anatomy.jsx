@@ -1,61 +1,66 @@
-import { useRef, useState, useMemo, Suspense } from 'react';
+import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
-import { Bone, RotateCcw, Layers, X } from 'lucide-react';
+import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity } from 'lucide-react';
+import { FIXIT_EXERCISES } from '../data/fixit-exercises';
+import { GYM_EXERCISES } from '../data/gym-exercises';
+import {
+  getAllUsers, getAnatomyInjuries, addAnatomyInjury, updateAnatomyInjury, deleteAnatomyInjury,
+} from '../lib/firestore';
 
-// ── Phase-0 anatomy spike ──────────────────────────────────────────────
-// A procedural KNEE where every structure is its OWN named, selectable mesh.
-// This proves the product mechanic (click → highlight → isolate → annotate).
-// A real segmented anatomy GLB drops into the SAME selection code later —
-// just replace STRUCTURES-driven meshes with GLB nodes and keep name→mesh map.
+// ── AI Anatomy Consult — the full loop ─────────────────────────────────
+// Body-part detail → mark injury → linked exercises → healing over time,
+// persisted per patient (users/{uid}/anatomyInjuries). The 3D knee is a
+// procedural placeholder; a real segmented GLB drops into KneeModel (see
+// GLB_INTEGRATION below) using the same structure IDs + selection logic.
 
 const LAYER_COLORS = { bone: '#e9e3d5', ligament: '#cbbd97', cartilage: '#a9c4d6', tendon: '#ddc59c' };
 const LAYER_LABELS = { bone: 'Bones', ligament: 'Ligaments', cartilage: 'Cartilage', tendon: 'Tendon' };
+const STATUS = { acute: { c: '#e0655a', label: 'Acute' }, healing: { c: '#d8ab4f', label: 'Healing' }, recovered: { c: '#6fc08a', label: 'Recovered' } };
+const STATUS_ORDER = ['acute', 'healing', 'recovered'];
+const INJURY_TYPES = ['Sprain', 'Tear', 'Strain', 'Tendinopathy', 'Inflammation', 'Bruise', 'Post-surgery'];
 
-// Each structure = one selectable group of primitive parts. Approximate, not
-// anatomically exact — enough to be recognizable and to exercise the interaction.
 const STRUCTURES = [
-  { id: 'femur', name: 'Femur', layer: 'bone', label: [0, 1.7, 0],
-    desc: 'Thigh bone — forms the top of the knee joint.',
-    parts: [
-      { geo: 'cyl', args: [0.33, 0.36, 2.2, 20], pos: [0, 1.55, 0] },
-      { geo: 'sph', args: [0.5, 24, 20], pos: [-0.42, 0.35, 0], scale: [1, 0.8, 1.15] },
-      { geo: 'sph', args: [0.5, 24, 20], pos: [0.42, 0.35, 0], scale: [1, 0.8, 1.15] },
-    ] },
-  { id: 'tibia', name: 'Tibia', layer: 'bone', label: [0, -1.6, 0.2],
-    desc: 'Shin bone — the main weight-bearing bone below the knee.',
-    parts: [
-      { geo: 'cyl', args: [0.3, 0.34, 2.0, 20], pos: [0, -1.5, 0] },
-      { geo: 'cyl', args: [0.6, 0.55, 0.3, 24], pos: [0, -0.42, 0] },
-    ] },
-  { id: 'fibula', name: 'Fibula', layer: 'bone', label: [0.7, -1.5, 0],
-    desc: 'Slender outer lower-leg bone; anchors the LCL.',
+  { id: 'femur', name: 'Femur', layer: 'bone', label: [0, 1.7, 0], desc: 'Thigh bone — forms the top of the knee joint.',
+    parts: [{ geo: 'cyl', args: [0.33, 0.36, 2.2, 20], pos: [0, 1.55, 0] }, { geo: 'sph', args: [0.5, 24, 20], pos: [-0.42, 0.35, 0], scale: [1, 0.8, 1.15] }, { geo: 'sph', args: [0.5, 24, 20], pos: [0.42, 0.35, 0], scale: [1, 0.8, 1.15] }] },
+  { id: 'tibia', name: 'Tibia', layer: 'bone', label: [0, -1.6, 0.2], desc: 'Shin bone — the main weight-bearing bone below the knee.',
+    parts: [{ geo: 'cyl', args: [0.3, 0.34, 2.0, 20], pos: [0, -1.5, 0] }, { geo: 'cyl', args: [0.6, 0.55, 0.3, 24], pos: [0, -0.42, 0] }] },
+  { id: 'fibula', name: 'Fibula', layer: 'bone', label: [0.7, -1.5, 0], desc: 'Slender outer lower-leg bone; anchors the LCL.',
     parts: [{ geo: 'cyl', args: [0.11, 0.13, 1.9, 14], pos: [0.63, -1.45, -0.05] }] },
-  { id: 'patella', name: 'Patella', layer: 'bone', label: [0, 0.25, 0.9],
-    desc: 'Kneecap — glides in front and protects the joint.',
+  { id: 'patella', name: 'Patella', layer: 'bone', label: [0, 0.25, 0.9], desc: 'Kneecap — glides in front and protects the joint.',
     parts: [{ geo: 'sph', args: [0.34, 24, 20], pos: [0, 0.2, 0.62], scale: [1, 1.25, 0.55] }] },
-  { id: 'acl', name: 'ACL', layer: 'ligament', label: [0.25, 0, 0.35],
-    desc: 'Anterior cruciate ligament — stops the shin sliding forward; the classic sports tear.',
+  { id: 'acl', name: 'ACL', layer: 'ligament', label: [0.25, 0, 0.35], desc: 'Anterior cruciate ligament — stops the shin sliding forward; the classic sports tear.',
     parts: [{ geo: 'cyl', args: [0.08, 0.08, 1.1, 12], pos: [0.03, -0.02, 0.06], rot: [0.5, 0, 0.4] }] },
-  { id: 'pcl', name: 'PCL', layer: 'ligament', label: [-0.25, 0, -0.35],
-    desc: 'Posterior cruciate ligament — stops the shin sliding backward.',
+  { id: 'pcl', name: 'PCL', layer: 'ligament', label: [-0.25, 0, -0.35], desc: 'Posterior cruciate ligament — stops the shin sliding backward.',
     parts: [{ geo: 'cyl', args: [0.085, 0.085, 1.1, 12], pos: [-0.03, -0.02, -0.12], rot: [-0.55, 0, -0.35] }] },
-  { id: 'mcl', name: 'MCL', layer: 'ligament', label: [-0.75, 0, 0],
-    desc: 'Medial collateral — inner-side stabilizer; sprained by blows to the outer knee.',
+  { id: 'mcl', name: 'MCL', layer: 'ligament', label: [-0.75, 0, 0], desc: 'Medial collateral — inner-side stabilizer; sprained by blows to the outer knee.',
     parts: [{ geo: 'cyl', args: [0.075, 0.075, 1.45, 12], pos: [-0.62, -0.05, 0.02], rot: [0, 0, 0.08] }] },
-  { id: 'lcl', name: 'LCL', layer: 'ligament', label: [0.8, 0, -0.1],
-    desc: 'Lateral collateral — outer-side stabilizer.',
+  { id: 'lcl', name: 'LCL', layer: 'ligament', label: [0.8, 0, -0.1], desc: 'Lateral collateral — outer-side stabilizer.',
     parts: [{ geo: 'cyl', args: [0.07, 0.07, 1.4, 12], pos: [0.67, -0.05, -0.05], rot: [0, 0, -0.08] }] },
-  { id: 'medial_meniscus', name: 'Medial meniscus', layer: 'cartilage', label: [-0.25, -0.28, 0.4],
-    desc: 'Inner shock-absorbing cartilage; commonly torn with twisting.',
+  { id: 'medial_meniscus', name: 'Medial meniscus', layer: 'cartilage', label: [-0.25, -0.28, 0.4], desc: 'Inner shock-absorbing cartilage; commonly torn with twisting.',
     parts: [{ geo: 'tor', args: [0.34, 0.09, 10, 22], pos: [-0.2, -0.27, 0.02], rot: [1.5708, 0, 0], scale: [1, 1, 0.5] }] },
-  { id: 'lateral_meniscus', name: 'Lateral meniscus', layer: 'cartilage', label: [0.25, -0.28, 0.4],
-    desc: 'Outer shock-absorbing cartilage.',
+  { id: 'lateral_meniscus', name: 'Lateral meniscus', layer: 'cartilage', label: [0.25, -0.28, 0.4], desc: 'Outer shock-absorbing cartilage.',
     parts: [{ geo: 'tor', args: [0.34, 0.09, 10, 22], pos: [0.2, -0.27, 0.02], rot: [1.5708, 0, 0], scale: [1, 1, 0.5] }] },
-  { id: 'patellar_tendon', name: 'Patellar tendon', layer: 'tendon', label: [0, -0.45, 0.7],
-    desc: 'Connects the kneecap to the shin; drives knee extension.',
+  { id: 'patellar_tendon', name: 'Patellar tendon', layer: 'tendon', label: [0, -0.45, 0.7], desc: 'Connects the kneecap to the shin; drives knee extension.',
     parts: [{ geo: 'cyl', args: [0.09, 0.09, 0.8, 12], pos: [0, -0.4, 0.5], rot: [0.35, 0, 0] }] },
 ];
+const STRUCT_BY_ID = Object.fromEntries(STRUCTURES.map((s) => [s.id, s]));
+
+/* GLB_INTEGRATION — to swap in a real segmented knee:
+   1) drop a Draco/KTX2 GLB at public/models/knee.glb with separately-named meshes
+   2) map its mesh names → our structure ids in GLB_NAME_MAP below
+   3) set USE_GLB = true. The selection/isolate/injury logic is unchanged —
+      it keys off structure ids, not geometry. */
+// const GLB_NAME_MAP = { Femur: 'femur', ACL_Ligament: 'acl', /* … */ };
+const USE_GLB = false;
+
+// Knee-relevant exercises pulled from the existing library.
+const KNEE_MUSCLES = ['Quadriceps', 'Hamstrings', 'Glutes', 'Calves'];
+const KNEE_EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES]
+  .filter((e) => e.bodyPart === 'Lower Body' || (e.musclesTargeted || []).some((m) => KNEE_MUSCLES.includes(m)))
+  .map((e) => ({ id: e.id, name: e.name }))
+  .filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i)
+  .slice(0, 16);
 
 function Geo({ p }) {
   if (p.geo === 'cyl') return <cylinderGeometry args={p.args} />;
@@ -64,20 +69,20 @@ function Geo({ p }) {
   return null;
 }
 
-function Structure({ s, selected, anySelected, visible, onSelect }) {
+function Structure({ s, selected, anySelected, visible, injuryStatus, onSelect }) {
   const matRefs = useRef([]);
   const [hover, setHover] = useState(false);
   const ghost = anySelected && !selected;
-
-  // Gentle pulse on the selected structure so the eye lands on it.
   useFrame(({ clock }) => {
     if (!selected) return;
     const p = 0.5 + 0.35 * Math.sin(clock.elapsedTime * 4);
     matRefs.current.forEach((m) => { if (m) m.emissiveIntensity = p; });
   });
-
   if (!visible) return null;
-  const base = LAYER_COLORS[s.layer];
+  const injColor = injuryStatus ? STATUS[injuryStatus].c : null;
+  const base = injColor || LAYER_COLORS[s.layer];
+  const emissive = selected ? '#e0655a' : injColor ? injColor : hover ? '#3d8593' : '#000000';
+  const emissiveInt = selected ? 0.6 : injColor ? 0.35 : hover ? 0.5 : 0;
   return (
     <group
       onClick={(e) => { e.stopPropagation(); onSelect(s.id); }}
@@ -90,8 +95,7 @@ function Structure({ s, selected, anySelected, visible, onSelect }) {
           <meshStandardMaterial
             ref={(el) => { matRefs.current[i] = el; }}
             color={selected ? '#f4e5e0' : base}
-            emissive={selected ? '#e0655a' : hover ? '#3d8593' : '#000000'}
-            emissiveIntensity={selected ? 0.6 : hover ? 0.5 : 0}
+            emissive={emissive} emissiveIntensity={emissiveInt}
             roughness={0.5} metalness={0.05}
             transparent={ghost} opacity={ghost ? 0.09 : 1} depthWrite={!ghost}
           />
@@ -101,35 +105,31 @@ function Structure({ s, selected, anySelected, visible, onSelect }) {
   );
 }
 
-function Scene({ selectedId, setSelectedId, layers }) {
-  const selected = STRUCTURES.find((s) => s.id === selectedId) || null;
+function Scene({ selectedId, setSelectedId, layers, injuryMap }) {
+  const selected = STRUCT_BY_ID[selectedId];
   return (
-    <Canvas
-      camera={{ position: [3.6, 0.8, 4.6], fov: 42 }}
-      dpr={[1, 2]} gl={{ antialias: true }}
-      onPointerMissed={() => setSelectedId(null)}
-    >
+    <Canvas camera={{ position: [3.6, 0.8, 4.6], fov: 42 }} dpr={[1, 2]} gl={{ antialias: true }} onPointerMissed={() => setSelectedId(null)}>
       <color attach="background" args={['#0c0f12']} />
       <ambientLight intensity={0.55} />
       <directionalLight position={[4, 6, 5]} intensity={1.15} />
       <directionalLight position={[-5, 2, -4]} intensity={0.4} color="#9fd0da" />
       <Suspense fallback={null}>
         {STRUCTURES.map((s) => (
-          <Structure
-            key={s.id} s={s}
-            selected={s.id === selectedId}
-            anySelected={!!selectedId}
-            visible={layers[s.layer]}
-            onSelect={setSelectedId}
-          />
+          <Structure key={s.id} s={s} selected={s.id === selectedId} anySelected={!!selectedId}
+            visible={layers[s.layer]} injuryStatus={injuryMap[s.id]?.status || null} onSelect={setSelectedId} />
         ))}
+        {/* persistent injury tags (hidden while a structure is isolated) */}
+        {!selectedId && Object.entries(injuryMap).map(([id, inj]) => {
+          const s = STRUCT_BY_ID[id]; if (!s || !layers[s.layer]) return null;
+          return (
+            <Html key={id} position={s.label} center distanceFactor={9} pointerEvents="none" zIndexRange={[10, 0]}>
+              <div style={{ background: STATUS[inj.status].c, color: '#1a1a1a', fontFamily: 'system-ui', fontSize: '11px', fontWeight: 800, padding: '3px 9px', borderRadius: '999px', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>{s.name}</div>
+            </Html>
+          );
+        })}
         {selected && layers[selected.layer] && (
-          <Html position={selected.label} center distanceFactor={9} pointerEvents="none" zIndexRange={[10, 0]}>
-            <div style={{
-              background: 'rgba(224,101,90,0.92)', color: '#fff', fontFamily: 'system-ui',
-              fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px',
-              whiteSpace: 'nowrap', boxShadow: '0 6px 18px rgba(0,0,0,0.4)', transform: 'translateY(-8px)',
-            }}>{selected.name}</div>
+          <Html position={selected.label} center distanceFactor={9} pointerEvents="none" zIndexRange={[11, 0]}>
+            <div style={{ background: 'rgba(224,101,90,0.94)', color: '#fff', fontFamily: 'system-ui', fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', boxShadow: '0 6px 18px rgba(0,0,0,0.4)', transform: 'translateY(-8px)' }}>{selected.name}</div>
           </Html>
         )}
       </Suspense>
@@ -138,121 +138,189 @@ function Scene({ selectedId, setSelectedId, layers }) {
   );
 }
 
+const inp = { width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '0.82rem', boxSizing: 'border-box' };
+const chip = (active, color) => ({ padding: '5px 11px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${active ? color : 'var(--color-border)'}`, background: active ? color + '22' : 'white', color: active ? color : 'var(--color-text)' });
+
 export default function Anatomy() {
+  const [patients, setPatients] = useState([]);
+  const [patientId, setPatientId] = useState('');
+  const [injuries, setInjuries] = useState([]);          // for selected patient
   const [selectedId, setSelectedId] = useState(null);
   const [layers, setLayers] = useState({ bone: true, ligament: true, cartilage: true, tendon: true });
-  const selected = STRUCTURES.find((s) => s.id === selectedId) || null;
+  const [form, setForm] = useState(null);                // new-injury draft
+  const [busy, setBusy] = useState(false);
 
-  const grouped = useMemo(() => {
-    const g = {};
-    for (const s of STRUCTURES) (g[s.layer] ||= []).push(s);
-    return g;
+  useEffect(() => {
+    getAllUsers().then((all) => setPatients(all.filter((u) => {
+      const roles = u.roles && Array.isArray(u.roles) ? u.roles : [u.role];
+      return roles.includes('patient');
+    }))).catch(() => {});
   }, []);
 
-  const pick = (id) => {
-    const s = STRUCTURES.find((x) => x.id === id);
-    if (s && !layers[s.layer]) setLayers((l) => ({ ...l, [s.layer]: true }));
-    setSelectedId(id);
+  const loadInjuries = (uid) => {
+    if (!uid) { setInjuries([]); return; }
+    getAnatomyInjuries(uid).then(setInjuries).catch(() => setInjuries([]));
   };
+  useEffect(() => { loadInjuries(patientId); }, [patientId]);
+
+  const injuryMap = useMemo(() => Object.fromEntries(injuries.map((i) => [i.structureId, i])), [injuries]);
+  const selected = STRUCT_BY_ID[selectedId];
+  const selectedInjury = selected ? injuryMap[selected.id] : null;
+
+  const pick = (id) => {
+    const s = STRUCT_BY_ID[id];
+    if (s && !layers[s.layer]) setLayers((l) => ({ ...l, [s.layer]: true }));
+    setSelectedId(id); setForm(null);
+  };
+
+  const startMark = () => setForm({ injuryType: 'Sprain', grade: '', side: '', note: '', exercises: [] });
+
+  const saveInjury = async () => {
+    if (!patientId || !selected) return;
+    setBusy(true);
+    try {
+      await addAnatomyInjury(patientId, {
+        structureId: selected.id, structureName: selected.name,
+        injuryType: form.injuryType, grade: form.grade, side: form.side, note: form.note,
+        exercises: form.exercises, status: 'acute',
+        healingLog: [{ date: new Date().toISOString(), status: 'acute', note: 'Injury marked' }],
+      });
+      setForm(null); loadInjuries(patientId);
+    } finally { setBusy(false); }
+  };
+
+  const advance = async (inj) => {
+    const next = STATUS_ORDER[Math.min(STATUS_ORDER.indexOf(inj.status) + 1, STATUS_ORDER.length - 1)];
+    if (next === inj.status) return;
+    const log = [...(inj.healingLog || []), { date: new Date().toISOString(), status: next, note: `Advanced to ${STATUS[next].label}` }];
+    await updateAnatomyInjury(patientId, inj.id, { status: next, healingLog: log });
+    loadInjuries(patientId);
+  };
+  const removeInjury = async (inj) => { await deleteAnatomyInjury(patientId, inj.id); loadInjuries(patientId); };
+  const toggleEx = (ex) => setForm((f) => ({ ...f, exercises: f.exercises.some((x) => x.id === ex.id) ? f.exercises.filter((x) => x.id !== ex.id) : [...f.exercises, ex] }));
 
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-          <Bone size={22} /> Anatomy <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-accent)', border: '1px solid var(--color-border)', padding: '2px 8px', borderRadius: '999px' }}>Knee · Phase 0</span>
+          <Bone size={22} /> Anatomy Consult <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-accent)', border: '1px solid var(--color-border)', padding: '2px 8px', borderRadius: '999px' }}>Knee</span>
         </h1>
-        <span style={{ fontSize: '0.72rem', color: 'var(--color-text)' }}>Drag to rotate · scroll to zoom · click a structure</span>
+        <select value={patientId} onChange={(e) => { setPatientId(e.target.value); setSelectedId(null); setForm(null); }} style={{ ...inp, width: 'auto', fontWeight: 600 }}>
+          <option value="">Demo (no patient)</option>
+          {patients.map((p) => <option key={p.id} value={p.id}>{p.name || p.email}</option>)}
+        </select>
       </div>
 
       <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap' }}>
-        {/* 3D viewport */}
-        <div style={{
-          position: 'relative', flex: '1 1 460px', minWidth: '300px', height: '72vh', minHeight: '440px',
-          borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--color-border)', background: '#0c0f12',
-        }}>
-          <Scene selectedId={selectedId} setSelectedId={setSelectedId} layers={layers} />
-
-          {/* Layer toggles (overlay) */}
+        {/* viewport */}
+        <div style={{ position: 'relative', flex: '1 1 440px', minWidth: '300px', height: '74vh', minHeight: '440px', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--color-border)', background: '#0c0f12' }}>
+          <Scene selectedId={selectedId} setSelectedId={setSelectedId} layers={layers} injuryMap={injuryMap} />
           <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: '6px', flexWrap: 'wrap', maxWidth: '80%' }}>
             {Object.keys(LAYER_LABELS).map((k) => (
-              <button key={k} onClick={() => setLayers((l) => ({ ...l, [k]: !l[k] }))} style={{
-                display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.66rem', fontWeight: 700,
-                padding: '5px 10px', borderRadius: '999px', cursor: 'pointer',
-                border: `1px solid ${layers[k] ? LAYER_COLORS[k] : 'rgba(255,255,255,0.15)'}`,
-                background: layers[k] ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.3)',
-                color: layers[k] ? '#fff' : 'rgba(255,255,255,0.4)', backdropFilter: 'blur(6px)',
-              }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: LAYER_COLORS[k], opacity: layers[k] ? 1 : 0.4 }} />
-                {LAYER_LABELS[k]}
+              <button key={k} onClick={() => setLayers((l) => ({ ...l, [k]: !l[k] }))} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.66rem', fontWeight: 700, padding: '5px 10px', borderRadius: '999px', cursor: 'pointer', border: `1px solid ${layers[k] ? LAYER_COLORS[k] : 'rgba(255,255,255,0.15)'}`, background: layers[k] ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.3)', color: layers[k] ? '#fff' : 'rgba(255,255,255,0.4)', backdropFilter: 'blur(6px)' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: LAYER_COLORS[k], opacity: layers[k] ? 1 : 0.4 }} /> {LAYER_LABELS[k]}
               </button>
             ))}
           </div>
-
           {selectedId && (
-            <button onClick={() => setSelectedId(null)} style={{
-              position: 'absolute', top: 12, right: 12, display: 'flex', alignItems: 'center', gap: '5px',
-              fontSize: '0.7rem', fontWeight: 700, padding: '6px 12px', borderRadius: '999px', cursor: 'pointer',
-              border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.4)', color: '#fff', backdropFilter: 'blur(6px)',
-            }}><RotateCcw size={12} /> Show all</button>
+            <button onClick={() => { setSelectedId(null); setForm(null); }} style={{ position: 'absolute', top: 12, right: 12, display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, padding: '6px 12px', borderRadius: '999px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.4)', color: '#fff', backdropFilter: 'blur(6px)' }}><RotateCcw size={12} /> Show all</button>
           )}
+          {/* legend */}
+          <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', gap: '10px', fontSize: '0.62rem', color: 'rgba(255,255,255,0.7)', fontFamily: 'system-ui' }}>
+            {Object.entries(STATUS).map(([k, v]) => <span key={k} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: v.c }} />{v.label}</span>)}
+          </div>
         </div>
 
-        {/* Structure panel */}
-        <div style={{
-          flex: '0 0 300px', minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '12px',
-        }}>
-          {/* Selected info */}
-          <div style={{
-            background: selected ? 'rgba(224,101,90,0.08)' : 'var(--color-bg-alt)',
-            border: `1px solid ${selected ? 'rgba(224,101,90,0.35)' : 'var(--color-border)'}`,
-            borderRadius: '14px', padding: '16px', minHeight: '92px',
-          }}>
-            {selected ? (
+        {/* right rail */}
+        <div style={{ flex: '0 0 320px', minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* selected structure / mark form / injury detail */}
+          <div style={{ background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)', borderRadius: '14px', padding: '16px' }}>
+            {!selected ? (
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}>Click a structure to inspect it{patientId ? ' and mark an injury' : ''}.</div>
+            ) : form ? (
+              <>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '10px' }}>Mark injury · {selected.name}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <select value={form.injuryType} onChange={(e) => setForm({ ...form, injuryType: e.target.value })} style={inp}>{INJURY_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {['1', '2', '3'].map((g) => <button key={g} onClick={() => setForm({ ...form, grade: form.grade === g ? '' : g })} style={chip(form.grade === g, '#d8ab4f')}>Grade {g}</button>)}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {['left', 'right'].map((sd) => <button key={sd} onClick={() => setForm({ ...form, side: form.side === sd ? '' : sd })} style={chip(form.side === sd, '#3d8593')}>{sd[0].toUpperCase() + sd.slice(1)}</button>)}
+                  </div>
+                  <textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Clinical note (optional)" style={{ ...inp, minHeight: '52px', resize: 'vertical' }} />
+                  <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)' }}>Link exercises</div>
+                  <div style={{ maxHeight: '132px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    {KNEE_EXERCISES.map((ex) => {
+                      const on = form.exercises.some((x) => x.id === ex.id);
+                      return <button key={ex.id} onClick={() => toggleEx(ex)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '6px 9px', borderRadius: '8px', cursor: 'pointer', border: `1px solid ${on ? '#6fc08a' : 'var(--color-border)'}`, background: on ? '#6fc08a18' : 'white', fontSize: '0.78rem', color: on ? '#2e7d32' : 'var(--color-secondary)', textAlign: 'left' }}><span style={{ width: 14, height: 14, borderRadius: '4px', border: `2px solid ${on ? '#6fc08a' : '#ccc'}`, background: on ? '#6fc08a' : 'white', color: 'white', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>{ex.name}</button>;
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                    <button onClick={saveInjury} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: 'var(--color-secondary)', color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>{busy ? 'Saving…' : 'Save injury'}</button>
+                    <button onClick={() => setForm(null)} style={{ padding: '10px 16px', borderRadius: '10px', border: '1px solid var(--color-border)', background: 'white', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--color-text)' }}>Cancel</button>
+                  </div>
+                </div>
+              </>
+            ) : (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-secondary)' }}>{selected.name}</div>
                   <span style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)' }}>{LAYER_LABELS[selected.layer]}</span>
                 </div>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text)', margin: '6px 0 0', lineHeight: 1.5 }}>{selected.desc}</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text)', margin: '6px 0 10px', lineHeight: 1.5 }}>{selected.desc}</p>
+                {selectedInjury ? (
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: '999px', background: STATUS[selectedInjury.status].c + '22', color: STATUS[selectedInjury.status].c, fontWeight: 700, fontSize: '0.68rem' }}>{STATUS[selectedInjury.status].label}</span>
+                    {selectedInjury.injuryType}{selectedInjury.grade ? ` · Grade ${selectedInjury.grade}` : ''} — see below
+                  </div>
+                ) : patientId ? (
+                  <button onClick={startMark} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#e0655a', color: 'white', fontWeight: 700, fontSize: '0.8rem' }}><Plus size={14} /> Mark injury here</button>
+                ) : (
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text)', fontStyle: 'italic' }}>Select a patient above to mark an injury.</div>
+                )}
               </>
-            ) : (
-              <div style={{ fontSize: '0.85rem', color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '8px', height: '100%' }}>
-                <Layers size={16} /> Click any structure to isolate &amp; learn about it.
-              </div>
             )}
           </div>
 
-          {/* Structure list */}
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {Object.entries(grouped).map(([layer, items]) => (
-              <div key={layer}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', margin: '0 0 6px 2px' }}>{LAYER_LABELS[layer]}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {items.map((s) => {
-                    const isSel = s.id === selectedId;
-                    return (
-                      <button key={s.id} onClick={() => pick(s.id)} style={{
-                        display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left',
-                        padding: '9px 12px', borderRadius: '10px', cursor: 'pointer',
-                        border: `1px solid ${isSel ? '#e0655a' : 'var(--color-border)'}`,
-                        background: isSel ? 'rgba(224,101,90,0.10)' : 'white',
-                        color: isSel ? '#c0392b' : 'var(--color-secondary)', fontWeight: isSel ? 700 : 500, fontSize: '0.82rem',
-                      }}>
-                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: LAYER_COLORS[s.layer], flexShrink: 0 }} />
-                        {s.name}
-                      </button>
-                    );
-                  })}
+          {/* injuries + healing loop */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={12} /> Injuries &amp; recovery {injuries.length ? `(${injuries.length})` : ''}</div>
+            {!patientId ? (
+              <div style={{ fontSize: '0.78rem', color: 'var(--color-text)', fontStyle: 'italic', padding: '4px 0' }}>Pick a patient to build their recovery record.</div>
+            ) : injuries.length === 0 ? (
+              <div style={{ fontSize: '0.78rem', color: 'var(--color-text)', fontStyle: 'italic', padding: '4px 0' }}>No injuries marked yet. Click a structure → “Mark injury”.</div>
+            ) : injuries.map((inj) => (
+              <div key={inj.id} style={{ background: 'white', border: `1px solid ${STATUS[inj.status].c}55`, borderRadius: '12px', padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <button onClick={() => pick(inj.structureId)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.86rem', fontWeight: 700, color: 'var(--color-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>{inj.structureName} <ChevronRight size={13} /></button>
+                  <span style={{ padding: '2px 9px', borderRadius: '999px', background: STATUS[inj.status].c + '22', color: STATUS[inj.status].c, fontWeight: 800, fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{STATUS[inj.status].label}</span>
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--color-text)', margin: '4px 0' }}>{inj.injuryType}{inj.grade ? ` · Grade ${inj.grade}` : ''}{inj.side ? ` · ${inj.side}` : ''}{inj.note ? ` — ${inj.note}` : ''}</div>
+                {inj.exercises?.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '6px 0' }}>
+                    {inj.exercises.map((ex) => <span key={ex.id} style={{ fontSize: '0.64rem', padding: '2px 8px', borderRadius: '999px', background: 'var(--color-bg-alt)', color: 'var(--color-text)' }}>🏋 {ex.name}</span>)}
+                  </div>
+                )}
+                {/* healing progress bar */}
+                <div style={{ display: 'flex', gap: '3px', margin: '8px 0 6px' }}>
+                  {STATUS_ORDER.map((st) => <div key={st} style={{ flex: 1, height: '5px', borderRadius: '3px', background: STATUS_ORDER.indexOf(st) <= STATUS_ORDER.indexOf(inj.status) ? STATUS[inj.status].c : 'var(--color-border)' }} />)}
+                </div>
+                {inj.healingLog?.length > 0 && (
+                  <div style={{ fontSize: '0.66rem', color: 'var(--color-text)', marginBottom: '6px' }}>
+                    {inj.healingLog.slice(-2).map((h, i) => <div key={i}>· {new Date(h.date).toLocaleDateString()} — {h.note}</div>)}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {inj.status !== 'recovered' && <button onClick={() => advance(inj)} style={{ flex: 1, padding: '7px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: STATUS[STATUS_ORDER[STATUS_ORDER.indexOf(inj.status) + 1]].c, color: '#1a1a1a', fontWeight: 700, fontSize: '0.72rem' }}>Mark {STATUS[STATUS_ORDER[STATUS_ORDER.indexOf(inj.status) + 1]].label} →</button>}
+                  <button onClick={() => removeInjury(inj)} title="Delete" style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'white', cursor: 'pointer', color: '#c0392b' }}><Trash2 size={13} /></button>
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{
-            fontSize: '0.68rem', color: 'var(--color-text)', background: 'var(--color-bg-alt)',
-            border: '1px solid var(--color-border)', borderRadius: '10px', padding: '10px 12px', lineHeight: 1.5,
-          }}>
-            <strong>Phase 0 spike.</strong> Procedural placeholder knee — proves the click → isolate → annotate loop. Next: swap in a real segmented anatomy model, then let the AI voice operate it.
+          <div style={{ fontSize: '0.66rem', color: 'var(--color-text)', background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '10px 12px', lineHeight: 1.5 }}>
+            <strong>The loop:</strong> inspect a part → mark the injury → link exercises → advance healing (Acute → Healing → Recovered) and watch the structure change colour on the model. Next: swap in a real segmented knee{USE_GLB ? '' : ' (GLB drop-in ready)'} + let the AI voice operate it.
           </div>
         </div>
       </div>
