@@ -63,6 +63,11 @@ const STRUCTURES = [
 ];
 const STRUCT_BY_ID = Object.fromEntries(STRUCTURES.map((s) => [s.id, s]));
 
+// Range-of-motion: the lower-leg structures rotate about the knee joint line.
+const PIVOT = [0, -0.4, 0];
+const NEG_PIVOT = [0, 0.4, 0];
+const MOVERS = new Set(['tibia', 'fibula', 'patella', 'patellar_tendon', 'medial_meniscus', 'lateral_meniscus', 'gastrocnemius', 'tibial_nerve', 'fibular_nerve', 'popliteal_artery']);
+
 // Explode direction per structure = outward from the model centre.
 const MODEL_CENTER = [0, -0.1, 0];
 const EXPLODE_DIR = Object.fromEntries(STRUCTURES.map((s) => {
@@ -96,7 +101,7 @@ function Geo({ p }) {
   return null;
 }
 
-function Structure({ s, selected, anySelected, visible, injuryStatus, explode, clipPlanes, onSelect }) {
+function Structure({ s, selected, anySelected, visible, injuryStatus, explode, clipPlanes, flex, onSelect }) {
   const matRefs = useRef([]);
   const [hover, setHover] = useState(false);
   const ghost = anySelected && !selected;
@@ -107,13 +112,14 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, explode, c
     matRefs.current.forEach((m) => { if (m) m.emissiveIntensity = p; });
   });
   if (!visible) return null;
+  const mover = MOVERS.has(s.id);
   const injColor = injuryStatus ? STATUS[injuryStatus].c : null;
   const base = injColor || LAYER_COLORS[s.layer];
   const emissive = selected ? '#e0655a' : injColor ? injColor : hover ? '#3d8593' : '#000000';
   const emissiveInt = selected ? 0.6 : injColor ? 0.35 : hover ? 0.5 : 0;
   // Bulky muscles render translucent so you can still see the joint underneath.
   const translucent = s.translucent && !selected && !injColor;
-  return (
+  const content = (
     <group
       position={off}
       onClick={(e) => { e.stopPropagation(); onSelect(s.id); }}
@@ -135,9 +141,16 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, explode, c
       ))}
     </group>
   );
+  // Flex the knee: rotate movers about the joint pivot (translate→rotate→translate back).
+  if (!mover || !flex) return content;
+  return (
+    <group position={PIVOT} rotation={[flex, 0, 0]}>
+      <group position={NEG_PIVOT}>{content}</group>
+    </group>
+  );
 }
 
-function Scene({ selectedId, setSelectedId, layers, injuryMap, explode, clipPlanes }) {
+function Scene({ selectedId, setSelectedId, layers, injuryMap, explode, clipPlanes, flex }) {
   const selected = STRUCT_BY_ID[selectedId];
   return (
     <Canvas camera={{ position: [3.6, 0.8, 4.6], fov: 42 }} dpr={[1, 2]} gl={{ antialias: true, localClippingEnabled: true }} onPointerMissed={() => setSelectedId(null)}>
@@ -149,7 +162,7 @@ function Scene({ selectedId, setSelectedId, layers, injuryMap, explode, clipPlan
         {STRUCTURES.map((s) => (
           <Structure key={s.id} s={s} selected={s.id === selectedId} anySelected={!!selectedId}
             visible={layers[s.layer]} injuryStatus={injuryMap[s.id]?.status || null}
-            explode={explode} clipPlanes={clipPlanes} onSelect={setSelectedId} />
+            explode={explode} clipPlanes={clipPlanes} flex={flex} onSelect={setSelectedId} />
         ))}
         {/* persistent injury tags (hidden while a structure is isolated) */}
         {!selectedId && Object.entries(injuryMap).map(([id, inj]) => {
@@ -182,6 +195,7 @@ export default function Anatomy() {
   const [selectedId, setSelectedId] = useState(null);
   const [layers, setLayers] = useState({ muscle: true, tendon: true, ligament: true, cartilage: true, nerve: true, vessel: true, bone: true });
   const [explode, setExplode] = useState(0);            // 0..1 exploded view
+  const [flex, setFlex] = useState(0);                  // 0..1 knee flexion
   const [crossOn, setCrossOn] = useState(false);        // cross-section on/off
   const [crossAxis, setCrossAxis] = useState('z');
   const [crossPos, setCrossPos] = useState(0);
@@ -289,7 +303,7 @@ export default function Anatomy() {
       <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap' }}>
         {/* viewport */}
         <div style={{ position: 'relative', flex: '1 1 440px', minWidth: '300px', height: '74vh', minHeight: '440px', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--color-border)', background: '#0c0f12' }}>
-          <Scene selectedId={selectedId} setSelectedId={setSelectedId} layers={layers} injuryMap={injuryMap} explode={explode} clipPlanes={clipPlanes} />
+          <Scene selectedId={selectedId} setSelectedId={setSelectedId} layers={layers} injuryMap={injuryMap} explode={explode} clipPlanes={clipPlanes} flex={flex * 1.3} />
           <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: '6px', flexWrap: 'wrap', maxWidth: '80%' }}>
             {Object.keys(LAYER_LABELS).map((k) => (
               <button key={k} onClick={() => setLayers((l) => ({ ...l, [k]: !l[k] }))} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.66rem', fontWeight: 700, padding: '5px 10px', borderRadius: '999px', cursor: 'pointer', border: `1px solid ${layers[k] ? LAYER_COLORS[k] : 'rgba(255,255,255,0.15)'}`, background: layers[k] ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.3)', color: layers[k] ? '#fff' : 'rgba(255,255,255,0.4)', backdropFilter: 'blur(6px)' }}>
@@ -303,6 +317,10 @@ export default function Anatomy() {
           {/* bottom bar: view tools + status legend */}
           <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 14px', background: 'linear-gradient(0deg, rgba(6,10,12,0.9), transparent)', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.66rem', fontWeight: 700, color: '#cfe0e4' }}>
+                Flex {flex > 0 ? `${Math.round(flex * 75)}°` : ''}
+                <input type="range" min="0" max="1" step="0.01" value={flex} onChange={(e) => setFlex(+e.target.value)} style={{ width: 84, accentColor: '#57b6c4' }} />
+              </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.66rem', fontWeight: 700, color: '#cfe0e4' }}>
                 Explode
                 <input type="range" min="0" max="1" step="0.01" value={explode} onChange={(e) => setExplode(+e.target.value)} style={{ width: 84, accentColor: '#57b6c4' }} />
