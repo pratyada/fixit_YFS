@@ -507,6 +507,71 @@ function unsubscribePage(ok, email) {
 ${msg}<p style="margin-top:24px"><a href="${APP_URL}" style="color:#708E86">Back to FIXIT</a></p></body></html>`;
 }
 
+// ── Anatomy consult ──
+// Parse a clinician's free-text note into structured injuries, each mapped to
+// the closest anatomical structure — so the note auto-marks the 3D model.
+async function handleAnatomyParse(event) {
+  if (!ANTHROPIC_API_KEY) throw new HttpError(400, 'ANTHROPIC_API_KEY not set — configure the stack to enable AI parsing');
+  const { note, structures = [], exercises = [] } = parseBody(event);
+  if (!note || !note.trim()) throw new HttpError(400, 'note required');
+  const validIds = new Set(structures.map((s) => s.id));
+  const catalog = structures.map((s) => `- ${s.id}: ${s.name}`).join('\n');
+  const exList = exercises.map((e) => `- ${e.id}: ${e.name}`).join('\n');
+  const system = `You parse a physiotherapist's free-text clinical note into structured injuries, each mapped to the SINGLE closest anatomical structure from the catalog. This drives a 3D knee model that highlights the injured structures for the patient.
+
+Rules:
+- Use ONLY structure ids from the catalog below. If a term is joint-wide (e.g. arthritis/osteoarthritis) with no single structure, map it to the most representative catalog structure (a weight-bearing bone or the cartilage) and say so briefly in the note.
+- One note may contain MULTIPLE injuries — return one entry per affected structure. If a term applies to a paired structure without a stated side (e.g. "meniscus tear"), pick the most likely single structure (commonly the medial meniscus) unless the note says otherwise.
+- injuryType: closest of Sprain, Tear, Strain, Tendinopathy, Inflammation, Bruise, Post-surgery, Arthritis, Fracture.
+- grade: "1","2","3" ONLY if explicitly stated (e.g. "grade 3" -> "3"), else "".
+- side: "left" or "right" ONLY if stated, else "".
+- note: a concise clinical one-liner for that structure.
+- exerciseIds: optionally 1-4 rehab-appropriate exercise ids from the provided list, else [].
+
+Structure catalog (id: name):
+${catalog}
+
+Available exercises (id: name):
+${exList}`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5', max_tokens: 1400, system,
+      tools: [{
+        name: 'mark_injuries',
+        description: 'Return the structured injuries to mark on the 3D model.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            injuries: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  structureId: { type: 'string' }, structureName: { type: 'string' },
+                  injuryType: { type: 'string' }, grade: { type: 'string' }, side: { type: 'string' },
+                  note: { type: 'string' }, exerciseIds: { type: 'array', items: { type: 'string' } },
+                },
+                required: ['structureId', 'injuryType', 'note'],
+              },
+            },
+          },
+          required: ['injuries'],
+        },
+      }],
+      tool_choice: { type: 'tool', name: 'mark_injuries' },
+      messages: [{ role: 'user', content: `Clinical note: ${note}` }],
+    }),
+  });
+  if (!res.ok) throw new HttpError(502, `Anthropic error ${res.status}`);
+  const data = await res.json();
+  const tool = (data.content || []).find((c) => c.type === 'tool_use');
+  if (!tool) throw new HttpError(502, 'AI did not parse the note');
+  const injuries = (tool.input.injuries || []).filter((i) => validIds.has(i.structureId));
+  return json(200, { injuries });
+}
+
 // ── Kiosk (voice) ──
 // Claude-driven coach brain. Takes the full spoken conversation so far and
 // returns the next thing to say out loud — genuinely context-aware (it answers
@@ -664,6 +729,7 @@ export const handler = async (event) => {
     if (path.endsWith('/marketing/email/preview') && method === 'POST') return await handleEmailPreview(event);
     if (path.endsWith('/marketing/upload-image') && method === 'POST') return await handleUploadImage(event);
     if (path.endsWith('/marketing/creative/generate') && method === 'POST') return await handleCreativeGenerate(event);
+    if (path.endsWith('/marketing/anatomy/parse') && method === 'POST') return await handleAnatomyParse(event);
     if (path.endsWith('/marketing/kiosk/stt-token') && method === 'POST') return await handleKioskSttToken();
     if (path.endsWith('/marketing/kiosk/chat') && method === 'POST') return await handleKioskChat(event);
     if (path.endsWith('/marketing/kiosk/speak') && method === 'POST') return await handleKioskSpeak(event);

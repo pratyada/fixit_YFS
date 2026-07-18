@@ -33,6 +33,7 @@ export const marketing = {
   generateCreative: (brief) => authedFetch('/api/marketing/creative/generate', { method: 'POST', body: { brief } }),
   sendEmail: (payload) => authedFetch('/api/marketing/email/send', { method: 'POST', body: payload }),
   emailHistory: () => authedFetch('/api/marketing/email/history'),
+  parseAnatomy: (note, structures, exercises) => authedFetch('/api/marketing/anatomy/parse', { method: 'POST', body: { note, structures, exercises } }),
 };
 
 // Public newsletter signup lives in ./subscribe (Firebase-free) so public/guide

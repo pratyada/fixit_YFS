@@ -1,12 +1,13 @@
 import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
-import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity } from 'lucide-react';
+import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity, Sparkles } from 'lucide-react';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
 import {
   getAllUsers, getAnatomyInjuries, addAnatomyInjury, updateAnatomyInjury, deleteAnatomyInjury,
 } from '../lib/firestore';
+import { marketing } from '../lib/marketingApi';
 
 // ── AI Anatomy Consult — the full loop ─────────────────────────────────
 // Body-part detail → mark injury → linked exercises → healing over time,
@@ -14,11 +15,11 @@ import {
 // procedural placeholder; a real segmented GLB drops into KneeModel (see
 // GLB_INTEGRATION below) using the same structure IDs + selection logic.
 
-const LAYER_COLORS = { bone: '#e9e3d5', ligament: '#cbbd97', cartilage: '#a9c4d6', tendon: '#ddc59c' };
-const LAYER_LABELS = { bone: 'Bones', ligament: 'Ligaments', cartilage: 'Cartilage', tendon: 'Tendon' };
+const LAYER_COLORS = { muscle: '#cf7b6e', tendon: '#ddc59c', ligament: '#cbbd97', cartilage: '#a9c4d6', nerve: '#ecd35a', vessel: '#c0555a', bone: '#e9e3d5' };
+const LAYER_LABELS = { muscle: 'Muscles', tendon: 'Tendon', ligament: 'Ligaments', cartilage: 'Cartilage', nerve: 'Nerves', vessel: 'Vessels', bone: 'Bones' };
 const STATUS = { acute: { c: '#e0655a', label: 'Acute' }, healing: { c: '#d8ab4f', label: 'Healing' }, recovered: { c: '#6fc08a', label: 'Recovered' } };
 const STATUS_ORDER = ['acute', 'healing', 'recovered'];
-const INJURY_TYPES = ['Sprain', 'Tear', 'Strain', 'Tendinopathy', 'Inflammation', 'Bruise', 'Post-surgery'];
+const INJURY_TYPES = ['Sprain', 'Tear', 'Strain', 'Tendinopathy', 'Inflammation', 'Bruise', 'Post-surgery', 'Arthritis', 'Fracture'];
 
 const STRUCTURES = [
   { id: 'femur', name: 'Femur', layer: 'bone', label: [0, 1.7, 0], desc: 'Thigh bone — forms the top of the knee joint.',
@@ -43,6 +44,21 @@ const STRUCTURES = [
     parts: [{ geo: 'tor', args: [0.34, 0.09, 10, 22], pos: [0.2, -0.27, 0.02], rot: [1.5708, 0, 0], scale: [1, 1, 0.5] }] },
   { id: 'patellar_tendon', name: 'Patellar tendon', layer: 'tendon', label: [0, -0.45, 0.7], desc: 'Connects the kneecap to the shin; drives knee extension.',
     parts: [{ geo: 'cyl', args: [0.09, 0.09, 0.8, 12], pos: [0, -0.4, 0.5], rot: [0.35, 0, 0] }] },
+  // ── Muscles (translucent so they overlay without hiding the joint) ──
+  { id: 'quadriceps', name: 'Quadriceps', layer: 'muscle', translucent: true, label: [0, 1.15, 0.65], desc: 'Front-thigh muscles; extend the knee and stabilise the kneecap.',
+    parts: [{ geo: 'cyl', args: [0.44, 0.34, 1.5, 18], pos: [0, 1.0, 0.32], rot: [0.12, 0, 0] }] },
+  { id: 'hamstrings', name: 'Hamstrings', layer: 'muscle', translucent: true, label: [0, 0.7, -0.75], desc: 'Back-thigh muscles; flex the knee and protect the ACL.',
+    parts: [{ geo: 'cyl', args: [0.34, 0.28, 1.6, 16], pos: [0, 0.6, -0.45], rot: [-0.12, 0, 0] }] },
+  { id: 'gastrocnemius', name: 'Calf (gastrocnemius)', layer: 'muscle', translucent: true, label: [0, -1.35, -0.75], desc: 'Calf muscle; crosses the back of the knee and points the foot.',
+    parts: [{ geo: 'cyl', args: [0.26, 0.18, 1.4, 14], pos: [-0.24, -1.35, -0.35], rot: [-0.05, 0, 0.05] }, { geo: 'cyl', args: [0.26, 0.18, 1.4, 14], pos: [0.24, -1.35, -0.35], rot: [-0.05, 0, -0.05] }] },
+  // ── Nerves ──
+  { id: 'tibial_nerve', name: 'Tibial nerve', layer: 'nerve', label: [-0.2, -0.9, -0.55], desc: 'Major nerve running down the back of the knee to the foot.',
+    parts: [{ geo: 'cyl', args: [0.05, 0.05, 3.4, 8], pos: [-0.05, 0, -0.32], rot: [0.03, 0, 0.02] }] },
+  { id: 'fibular_nerve', name: 'Common fibular nerve', layer: 'nerve', label: [0.8, -0.7, -0.35], desc: 'Wraps around the fibular head; vulnerable to compression (foot drop).',
+    parts: [{ geo: 'cyl', args: [0.045, 0.045, 1.3, 8], pos: [0.5, -0.6, -0.18], rot: [0.4, 0, -0.35] }] },
+  // ── Vessels ──
+  { id: 'popliteal_artery', name: 'Popliteal artery', layer: 'vessel', label: [0.2, -0.4, -0.55], desc: 'Main artery behind the knee; supplies the lower leg.',
+    parts: [{ geo: 'cyl', args: [0.06, 0.06, 2.2, 8], pos: [0.06, -0.15, -0.3], rot: [0.02, 0, -0.02] }] },
 ];
 const STRUCT_BY_ID = Object.fromEntries(STRUCTURES.map((s) => [s.id, s]));
 
@@ -83,6 +99,8 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, onSelect }
   const base = injColor || LAYER_COLORS[s.layer];
   const emissive = selected ? '#e0655a' : injColor ? injColor : hover ? '#3d8593' : '#000000';
   const emissiveInt = selected ? 0.6 : injColor ? 0.35 : hover ? 0.5 : 0;
+  // Bulky muscles render translucent so you can still see the joint underneath.
+  const translucent = s.translucent && !selected && !injColor;
   return (
     <group
       onClick={(e) => { e.stopPropagation(); onSelect(s.id); }}
@@ -97,7 +115,7 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, onSelect }
             color={selected ? '#f4e5e0' : base}
             emissive={emissive} emissiveIntensity={emissiveInt}
             roughness={0.5} metalness={0.05}
-            transparent={ghost} opacity={ghost ? 0.09 : 1} depthWrite={!ghost}
+            transparent={ghost || translucent} opacity={ghost ? 0.09 : translucent ? 0.5 : 1} depthWrite={!ghost && !translucent}
           />
         </mesh>
       ))}
@@ -146,9 +164,12 @@ export default function Anatomy() {
   const [patientId, setPatientId] = useState('');
   const [injuries, setInjuries] = useState([]);          // for selected patient
   const [selectedId, setSelectedId] = useState(null);
-  const [layers, setLayers] = useState({ bone: true, ligament: true, cartilage: true, tendon: true });
+  const [layers, setLayers] = useState({ muscle: true, tendon: true, ligament: true, cartilage: true, nerve: true, vessel: true, bone: true });
   const [form, setForm] = useState(null);                // new-injury draft
   const [busy, setBusy] = useState(false);
+  const [aiNote, setAiNote] = useState('');              // free-text clinical note
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMsg, setAiMsg] = useState('');
 
   useEffect(() => {
     getAllUsers().then((all) => setPatients(all.filter((u) => {
@@ -197,6 +218,35 @@ export default function Anatomy() {
     loadInjuries(patientId);
   };
   const removeInjury = async (inj) => { await deleteAnatomyInjury(patientId, inj.id); loadInjuries(patientId); };
+
+  // AI: parse a free-text clinical note → mark the structures on the model.
+  const markFromNotes = async () => {
+    if (!patientId || !aiNote.trim()) return;
+    setAiBusy(true); setAiMsg('');
+    try {
+      const { injuries: parsed } = await marketing.parseAnatomy(
+        aiNote.trim(),
+        STRUCTURES.map((s) => ({ id: s.id, name: s.name })),
+        KNEE_EXERCISES,
+      );
+      if (!parsed?.length) { setAiMsg('No structure recognised — try naming one, e.g. “ACL grade 3”.'); return; }
+      const exLookup = Object.fromEntries(KNEE_EXERCISES.map((e) => [e.id, e]));
+      for (const p of parsed) {
+        const s = STRUCT_BY_ID[p.structureId]; if (!s) continue;
+        await addAnatomyInjury(patientId, {
+          structureId: p.structureId, structureName: s.name,
+          injuryType: p.injuryType || 'Inflammation', grade: p.grade || '', side: p.side || '', note: p.note || '',
+          exercises: (p.exerciseIds || []).map((id) => exLookup[id]).filter(Boolean),
+          status: 'acute',
+          healingLog: [{ date: new Date().toISOString(), status: 'acute', note: 'Marked from clinical note' }],
+        });
+      }
+      loadInjuries(patientId);
+      setAiMsg(`Marked ${parsed.length}: ${parsed.map((p) => STRUCT_BY_ID[p.structureId]?.name).filter(Boolean).join(', ')}`);
+      setAiNote(''); setSelectedId(parsed[0].structureId);
+    } catch (e) { setAiMsg('Could not parse — ' + (e.message || 'try again')); }
+    finally { setAiBusy(false); }
+  };
   const toggleEx = (ex) => setForm((f) => ({ ...f, exercises: f.exercises.some((x) => x.id === ex.id) ? f.exercises.filter((x) => x.id !== ex.id) : [...f.exercises, ex] }));
 
   return (
@@ -233,6 +283,22 @@ export default function Anatomy() {
 
         {/* right rail */}
         <div style={{ flex: '0 0 320px', minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* AI: mark from clinical notes */}
+          {patientId && (
+            <div style={{ background: 'linear-gradient(135deg, #14262b, #101b1f)', border: '1px solid #2c4750', borderRadius: '14px', padding: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 700, color: '#7fd0dc', marginBottom: '8px' }}>
+                <Sparkles size={13} /> Mark from notes
+              </div>
+              <textarea value={aiNote} onChange={(e) => setAiNote(e.target.value)}
+                placeholder="e.g. ACL grade 3 tear, medial meniscus tear, early arthritis in the knee"
+                style={{ width: '100%', minHeight: '58px', boxSizing: 'border-box', resize: 'vertical', borderRadius: '8px', border: '1px solid #2c4750', background: 'rgba(255,255,255,0.04)', color: '#e9eef1', fontSize: '0.82rem', padding: '8px 10px' }} />
+              <button onClick={markFromNotes} disabled={aiBusy || !aiNote.trim()} style={{ marginTop: '8px', width: '100%', padding: '9px', borderRadius: '9px', border: 'none', cursor: aiBusy || !aiNote.trim() ? 'default' : 'pointer', background: 'linear-gradient(135deg,#57b6c4,#3d8593)', color: '#08181b', fontWeight: 800, fontSize: '0.82rem', opacity: aiBusy || !aiNote.trim() ? 0.6 : 1 }}>
+                {aiBusy ? 'Reading the note…' : 'Mark on the model →'}
+              </button>
+              {aiMsg && <div style={{ marginTop: '8px', fontSize: '0.72rem', color: '#9fb0ba' }}>{aiMsg}</div>}
+            </div>
+          )}
+
           {/* selected structure / mark form / injury detail */}
           <div style={{ background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)', borderRadius: '14px', padding: '16px' }}>
             {!selected ? (
