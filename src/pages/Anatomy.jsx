@@ -114,20 +114,24 @@ function Geo({ p }) {
 function Structure({ s, selected, anySelected, visible, injuryStatus, explode, clipPlanes, flex, onSelect }) {
   const matRefs = useRef([]);
   const [hover, setHover] = useState(false);
-  const ghost = anySelected && !selected;
   const off = explode ? EXPLODE_DIR[s.id].map((v) => v * explode * 1.7) : [0, 0, 0];
   const injColor0 = injuryStatus ? STATUS[injuryStatus].c : null;
-  // Living tissue: pulse the selected/injured parts, heartbeat the artery,
-  // shimmer the nerves — subtle, always-on so the model feels alive.
+  // Living tissue + smooth fades: ease opacity and glow every frame (no snapping)
+  // — artery heartbeat, nerve shimmer, selected/injured throb, isolate fade.
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
+    let ei;
+    if (selected) ei = 0.55 + 0.32 * Math.sin(t * 4);
+    else if (injColor0) ei = 0.3 + 0.14 * Math.sin(t * 3);
+    else if (s.layer === 'vessel') ei = 0.18 + 0.28 * Math.max(0, Math.sin(t * 2.3)); // heartbeat
+    else if (s.layer === 'nerve') ei = 0.12 + 0.14 * (0.5 + 0.5 * Math.sin(t * 5 + s.id.length));
+    else ei = hover ? 0.5 : 0;
+    const targetOp = (anySelected && !selected) ? 0.09 : (s.translucent && !selected && !injColor0) ? 0.5 : 1;
     matRefs.current.forEach((m) => {
       if (!m) return;
-      if (selected) m.emissiveIntensity = 0.55 + 0.32 * Math.sin(t * 4);
-      else if (injColor0) m.emissiveIntensity = 0.3 + 0.14 * Math.sin(t * 3);
-      else if (s.layer === 'vessel') m.emissiveIntensity = 0.18 + 0.28 * Math.max(0, Math.sin(t * 2.3)); // heartbeat
-      else if (s.layer === 'nerve') m.emissiveIntensity = 0.12 + 0.14 * (0.5 + 0.5 * Math.sin(t * 5 + s.id.length));
-      else m.emissiveIntensity = hover ? 0.5 : 0;
+      m.emissiveIntensity += (ei - m.emissiveIntensity) * 0.2;
+      m.opacity += (targetOp - m.opacity) * 0.16;
+      m.depthWrite = m.opacity > 0.9;
     });
   });
   if (!visible) return null;
@@ -136,9 +140,6 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, explode, c
   const base = injColor || LAYER_COLORS[s.layer];
   const idleEmissive = s.layer === 'vessel' ? '#c0555a' : s.layer === 'nerve' ? '#ecd35a' : '#000000';
   const emissive = selected ? '#e0655a' : injColor ? injColor : hover ? '#3d8593' : idleEmissive;
-  const emissiveInt = selected ? 0.6 : injColor ? 0.35 : hover ? 0.5 : 0;
-  // Bulky muscles render translucent so you can still see the joint underneath.
-  const translucent = s.translucent && !selected && !injColor;
   const content = (
     <group
       position={off}
@@ -152,10 +153,10 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, explode, c
           <meshStandardMaterial
             ref={(el) => { matRefs.current[i] = el; }}
             color={selected ? '#f4e5e0' : base}
-            emissive={emissive} emissiveIntensity={emissiveInt}
+            emissive={emissive}
             roughness={0.5} metalness={0.05}
             clippingPlanes={clipPlanes}
-            transparent={ghost || translucent} opacity={ghost ? 0.09 : translucent ? 0.5 : 1} depthWrite={!ghost && !translucent}
+            transparent
           />
         </mesh>
       ))}
