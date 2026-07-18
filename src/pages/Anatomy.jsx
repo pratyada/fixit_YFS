@@ -1,6 +1,6 @@
 import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Html } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
 import { Plane, Vector3 } from 'three';
 import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity, Sparkles, Mic, Printer } from 'lucide-react';
 import { listenStream } from '../lib/voice';
@@ -69,6 +69,13 @@ const PIVOT = [0, -0.4, 0];
 const NEG_PIVOT = [0, 0.4, 0];
 const MOVERS = new Set(['tibia', 'fibula', 'patella', 'patellar_tendon', 'medial_meniscus', 'lateral_meniscus', 'gastrocnemius', 'tibial_nerve', 'fibular_nerve', 'popliteal_artery']);
 
+// Per-structure centroid (for camera fly-to) + explode direction.
+const CENTROID = Object.fromEntries(STRUCTURES.map((s) => {
+  const c = s.parts.reduce((a, p) => [a[0] + p.pos[0], a[1] + p.pos[1], a[2] + p.pos[2]], [0, 0, 0]).map((v) => v / s.parts.length);
+  return [s.id, c];
+}));
+const DEFAULT_TARGET = new Vector3(0, -0.1, 0);
+
 // Explode direction per structure = outward from the model centre.
 const MODEL_CENTER = [0, -0.1, 0];
 const EXPLODE_DIR = Object.fromEntries(STRUCTURES.map((s) => {
@@ -107,16 +114,26 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, explode, c
   const [hover, setHover] = useState(false);
   const ghost = anySelected && !selected;
   const off = explode ? EXPLODE_DIR[s.id].map((v) => v * explode * 1.7) : [0, 0, 0];
+  const injColor0 = injuryStatus ? STATUS[injuryStatus].c : null;
+  // Living tissue: pulse the selected/injured parts, heartbeat the artery,
+  // shimmer the nerves — subtle, always-on so the model feels alive.
   useFrame(({ clock }) => {
-    if (!selected) return;
-    const p = 0.5 + 0.35 * Math.sin(clock.elapsedTime * 4);
-    matRefs.current.forEach((m) => { if (m) m.emissiveIntensity = p; });
+    const t = clock.elapsedTime;
+    matRefs.current.forEach((m) => {
+      if (!m) return;
+      if (selected) m.emissiveIntensity = 0.55 + 0.32 * Math.sin(t * 4);
+      else if (injColor0) m.emissiveIntensity = 0.3 + 0.14 * Math.sin(t * 3);
+      else if (s.layer === 'vessel') m.emissiveIntensity = 0.18 + 0.28 * Math.max(0, Math.sin(t * 2.3)); // heartbeat
+      else if (s.layer === 'nerve') m.emissiveIntensity = 0.12 + 0.14 * (0.5 + 0.5 * Math.sin(t * 5 + s.id.length));
+      else m.emissiveIntensity = hover ? 0.5 : 0;
+    });
   });
   if (!visible) return null;
   const mover = MOVERS.has(s.id);
-  const injColor = injuryStatus ? STATUS[injuryStatus].c : null;
+  const injColor = injColor0;
   const base = injColor || LAYER_COLORS[s.layer];
-  const emissive = selected ? '#e0655a' : injColor ? injColor : hover ? '#3d8593' : '#000000';
+  const idleEmissive = s.layer === 'vessel' ? '#c0555a' : s.layer === 'nerve' ? '#ecd35a' : '#000000';
+  const emissive = selected ? '#e0655a' : injColor ? injColor : hover ? '#3d8593' : idleEmissive;
   const emissiveInt = selected ? 0.6 : injColor ? 0.35 : hover ? 0.5 : 0;
   // Bulky muscles render translucent so you can still see the joint underneath.
   const translucent = s.translucent && !selected && !injColor;
@@ -151,14 +168,28 @@ function Structure({ s, selected, anySelected, visible, injuryStatus, explode, c
   );
 }
 
+// Eases the orbit target toward the selected structure — a cinematic recenter.
+function CameraRig({ focus }) {
+  const { controls } = useThree();
+  useFrame(() => {
+    if (!controls?.target) return;
+    controls.target.lerp(focus || DEFAULT_TARGET, 0.07);
+    controls.update?.();
+  });
+  return null;
+}
+
 function Scene({ selectedId, setSelectedId, layers, injuryMap, explode, clipPlanes, flex }) {
   const selected = STRUCT_BY_ID[selectedId];
+  const focus = selected ? new Vector3(CENTROID[selected.id][0], CENTROID[selected.id][1], CENTROID[selected.id][2]) : null;
   return (
     <Canvas camera={{ position: [3.6, 0.8, 4.6], fov: 42 }} dpr={[1, 2]} gl={{ antialias: true, localClippingEnabled: true }} onPointerMissed={() => setSelectedId(null)}>
       <color attach="background" args={['#0c0f12']} />
-      <ambientLight intensity={0.55} />
+      <ambientLight intensity={0.5} />
+      <hemisphereLight args={['#bcd6de', '#241d1a', 0.45]} />
       <directionalLight position={[4, 6, 5]} intensity={1.15} />
-      <directionalLight position={[-5, 2, -4]} intensity={0.4} color="#9fd0da" />
+      <directionalLight position={[-5, 2, -4]} intensity={0.45} color="#9fd0da" />
+      <directionalLight position={[0, 1, -6]} intensity={0.5} color="#ffd9c0" />
       <Suspense fallback={null}>
         {STRUCTURES.map((s) => (
           <Structure key={s.id} s={s} selected={s.id === selectedId} anySelected={!!selectedId}
@@ -179,8 +210,10 @@ function Scene({ selectedId, setSelectedId, layers, injuryMap, explode, clipPlan
             <div style={{ background: 'rgba(224,101,90,0.94)', color: '#fff', fontFamily: 'system-ui', fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', boxShadow: '0 6px 18px rgba(0,0,0,0.4)', transform: 'translateY(-8px)' }}>{selected.name}</div>
           </Html>
         )}
+        <ContactShadows position={[0, -2.75, 0]} opacity={0.45} scale={12} blur={2.6} far={4.5} color="#000000" />
       </Suspense>
-      <OrbitControls makeDefault enablePan minDistance={2.2} maxDistance={13} target={[0, -0.1, 0]} />
+      <CameraRig focus={focus} />
+      <OrbitControls makeDefault enablePan minDistance={2.2} maxDistance={13} autoRotate={!selectedId} autoRotateSpeed={0.5} />
     </Canvas>
   );
 }
