@@ -806,6 +806,31 @@ export default function PoseChecker() {
           </div>
         </div>
 
+        {/* v2 metadata: reps · view · data quality · consistency */}
+        {(() => {
+          const chips = [];
+          if (report.reps > 0) chips.push({ label: 'Reps', value: report.reps });
+          if (report.view) chips.push({ label: 'View', value: report.view });
+          if (typeof report.dataQuality === 'number') chips.push({ label: 'Confidence', value: Math.round(report.dataQuality * 100) + '%', warn: report.dataQuality < 0.5 });
+          if (report.consistency && report.reps > 1) chips.push({ label: 'Smoothness', value: report.consistency.smoothness + '%' });
+          if (!chips.length) return null;
+          return (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {chips.map((c, i) => (
+                <div key={i} style={{ flex: '1 1 70px', minWidth: '70px', background: 'white', border: `1px solid ${c.warn ? '#FFCC80' : 'var(--color-border)'}`, borderRadius: '12px', padding: '10px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: c.warn ? '#E65100' : 'var(--color-secondary)', textTransform: 'capitalize' }}>{c.value}</div>
+                  <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text)' }}>{c.label}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+        {report.dataQuality < 0.5 && (
+          <div style={{ background: '#FFF3E0', border: '1px solid #FFCC80', borderRadius: '12px', padding: '12px 16px', fontSize: '0.8rem', color: '#E65100', display: 'flex', alignItems: 'center', gap: '8px', lineHeight: 1.4 }}>
+            <AlertCircle size={18} style={{ flexShrink: 0 }} /> Low-confidence capture — record in a clean side or front view, whole body in frame with good lighting, for a reliable score.
+          </div>
+        )}
+
         {/* Categories */}
         <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
           <h4 style={{ marginBottom: '16px' }}>{tKiosk('report.scoreBreakdown')}</h4>
