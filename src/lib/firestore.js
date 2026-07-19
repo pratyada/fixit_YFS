@@ -122,6 +122,15 @@ export async function addSession(uid, data) {
   });
 }
 
+// ─── Scoring calibration — per-exercise band offsets, calibration/{profileId} ───
+export async function getCalibration(profileId) {
+  const snap = await getDoc(doc(db, 'calibration', profileId));
+  return snap.exists() ? snap.data() : null;
+}
+export async function setCalibration(profileId, data) {
+  await setDoc(doc(db, 'calibration', profileId), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+}
+
 // ─── Patient dossier — background notes + AI summary on users/{uid} ───
 export async function updatePatientDossier(uid, data) {
   await updateDoc(doc(db, 'users', uid), { ...data, updatedAt: serverTimestamp() });

@@ -192,7 +192,7 @@ function profileFor(name = '') {
 }
 
 // ── main ──
-export function analyzeMovement(frames, exerciseName = '') {
+export function analyzeMovement(frames, exerciseName = '', cal = null) {
   if (!frames || frames.length < 5) return { error: 'Not enough frames captured. Record for at least 3 seconds.' };
   const profile = profileFor(exerciseName);
   const N = frames.length;
@@ -345,7 +345,8 @@ export function analyzeMovement(frames, exerciseName = '') {
   for (const c of profile.criteria) {
     const val = measures[c.key];
     const valid = viewOk(c.view) && val != null && !Number.isNaN(val);
-    const sc = valid ? bandScore(val, c.band[0], c.band[1], c.band[2], c.band[3]) : null;
+    const o = (cal && typeof cal[c.key] === 'number') ? cal[c.key] : 0;   // calibration offset
+    const sc = valid ? bandScore(val, c.band[0] + o, c.band[1] + o, c.band[2] + o, c.band[3] + o) : null;
     per.push({ key: c.key, label: c.label, value: val, score: sc, weight: c.w, viewValid: valid, target: c.target, faultLabel: c.faultLabel, isFault: valid && c.faultWhen(val) });
   }
   const scored = per.filter((p) => p.score != null);
@@ -389,12 +390,32 @@ export function analyzeMovement(frames, exerciseName = '') {
     exercise: profile.label, view, reps: profile.iso ? 0 : reps.length,
     dataQuality: Math.round(dataQuality * 100) / 100,
     categories, faults, tips,
-    perCriterion: per.map((p) => ({ label: p.label, value: p.value, score: p.score, target: p.target, viewValid: p.viewValid })),
+    perCriterion: per.map((p) => ({ key: p.key, label: p.label, value: p.value, score: p.score, target: p.target, viewValid: p.viewValid })),
     perRep: profile.iso ? [] : (() => { const med = reps.length ? median(reps.map((r) => r.depth)) : 0; return reps.map((r, i) => ({ rep: i + 1, rom: Math.round(r.depth), bottomAngle: Math.round(r.bottomAngle), tempo: Math.round(r.tempo * 10) / 10, shallow: reps.length > 1 && r.depth < 0.8 * med })); })(),
     consistency: { depthCv: Math.round(depthCv * 100) / 100, smoothness: Math.round(smoothness) },
     angles: { leftKnee: angleStat(tl), rightKnee: angleStat(tr), leftHip: angleStat(hl2), rightHip: angleStat(hr2) },
     timeline,
   };
+}
+
+// Calibration: which profile an exercise maps to (for storing per-exercise offsets).
+export function profileIdFor(exerciseName = '') { return profileFor(exerciseName).id; }
+
+// Derive band offsets from a "good rep" recording: shift each criterion's band so
+// the coach-approved value scores full marks — calibrating to this camera setup.
+export function calibrationFor(exerciseName = '', perCriterion = []) {
+  const profile = profileFor(exerciseName);
+  const byKey = {}; profile.criteria.forEach((c) => { byKey[c.key] = c; });
+  const cal = {};
+  for (const pc of perCriterion) {
+    const c = byKey[pc.key];
+    if (!c || !pc.viewValid || pc.value == null) continue;
+    const lo = c.band[0], hi = c.band[1];
+    let off = 0;
+    if (pc.value < lo) off = pc.value - lo; else if (pc.value > hi) off = pc.value - hi;
+    if (Math.abs(off) >= 1) cal[pc.key] = Math.round(off * 10) / 10;
+  }
+  return cal;
 }
 
 // Live feedback while recording — a quick per-frame framing cue (null = looks good).

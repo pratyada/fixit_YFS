@@ -9,14 +9,14 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 // so Chart.js must be registered here — otherwise the timeline <Line> throws
 // "category is not a registered scale" and crashes the report.
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
-import { analyzeMovement, liveCue } from '../utils/movementAnalysis';
+import { analyzeMovement, liveCue, profileIdFor, calibrationFor } from '../utils/movementAnalysis';
 import { speak } from '../lib/voice';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
 const ALL_POSE_EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES];
 import { useAuth } from '../contexts/AuthContext';
-import { addSession, updateSession } from '../lib/firestore';
+import { addSession, updateSession, getCalibration, setCalibration } from '../lib/firestore';
 import { uploadVideo } from '../lib/storage-firebase';
 import FeatureGate from '../components/FeatureGate';
 
@@ -92,6 +92,9 @@ export default function PoseChecker() {
   const [liveAngles, setLiveAngles] = useState({});
   const [liveCueMsg, setLiveCueMsg] = useState('');
   const liveTickRef = useRef(0);
+  const [calOffsets, setCalOffsets] = useState(null);   // loaded band calibration
+  const [calSaved, setCalSaved] = useState(false);
+  const isPro = !!user && ((Array.isArray(user.roles) && user.roles.some((r) => r === 'admin' || r === 'practitioner')) || user.role === 'admin' || user.role === 'practitioner');
 
   // Data
   const [report, setReport] = useState(null);
@@ -221,7 +224,7 @@ export default function PoseChecker() {
   const finishAndAnalyze = async () => {
     // Merge front + side frames for analysis
     const allFrames = [...(recordedFramesRef.current.front || []), ...(recordedFramesRef.current.side || [])];
-    const analysis = analyzeMovement(allFrames, selectedExercise?.name || selectedExercise?.id || '');
+    const analysis = analyzeMovement(allFrames, selectedExercise?.name || selectedExercise?.id || '', calOffsets);
     setReport(analysis);
     setStep('report');
     // Small delay to let last MediaRecorder chunks flush
@@ -400,6 +403,22 @@ export default function PoseChecker() {
   }, [cameraReady, detector, showGrid, recording, angleName]);
 
   useEffect(() => { return () => stopCamera(); }, [stopCamera]);
+
+  // Load per-exercise scoring calibration (band offsets set from a reference rep).
+  useEffect(() => {
+    const nm = selectedExercise?.name || selectedExercise?.id;
+    setCalSaved(false);
+    if (!nm) { setCalOffsets(null); return; }
+    getCalibration(profileIdFor(nm)).then((d) => setCalOffsets(d?.offsets || null)).catch(() => setCalOffsets(null));
+  }, [selectedExercise]);
+
+  // Practitioner: lock this recording in as the reference "good form" for this
+  // exercise — shifts the scoring bands to match this camera setup.
+  const saveReferenceForm = async () => {
+    const nm = selectedExercise?.name || selectedExercise?.id || '';
+    const cal = calibrationFor(nm, report?.perCriterion || []);
+    try { await setCalibration(profileIdFor(nm), { offsets: cal, exerciseName: nm }); setCalOffsets(cal); setCalSaved(true); } catch { /* */ }
+  };
 
   // ─── Hands-free (voice kiosk): narrate + auto-record both angles, zero taps ───
   useEffect(() => {
@@ -978,6 +997,19 @@ export default function PoseChecker() {
           <CheckCircle2 size={16} color="#4CAF50" style={{ flexShrink: 0 }} />
           Submitted to your practitioner for review
         </div>
+
+        {/* Practitioner calibration */}
+        {isPro && (
+          <div style={{ background: 'white', border: '1px dashed var(--color-accent)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '0.76rem', color: 'var(--color-text)', flex: 1, minWidth: '180px' }}>
+              <strong style={{ color: 'var(--color-secondary)' }}>Practitioner</strong> — if this is correct form for {selectedExercise?.name}, lock it in to calibrate scoring to your camera.
+              {calOffsets && <span style={{ color: '#2e7d32', marginLeft: '6px', fontWeight: 700 }}>· calibrated ✓</span>}
+            </div>
+            <button onClick={saveReferenceForm} disabled={calSaved} style={{ padding: '9px 15px', borderRadius: '9px', border: 'none', cursor: calSaved ? 'default' : 'pointer', background: calSaved ? '#4CAF50' : 'var(--color-secondary)', color: 'white', fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+              {calSaved ? 'Saved ✓' : 'Set as reference form'}
+            </button>
+          </div>
+        )}
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
