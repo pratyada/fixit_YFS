@@ -501,6 +501,12 @@ export default function Anatomy() {
                 <button onClick={saveNotes} disabled={savingNotes} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--color-secondary)', color: 'white', fontWeight: 700, fontSize: '0.72rem' }}>{savingNotes ? 'Saving…' : 'Save notes'}</button>
                 <button onClick={genSummary} disabled={summarizing} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', cursor: 'pointer', background: 'white', color: 'var(--color-secondary)', fontWeight: 700, fontSize: '0.72rem' }}><Sparkles size={12} /> {summarizing ? 'Summarizing…' : 'AI summary'}</button>
               </div>
+              {notes.trim() && (
+                <button onClick={() => markFromNotes(notes)} disabled={aiBusy} style={{ marginTop: '6px', width: '100%', padding: '8px', borderRadius: '8px', border: 'none', cursor: aiBusy ? 'default' : 'pointer', background: 'linear-gradient(135deg,#57b6c4,#3d8593)', color: '#08181b', fontWeight: 800, fontSize: '0.76rem', opacity: aiBusy ? 0.6 : 1 }}>
+                  {aiBusy ? 'Reading the notes…' : '🩹 Mark injuries from these notes'}
+                </button>
+              )}
+              {aiMsg && <div style={{ marginTop: '6px', fontSize: '0.7rem', color: 'var(--color-text)' }}>{aiMsg}</div>}
               {summary && <div style={{ marginTop: '8px', fontSize: '0.76rem', color: 'var(--color-text)', background: 'white', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '8px 10px', lineHeight: 1.5 }}>{summary}</div>}
               {assignedExercises.length > 0 && (
                 <div style={{ marginTop: '10px' }}>
