@@ -187,7 +187,7 @@ export default function ClinicKiosk() {
 
   const finishAndAnalyze = async () => {
     const allFrames = [...(recordedFramesRef.current.front || []), ...(recordedFramesRef.current.side || [])];
-    const analysis = analyzeMovement(allFrames);
+    const analysis = analyzeMovement(allFrames, selectedExercise?.name || selectedExercise?.id || '');
     setReport(analysis);
     stopCamera();
     setStep('report');

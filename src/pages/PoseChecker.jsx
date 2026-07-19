@@ -219,7 +219,7 @@ export default function PoseChecker() {
   const finishAndAnalyze = async () => {
     // Merge front + side frames for analysis
     const allFrames = [...(recordedFramesRef.current.front || []), ...(recordedFramesRef.current.side || [])];
-    const analysis = analyzeMovement(allFrames);
+    const analysis = analyzeMovement(allFrames, selectedExercise?.name || selectedExercise?.id || '');
     setReport(analysis);
     setStep('report');
     // Small delay to let last MediaRecorder chunks flush
