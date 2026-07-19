@@ -117,6 +117,35 @@ const PROFILES = {
       { key: 'symmetry', label: 'Symmetry', view: 'front', w: 0.3, band: [0, 10, 0, 30], target: 'even arms', faultLabel: 'Asymmetric', faultWhen: (v) => v > 16 },
       { key: 'tempo', label: 'Control', view: 'any', w: 0.3, band: [0.4, 4, 0.15, 4], target: 'controlled, no swing', faultLabel: 'Swinging / uncontrolled', faultWhen: (v) => v < 0.3 },
     ] },
+  pushup: { label: 'Push-up', view: 'side', primary: 'elbow', iso: false,
+    criteria: [
+      { key: 'depth', label: 'Depth', view: 'side', w: 0.35, band: [45, 100, 45, 150], target: '~90° elbow at bottom', faultLabel: 'Partial depth', faultWhen: (v) => v > 120 },
+      { key: 'bodyLine', label: 'Body line', view: 'side', w: 0.4, band: [165, 190, 145, 205], target: 'straight shoulder-hip-ankle', faultLabel: 'Hips sagging or piking', faultWhen: (v) => v < 160 || v > 195 },
+      { key: 'tempo', label: 'Control', view: 'any', w: 0.25, band: [0.4, 4, 0.15, 4], target: 'controlled', faultLabel: 'Uncontrolled', faultWhen: (v) => v < 0.3 },
+    ] },
+  pullup: { label: 'Pull-up', view: 'front', primary: 'elbow', iso: false,
+    criteria: [
+      { key: 'rom', label: 'Full range', view: 'any', w: 0.5, band: [80, 170, 40, 170], target: 'full hang to chin-up', faultLabel: 'Partial range', faultWhen: (v) => v < 55 },
+      { key: 'symmetry', label: 'Symmetry', view: 'front', w: 0.5, band: [0, 12, 0, 32], target: 'even pull', faultLabel: 'Asymmetric', faultWhen: (v) => v > 18 },
+    ] },
+  row: { label: 'Row', view: 'side', primary: 'elbow', iso: false,
+    criteria: [
+      { key: 'rom', label: 'Pull range', view: 'any', w: 0.4, band: [70, 160, 35, 160], target: 'full pull & extend', faultLabel: 'Partial range', faultWhen: (v) => v < 50 },
+      { key: 'symmetry', label: 'Symmetry', view: 'front', w: 0.3, band: [0, 10, 0, 30], target: 'even arms', faultLabel: 'Asymmetric', faultWhen: (v) => v > 16 },
+      { key: 'tempo', label: 'Control', view: 'any', w: 0.3, band: [0.4, 4, 0.15, 4], target: 'no swinging', faultLabel: 'Swinging', faultWhen: (v) => v < 0.3 },
+    ] },
+  stepup: { label: 'Step-up', view: 'side', primary: 'knee', iso: false,
+    criteria: [
+      { key: 'depth', label: 'Knee drive', view: 'side', w: 0.35, band: [70, 110, 55, 130], target: '~90° working knee', faultLabel: 'Shallow', faultWhen: (v) => v > 115 },
+      { key: 'tempo', label: 'Control', view: 'side', w: 0.3, band: [0.5, 4, 0.2, 4], target: 'controlled', faultLabel: 'Uncontrolled', faultWhen: (v) => v < 0.4 },
+      { key: 'symmetry', label: 'Symmetry', view: 'front', w: 0.35, band: [0, 10, 0, 26], target: 'even L/R', faultLabel: 'Asymmetry', faultWhen: (v) => v > 15 },
+    ] },
+  sideplank: { label: 'Side plank', view: 'side', primary: 'body', iso: true,
+    criteria: [
+      { key: 'holdAngle', label: 'Straight body line', view: 'side', w: 0.6, band: [165, 190, 145, 205], target: '~180° shoulder-hip-ankle', faultLabel: 'Hips dropping', faultWhen: (v) => v < 165 },
+      { key: 'holdTime', label: 'Hold quality', view: 'side', w: 0.25, band: [80, 100, 0, 100], target: 'steady', faultLabel: 'Unsteady', faultWhen: (v) => v < 60 },
+      { key: 'drift', label: 'No sag creep', view: 'side', w: 0.15, band: [0, 5, 0, 25], target: 'no creep', faultLabel: 'Sagging over time', faultWhen: (v) => v > 12 },
+    ] },
   generic: { label: 'Movement', view: 'any', primary: 'knee', iso: false,
     criteria: [
       { key: 'rom', label: 'Range of motion', view: 'any', w: 0.4, band: [45, 200, 15, 200], target: 'full ROM', faultLabel: 'Limited range', faultWhen: (v) => v < 25 },
@@ -136,18 +165,28 @@ const REQUIRES = {
   press: { joints: ['shoulder', 'elbow', 'wrist'], region: 'arms' },
   curl: { joints: ['shoulder', 'elbow', 'wrist'], region: 'arms' },
   plank: { joints: ['shoulder', 'hip', 'ankle'], region: 'body' },
+  pushup: { joints: ['shoulder', 'elbow', 'wrist', 'hip'], region: 'upper body' },
+  pullup: { joints: ['shoulder', 'elbow', 'wrist'], region: 'arms' },
+  row: { joints: ['shoulder', 'elbow', 'wrist'], region: 'arms and back' },
+  stepup: { joints: ['hip', 'knee', 'ankle'], region: 'legs' },
+  sideplank: { joints: ['shoulder', 'hip', 'ankle'], region: 'body' },
   generic: { joints: ['hip', 'knee'], region: 'body' },
 };
 for (const k in PROFILES) { PROFILES[k].id = k; PROFILES[k].requires = REQUIRES[k].joints; PROFILES[k].region = REQUIRES[k].region; }
 function profileFor(name = '') {
   const n = String(name).toLowerCase();
+  if (/side\s*plank/.test(n)) return PROFILES.sideplank;
   if (/wall\s*sit/.test(n)) return PROFILES.wallsit;
   if (/plank/.test(n)) return PROFILES.plank;
+  if (/push[-\s]*up|press[-\s]*up/.test(n)) return PROFILES.pushup;
+  if (/pull[-\s]*up|chin[-\s]*up/.test(n)) return PROFILES.pullup;
   if (/deadlift|hinge|rdl|good\s*morning/.test(n)) return PROFILES.deadlift;
   if (/bridge|hip\s*thrust/.test(n)) return PROFILES.bridge;
   if (/lunge|split\s*squat/.test(n)) return PROFILES.lunge;
+  if (/step[-\s]*up/.test(n)) return PROFILES.stepup;
+  if (/\brow\b|bent[-\s]*over/.test(n)) return PROFILES.row;
   if (/curl/.test(n)) return PROFILES.curl;
-  if (/press|overhead|shoulder|push|raise|fly/.test(n)) return PROFILES.press;
+  if (/press|overhead|shoulder|raise|fly/.test(n)) return PROFILES.press;
   if (/squat/.test(n)) return PROFILES.squat;
   return PROFILES.generic;
 }
@@ -205,7 +244,7 @@ export function analyzeMovement(frames, exerciseName = '') {
   const oppo = side === 'left' ? 'right' : 'left';
 
   // 4. per-frame angles (camera-side + both for symmetry/timeline)
-  const kneeS = [], hipS = [], elbowS = [], trunkLean = [], valgus = [], hipSym = [], kneeSym = [], elbowSym = [];
+  const kneeS = [], hipS = [], elbowS = [], trunkLean = [], valgus = [], hipSym = [], kneeSym = [], elbowSym = [], bodyLineS = [];
   const tl = [], tr = [], hl2 = [], hr2 = [];
   const confSeq = [];
   for (let i = 0; i < N; i++) {
@@ -220,6 +259,9 @@ export function analyzeMovement(frames, exerciseName = '') {
     // trunk vs vertical (shoulder→hip on camera side)
     const lean = fromVertical(P(`${side}_shoulder`, i), P(`${side}_hip`, i));
     if (lean != null) trunkLean.push(lean);
+    // body line (shoulder-hip-ankle) — plank / push-up / side-plank straightness
+    const bl = angle(P(`${side}_shoulder`, i), P(`${side}_hip`, i), P(`${side}_ankle`, i));
+    if (bl != null) bodyLineS.push(bl);
     // knee valgus (front): knee-x deviation from hip→ankle line, normalized
     const hh = P(`${side}_hip`, i), kk = P(`${side}_knee`, i), aa = P(`${side}_ankle`, i);
     if (hh && kk && aa && view === 'front') { const line = (hh.x + aa.x) / 2; valgus.push(Math.abs(kk.x - line) / Lref * 100); }
@@ -237,7 +279,7 @@ export function analyzeMovement(frames, exerciseName = '') {
 
   if (profile.iso) {
     // isometric: longest plateau within ±8° of the mode
-    const sig = profile.primary === 'hip' ? hl2 : tl; // camera-side series with nulls
+    const sig = profile.primary === 'body' ? bodyLineS : profile.primary === 'hip' ? hl2 : tl;
     const vals = sig.filter((v) => v != null);
     holdAngle = median(vals);
     let inBand = 0; for (const v of vals) if (Math.abs(v - holdAngle) <= 8) inBand++;
@@ -267,6 +309,13 @@ export function analyzeMovement(frames, exerciseName = '') {
     const nrep = Math.max(1, reps.length);
     const tempoPerRep = duration / (nrep * 2); // rough per-phase seconds
     reps = reps.map((r) => ({ depth: r.top - r.bottom, bottomAngle: r.bottom, tempo: tempoPerRep }));
+    // outlier-rep rejection: drop partial reps (ROM < 50% of the set median) so a
+    // botched rep doesn't distort the score — self-calibrated to the set's own range.
+    if (reps.length >= 3) {
+      const medROM = median(reps.map((r) => r.depth));
+      const kept = reps.filter((r) => r.depth >= 0.5 * medROM);
+      if (kept.length >= 2) reps = kept;
+    }
     measures.depth = median(reps.map((r) => r.bottomAngle));         // lower = deeper (knee) — bands expect angle
     measures.tempo = tempoPerRep;
     measures.lockout = pct(clean, 92);                               // top angle (press/deadlift/bridge)
@@ -280,6 +329,7 @@ export function analyzeMovement(frames, exerciseName = '') {
     measures.spine = spineVals.length ? Math.abs(pct(spineVals, 50) - spineVals[0]) : 0;
   }
   measures.torsoLean = avg(trunkLean);
+  measures.bodyLine = bodyLineS.length ? median(bodyLineS) : null;
   measures.valgus = valgus.length ? avg(valgus) : null;
   measures.symmetry = (profile.primary === 'elbow')
     ? (elbowSym.length ? avg(elbowSym) : null)
@@ -340,10 +390,31 @@ export function analyzeMovement(frames, exerciseName = '') {
     dataQuality: Math.round(dataQuality * 100) / 100,
     categories, faults, tips,
     perCriterion: per.map((p) => ({ label: p.label, value: p.value, score: p.score, target: p.target, viewValid: p.viewValid })),
+    perRep: profile.iso ? [] : (() => { const med = reps.length ? median(reps.map((r) => r.depth)) : 0; return reps.map((r, i) => ({ rep: i + 1, rom: Math.round(r.depth), bottomAngle: Math.round(r.bottomAngle), tempo: Math.round(r.tempo * 10) / 10, shallow: reps.length > 1 && r.depth < 0.8 * med })); })(),
     consistency: { depthCv: Math.round(depthCv * 100) / 100, smoothness: Math.round(smoothness) },
     angles: { leftKnee: angleStat(tl), rightKnee: angleStat(tr), leftHip: angleStat(hl2), rightHip: angleStat(hr2) },
     timeline,
   };
+}
+
+// Live feedback while recording — a quick per-frame framing cue (null = looks good).
+export function liveCue(keypoints, exerciseName = '') {
+  if (!keypoints || !keypoints.length) return 'Step into frame';
+  const m = {}; keypoints.forEach((k) => { if ((k.score ?? 0) >= C_MIN) m[k.name] = k; });
+  const profile = profileFor(exerciseName);
+  for (const j of profile.requires) {
+    if (!m[`left_${j}`] && !m[`right_${j}`]) return `Keep your ${profile.region} in frame`;
+  }
+  const sl = m.left_shoulder, sr = m.right_shoulder, hl = m.left_hip, hr = m.right_hip;
+  if (sl && sr && hl && hr) {
+    const neck = { x: (sl.x + sr.x) / 2, y: (sl.y + sr.y) / 2 };
+    const mh = { x: (hl.x + hr.x) / 2, y: (hl.y + hr.y) / 2 };
+    const torso = Math.hypot(neck.x - mh.x, neck.y - mh.y) || 1;
+    const ratio = Math.abs(sl.x - sr.x) / torso;
+    if (profile.view === 'side' && ratio >= 0.5) return 'Turn side-on to the camera';
+    if (profile.view === 'front' && ratio <= 0.9) return 'Face the camera';
+  }
+  return null;
 }
 
 const FAULT_TIPS = {

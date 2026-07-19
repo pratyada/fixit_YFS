@@ -9,7 +9,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 // so Chart.js must be registered here — otherwise the timeline <Line> throws
 // "category is not a registered scale" and crashes the report.
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
-import { analyzeMovement } from '../utils/movementAnalysis';
+import { analyzeMovement, liveCue } from '../utils/movementAnalysis';
 import { speak } from '../lib/voice';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
@@ -90,6 +90,8 @@ export default function PoseChecker() {
   const [recordTimer, setRecordTimer] = useState(0);
   const [angleRecorded, setAngleRecorded] = useState({ front: false, side: false });
   const [liveAngles, setLiveAngles] = useState({});
+  const [liveCueMsg, setLiveCueMsg] = useState('');
+  const liveTickRef = useRef(0);
 
   // Data
   const [report, setReport] = useState(null);
@@ -378,6 +380,10 @@ export default function PoseChecker() {
           const rk = drawAngle('right_hip', 'right_knee', 'right_ankle');
           const lh = drawAngle('left_shoulder', 'left_hip', 'left_knee');
           setLiveAngles({ leftKnee: lk, rightKnee: rk, leftHip: lh });
+          // Live framing feedback (throttled) — tells them to fix the view / get in frame.
+          if ((liveTickRef.current++ % 12) === 0) {
+            setLiveCueMsg(liveCue(keypoints, selectedExercise?.name || selectedExercise?.id || '') || '');
+          }
 
           if (recording) {
             recordedFramesRef.current[angleName].push({
@@ -571,6 +577,18 @@ export default function PoseChecker() {
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: 'cover', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
           }} />
+
+          {/* Live framing cue */}
+          {cameraReady && liveCueMsg && (
+            <div style={{
+              position: 'absolute', bottom: '18px', left: '50%', transform: 'translateX(-50%)',
+              background: 'rgba(230,126,34,0.92)', color: 'white', backdropFilter: 'blur(8px)',
+              padding: '9px 18px', borderRadius: '50px', zIndex: 6, fontSize: '0.82rem', fontWeight: 700,
+              display: 'flex', alignItems: 'center', gap: '7px', whiteSpace: 'nowrap', boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+            }}>
+              <AlertCircle size={15} /> {liveCueMsg}
+            </div>
+          )}
 
           {/* Angle badge */}
           <div style={{
@@ -852,6 +870,23 @@ export default function PoseChecker() {
             ))}
           </div>
         </div>
+
+        {/* Rep-by-rep breakdown */}
+        {report.perRep?.length > 1 && (
+          <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
+            <h4 style={{ marginBottom: '12px' }}>Rep by rep</h4>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {report.perRep.map(r => (
+                <div key={r.rep} style={{ flex: '1 1 60px', minWidth: '56px', background: r.shallow ? '#FFF3E0' : 'var(--color-bg-alt)', border: `1px solid ${r.shallow ? '#FFCC80' : 'var(--color-border)'}`, borderRadius: '10px', padding: '8px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text)' }}>Rep {r.rep}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: r.shallow ? '#E65100' : 'var(--color-secondary)' }}>{r.rom}°</div>
+                  <div style={{ fontSize: '0.55rem', color: 'var(--color-text)' }}>{r.shallow ? 'shallow' : 'ROM'}</div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: '0.7rem', color: 'var(--color-text)', marginTop: '8px' }}>Range of motion per rep — shallow reps flagged in amber.</p>
+          </div>
+        )}
 
         {/* Faults */}
         <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px' }}>
