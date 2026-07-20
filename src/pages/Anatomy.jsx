@@ -12,6 +12,7 @@ import {
   getAllUsers, getAnatomyInjuries, addAnatomyInjury, updateAnatomyInjury, deleteAnatomyInjury, getSessions, updatePatientDossier,
 } from '../lib/firestore';
 import { marketing } from '../lib/marketingApi';
+import { useAuth } from '../contexts/AuthContext';
 
 // ── AI Anatomy Consult — the full loop ─────────────────────────────────
 // Body-part detail → mark injury → linked exercises → healing over time,
@@ -226,7 +227,9 @@ const chip = (active, color) => ({ padding: '5px 11px', borderRadius: '999px', f
 const ctlBtn = (active) => ({ padding: '5px 10px', borderRadius: '999px', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer', border: `1px solid ${active ? '#57b6c4' : 'rgba(255,255,255,0.18)'}`, background: active ? 'rgba(87,182,196,0.2)' : 'rgba(0,0,0,0.35)', color: active ? '#9fe3ec' : 'rgba(255,255,255,0.75)', backdropFilter: 'blur(6px)' });
 
 export default function Anatomy() {
+  const { user } = useAuth();
   const [patients, setPatients] = useState([]);
+  const [loadErr, setLoadErr] = useState('');
   const [patientId, setPatientId] = useState('');
   const [injuries, setInjuries] = useState([]);          // for selected patient
   const [sessions, setSessions] = useState([]);          // patient's pose-check sessions (real rehab data)
@@ -254,12 +257,25 @@ export default function Anatomy() {
   const [savingNotes, setSavingNotes] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
 
+  const isPatientUser = (u) => {
+    const roles = u.roles && Array.isArray(u.roles) ? u.roles : (u.role ? [u.role] : []);
+    return roles.includes('patient');
+  };
   useEffect(() => {
-    getAllUsers().then((all) => setPatients(all.filter((u) => {
-      const roles = u.roles && Array.isArray(u.roles) ? u.roles : [u.role];
-      return roles.includes('patient');
-    }))).catch(() => {});
-  }, []);
+    if (!user) return;               // wait for auth so Firestore reads are authenticated
+    let live = true;
+    setLoadErr('');
+    getAllUsers()
+      .then((all) => {
+        if (!live) return;
+        const pts = all.filter(isPatientUser);
+        // Fallback: if nobody is tagged 'patient' yet, show everyone so the picker is never mysteriously empty.
+        setPatients(pts.length ? pts : all);
+        if (!all.length) setLoadErr('No users found in the directory.');
+      })
+      .catch((e) => { if (live) setLoadErr(e?.message || 'Could not load patients.'); });
+    return () => { live = false; };
+  }, [user]);
 
   const loadInjuries = (uid) => {
     if (!uid) { setInjuries([]); return; }
@@ -281,10 +297,10 @@ export default function Anatomy() {
   // ── Patient dossier: notes + AI summary + assigned exercises & performance ──
   const patient = useMemo(() => patients.find((p) => p.id === patientId) || null, [patients, patientId]);
   useEffect(() => { setNotes(patient?.background || ''); setSummary(patient?.aiSummary || ''); }, [patient]);
-  const reloadPatients = () => getAllUsers().then((all) => setPatients(all.filter((u) => {
-    const r = u.roles && Array.isArray(u.roles) ? u.roles : [u.role];
-    return r.includes('patient');
-  }))).catch(() => {});
+  const reloadPatients = () => getAllUsers().then((all) => {
+    const pts = all.filter(isPatientUser);
+    setPatients(pts.length ? pts : all);
+  }).catch(() => {});
   const assignedExercises = useMemo(() => {
     const m = {};
     for (const inj of injuries) for (const ex of (inj.exercises || [])) m[ex.id] = ex.name;
@@ -422,9 +438,10 @@ export default function Anatomy() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button onClick={() => setArOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--color-border)', background: 'white', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-secondary)' }}><Box size={15} /> View in AR</button>
           <select value={patientId} onChange={(e) => { setPatientId(e.target.value); setSelectedId(null); setForm(null); }} style={{ ...inp, width: 'auto', fontWeight: 600 }}>
-            <option value="">Demo (no patient)</option>
+            <option value="">{patients.length ? `Demo (no patient) — ${patients.length} patients` : 'Demo (no patient)'}</option>
             {patients.map((p) => <option key={p.id} value={p.id}>{p.name || p.email}</option>)}
           </select>
+          {loadErr && <span style={{ fontSize: '0.68rem', color: '#c0392b', fontWeight: 600 }} title={loadErr}>⚠ {loadErr}</span>}
         </div>
       </div>
 
