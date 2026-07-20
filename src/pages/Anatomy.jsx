@@ -2,7 +2,7 @@ import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
 import { Plane, Vector3 } from 'three';
-import '@google/model-viewer'; // registers <model-viewer> for AR / phone viewing
+// @google/model-viewer (~300KB) is loaded on-demand when the AR overlay opens — see openAr()
 import { Box, X } from 'lucide-react';
 import { Bone, RotateCcw, Plus, Trash2, ChevronRight, Activity, Sparkles, Mic, Printer } from 'lucide-react';
 import { listenStream } from '../lib/voice';
@@ -252,6 +252,12 @@ export default function Anatomy() {
   const [aiMsg, setAiMsg] = useState('');
   const [listening, setListening] = useState(false);
   const [arOpen, setArOpen] = useState(false);
+  const [arLoading, setArLoading] = useState(false);
+  const openAr = async () => {
+    setArLoading(true);
+    try { await import('@google/model-viewer'); setArOpen(true); }   // register <model-viewer> just-in-time
+    finally { setArLoading(false); }
+  };
   const [notes, setNotes] = useState('');           // patient background notes
   const [summary, setSummary] = useState('');       // AI patient summary
   const [savingNotes, setSavingNotes] = useState(false);
@@ -264,13 +270,20 @@ export default function Anatomy() {
   useEffect(() => {
     if (!user) return;               // wait for auth so Firestore reads are authenticated
     let live = true;
+    // Show cached patients instantly (they barely change during a session), then revalidate.
+    try {
+      const cached = JSON.parse(sessionStorage.getItem('anatomy_patients') || 'null');
+      if (cached && Array.isArray(cached) && cached.length) setPatients(cached);
+    } catch { /* ignore */ }
     setLoadErr('');
     getAllUsers()
       .then((all) => {
         if (!live) return;
         const pts = all.filter(isPatientUser);
         // Fallback: if nobody is tagged 'patient' yet, show everyone so the picker is never mysteriously empty.
-        setPatients(pts.length ? pts : all);
+        const list = pts.length ? pts : all;
+        setPatients(list);
+        try { sessionStorage.setItem('anatomy_patients', JSON.stringify(list)); } catch { /* ignore */ }
         if (!all.length) setLoadErr('No users found in the directory.');
       })
       .catch((e) => { if (live) setLoadErr(e?.message || 'Could not load patients.'); });
@@ -436,7 +449,7 @@ export default function Anatomy() {
           <Bone size={22} /> Anatomy Consult <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-accent)', border: '1px solid var(--color-border)', padding: '2px 8px', borderRadius: '999px' }}>Knee</span>
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={() => setArOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--color-border)', background: 'white', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-secondary)' }}><Box size={15} /> View in AR</button>
+          <button onClick={openAr} disabled={arLoading} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--color-border)', background: 'white', cursor: arLoading ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-secondary)' }}><Box size={15} /> {arLoading ? 'Loading…' : 'View in AR'}</button>
           <select value={patientId} onChange={(e) => { setPatientId(e.target.value); setSelectedId(null); setForm(null); }} style={{ ...inp, width: 'auto', fontWeight: 600 }}>
             <option value="">{patients.length ? `Demo (no patient) — ${patients.length} patients` : 'Demo (no patient)'}</option>
             {patients.map((p) => <option key={p.id} value={p.id}>{p.name || p.email}</option>)}
