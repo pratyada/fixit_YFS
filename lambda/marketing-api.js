@@ -240,8 +240,14 @@ function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroI
   const hero = heroImageUrl
     ? `<tr><td><img src="${heroImageUrl}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto"></td></tr>`
     : '';
+  const isPersonal = brand === 'personal';
   const monogram = 'YFS'; // YourFormSux brand mark in the signature
-  const signature = theme.showSignature ? `<tr><td style="padding:4px 32px 28px">
+  // Personal (Ashima) brand: a plain typed sign-off, no branded card.
+  const signature = isPersonal
+    ? `<tr><td style="padding:6px 32px 30px;font-size:16px;line-height:1.7;color:#3f4a47">
+        <p style="margin:20px 0 0">Best regards,<br>${authorName}</p>
+      </td></tr>`
+    : theme.showSignature ? `<tr><td style="padding:4px 32px 28px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eef0ef"><tr>
       <td style="padding-top:18px;width:44px;vertical-align:top">
         <div style="width:44px;height:44px;border-radius:50%;background:#708E86;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.5px;text-align:center;line-height:44px">${monogram}</div>
@@ -252,6 +258,17 @@ function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroI
       </td>
     </tr></table>
   </td></tr>` : '';
+  // Personal brand: strip the marketing footer entirely — only a tiny, legally-
+  // required unsubscribe line. Other brands keep the full branded footer.
+  const footer = isPersonal
+    ? `<tr><td style="padding:6px 32px 22px;font-size:11px;color:#c2c9c7;text-align:center">
+        <a href="${unsubscribeUrl}" style="color:#c2c9c7">Unsubscribe</a>
+      </td></tr>`
+    : `<tr><td style="padding:18px 32px;background:#f7faf9;border-top:1px solid #eef0ef;font-size:11px;color:#98a2a0;text-align:center;line-height:1.6">
+    <p style="margin:0 0 6px">${theme.footerLine}</p>
+    <p style="margin:0 0 6px">${theme.address || ADDRESS}</p>
+    <p style="margin:0"><a href="${unsubscribeUrl}" style="color:#708E86;font-weight:600">Unsubscribe</a> &nbsp;·&nbsp; <a href="${theme.siteUrl}" style="color:#708E86;font-weight:600">${theme.siteLabel}</a></p>
+  </td></tr>`;
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
 <body style="margin:0;background:#eef2f1;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#3f4a47;-webkit-font-smoothing:antialiased">
 <span style="display:none;max-height:0;overflow:hidden;opacity:0">${preheader}</span>
@@ -262,11 +279,7 @@ function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroI
   ${hero}
   <tr><td style="padding:32px 32px 8px;font-size:16px;line-height:1.7;color:#3f4a47">${bodyHtml}</td></tr>
   ${signature}
-  <tr><td style="padding:18px 32px;background:#f7faf9;border-top:1px solid #eef0ef;font-size:11px;color:#98a2a0;text-align:center;line-height:1.6">
-    <p style="margin:0 0 6px">${theme.footerLine}</p>
-    <p style="margin:0 0 6px">${theme.address || ADDRESS}</p>
-    <p style="margin:0"><a href="${unsubscribeUrl}" style="color:#708E86;font-weight:600">Unsubscribe</a> &nbsp;·&nbsp; <a href="${theme.siteUrl}" style="color:#708E86;font-weight:600">${theme.siteLabel}</a></p>
-  </td></tr>
+  ${footer}
 </table></td></tr></table></body></html>`;
 }
 
@@ -381,8 +394,8 @@ async function handleEmailGenerate(event) {
   let system;
   if (brand === 'personal') {
     const who = (authorName && authorName.trim()) || 'Ashima';
-    system = `You are writing a SHORT, genuinely PERSONAL email as ${who}, in the first person ("I"/"we"), like writing to a friend or a valued member — NOT a corporate newsletter. Warm, human, a little excited, 90–170 words. NO infographics, NO stat/research boxes, NO clinical jargon, NO headings. Just a few short <p style="margin:0 0 14px">…</p> paragraphs. ${htmlRules}
-${ctaBtn('Count me in')} — use warm personal button text (e.g. "Count me in", "Save my spot"). Do not write a sign-off/signature; the template adds it as ${who}.`;
+    system = `You are writing a SHORT, genuinely PERSONAL email as ${who}, in the first person ("I"/"we"), like a plain note to a friend — NOT a corporate newsletter. Warm, human, a little excited, 90–170 words. It must read like normal typed text: NO buttons, NO CTA, NO infographics, NO stat/research/details boxes, NO colored boxes of any kind, NO clinical jargon, NO headings, NO emoji. ONLY a few short <p style="margin:0 0 14px">…</p> paragraphs of plain text. If you want people to reply or act, just say so in a sentence — never a button. ${htmlRules}
+Do not write a sign-off/signature; the template adds "Best regards, ${who}".`;
   } else if (brand === 'yfs') {
     system = `You are the community voice of YourFormSux — a Toronto fitness & movement community (events, meetups, training, watch parties). Write a friendly, energetic COMMUNITY email: welcoming and human, not clinical. 180–320 words. ${htmlRules}
 Structure: open with a short paragraph to {{firstName}}; 1–3 short sections led by <h2 style="font-size:19px;color:#4E4E53;margin:22px 0 8px">…</h2> with <p style="margin:0 0 14px">…</p>, and where useful a <ul style="margin:0 0 14px;padding-left:20px;line-height:1.7">…</ul>. You MAY include ONE details box: <div style="background:#eef5f2;border-radius:12px;padding:16px 18px;margin:18px 0"><div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#708E86;margin-bottom:6px">📅 The details</div><div style="font-size:14px;color:#44504c;line-height:1.6">WHAT / WHEN / WHERE</div></div>. Avoid heavy clinical/research framing. ${ctaBtn('RSVP — count me in')}`;
