@@ -114,16 +114,18 @@ const PRACTITIONER_TABS = [
 const ADMIN_TABS = [
   { to: '/', icon: Shield, labelKey: 'nav:tabs.admin' },
   { to: '/exercises', icon: BookOpen, labelKey: 'nav:tabs.library' },
+  // Customer-deliverable marketing pipeline (subscriber → email → sent → subscription → creatives → blog).
+  // `ready` marks features that are ready for customer testing (yellow highlight).
+  { to: '/subscribers', icon: Users, labelKey: 'Subscribers' },
+  { to: '/email', icon: Mail, labelKey: 'Email', ready: true },
+  { to: '/sent', icon: Send, labelKey: 'Sent' },
+  { to: '/billing', icon: CreditCard, labelKey: 'Subscription' },
+  { to: '/creatives', icon: Palette, labelKey: 'Creatives', ready: true },
+  { to: '/blog', icon: PenTool, labelKey: 'Blog', ready: true },
+  // In-clinic tools
   { to: '/kiosk', icon: Camera, labelKey: 'nav:tabs.kiosk' },
   { to: '/voice', icon: Mic, labelKey: 'Voice AI' },
   { to: '/anatomy', icon: Bone, labelKey: 'Know Your Injury' },
-  // Marketing pipeline (labelKey falls back to the string when no i18n key exists)
-  { to: '/subscribers', icon: Users, labelKey: 'Subscribers' },
-  { to: '/email', icon: Mail, labelKey: 'Email' },
-  { to: '/creatives', icon: Palette, labelKey: 'Creatives' },
-  { to: '/blog', icon: PenTool, labelKey: 'Blog' },
-  { to: '/sent', icon: Send, labelKey: 'Sent' },
-  { to: '/billing', icon: CreditCard, labelKey: 'Subscription' },
 ];
 
 // Placeholder for marketing sections not yet built (Email=Phase 2, Blog=Phase 3,
@@ -220,19 +222,21 @@ function AppLayout() {
 
           {/* Nav links */}
           <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {TABS.map(({ to, icon: Icon, labelKey }) => (
+            {TABS.map(({ to, icon: Icon, labelKey, ready }) => (
               <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none' }}>
                 {({ isActive }) => (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
                     padding: '10px 14px', borderRadius: '10px',
-                    background: isActive ? 'var(--color-accent)' : 'transparent',
+                    background: isActive ? 'var(--color-accent)' : ready ? 'rgba(242,194,0,0.12)' : 'transparent',
                     color: isActive ? 'white' : 'var(--color-text)',
+                    boxShadow: !isActive && ready ? 'inset 3px 0 0 #F2C200' : 'none',
                     transition: 'all 0.15s',
                     fontSize: '0.85rem', fontWeight: isActive ? 600 : 500,
                   }}>
                     <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
                     {t(labelKey)}
+                    {ready && <span title="Ready for customer testing" style={{ marginLeft: 'auto', width: '7px', height: '7px', borderRadius: '50%', background: '#F2C200', boxShadow: '0 0 0 3px rgba(242,194,0,0.22)', flexShrink: 0 }} />}
                   </div>
                 )}
               </NavLink>
@@ -423,7 +427,7 @@ function AppLayout() {
           zIndex: 50,
           boxShadow: '0 -2px 12px rgba(0,0,0,0.04)',
         }}>
-          {TABS.map(({ to, icon: Icon, labelKey }) => (
+          {TABS.map(({ to, icon: Icon, labelKey, ready }) => (
             <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none', flex: 1 }}>
               {({ isActive }) => (
                 <div style={{
@@ -435,8 +439,9 @@ function AppLayout() {
                     width: '36px', height: '28px', borderRadius: '14px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: isActive ? 'var(--color-accent)' : 'transparent',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.2s', position: 'relative',
                   }}>
+                    {ready && <span style={{ position: 'absolute', top: '2px', right: '4px', width: '6px', height: '6px', borderRadius: '50%', background: '#F2C200' }} />}
                     <Icon size={18} color={isActive ? 'white' : 'var(--color-text)'} strokeWidth={isActive ? 2.5 : 1.8} />
                   </div>
                   <span style={{
