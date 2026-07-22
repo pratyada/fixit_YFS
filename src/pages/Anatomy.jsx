@@ -446,7 +446,7 @@ export default function Anatomy() {
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-          <Bone size={22} /> Anatomy Consult <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-accent)', border: '1px solid var(--color-border)', padding: '2px 8px', borderRadius: '999px' }}>Knee</span>
+          <Bone size={22} /> Know Your Injury <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-accent)', border: '1px solid var(--color-border)', padding: '2px 8px', borderRadius: '999px' }}>Knee</span>
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button onClick={openAr} disabled={arLoading} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--color-border)', background: 'white', cursor: arLoading ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-secondary)' }}><Box size={15} /> {arLoading ? 'Loading…' : 'View in AR'}</button>

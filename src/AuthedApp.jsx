@@ -108,7 +108,7 @@ const PATIENT_TABS = [
 const PRACTITIONER_TABS = [
   { to: '/', icon: Users, labelKey: 'nav:tabs.patients' },
   { to: '/exercises', icon: BookOpen, labelKey: 'nav:tabs.library' },
-  { to: '/anatomy', icon: Bone, labelKey: 'Anatomy' },
+  { to: '/anatomy', icon: Bone, labelKey: 'Know Your Injury' },
 ];
 
 const ADMIN_TABS = [
@@ -116,7 +116,7 @@ const ADMIN_TABS = [
   { to: '/exercises', icon: BookOpen, labelKey: 'nav:tabs.library' },
   { to: '/kiosk', icon: Camera, labelKey: 'nav:tabs.kiosk' },
   { to: '/voice', icon: Mic, labelKey: 'Voice AI' },
-  { to: '/anatomy', icon: Bone, labelKey: 'Anatomy' },
+  { to: '/anatomy', icon: Bone, labelKey: 'Know Your Injury' },
   // Marketing pipeline (labelKey falls back to the string when no i18n key exists)
   { to: '/subscribers', icon: Users, labelKey: 'Subscribers' },
   { to: '/email', icon: Mail, labelKey: 'Email' },
