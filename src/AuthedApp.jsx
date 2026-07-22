@@ -219,7 +219,7 @@ function AppLayout() {
           </div>
 
           {/* Nav links */}
-          <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
             {TABS.map(({ to, icon: Icon, labelKey }) => (
               <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none' }}>
                 {({ isActive }) => (
