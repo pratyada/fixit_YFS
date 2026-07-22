@@ -206,6 +206,7 @@ function brandTheme(brand) {
       showSignature: true,
       authorName: 'The YourFormSux Team', authorTitle: 'Community · Events · Training',
       siteUrl: YFS_URL, siteLabel: 'yourformsux.com',
+      fromName: 'YourFormSux', address: 'YourFormSux · Toronto, ON, Canada',
     };
   }
   if (brand === 'personal') {
@@ -215,6 +216,7 @@ function brandTheme(brand) {
       showSignature: true,
       authorName: 'Ashima', authorTitle: '',
       siteUrl: YFS_URL, siteLabel: 'yourformsux.com',
+      fromName: 'Ashima', address: 'YourFormSux · Toronto, ON, Canada',
     };
   }
   return {   // 'fixit' (default) — FIXIT is the product by Musée Initialize
@@ -226,6 +228,7 @@ function brandTheme(brand) {
     showSignature: true,
     authorName: 'The FIXIT Team', authorTitle: 'FIXIT · by Musée Initialize',
     siteUrl: APP_URL, siteLabel: APP_URL.replace(/^https?:\/\//, ''),
+    fromName: 'FIXIT', address: 'FIXIT by Musée Initialize · Toronto, ON, Canada',
   };
 }
 
@@ -261,7 +264,7 @@ function brandedEmail({ subject, preheader = '', bodyHtml, unsubscribeUrl, heroI
   ${signature}
   <tr><td style="padding:18px 32px;background:#f7faf9;border-top:1px solid #eef0ef;font-size:11px;color:#98a2a0;text-align:center;line-height:1.6">
     <p style="margin:0 0 6px">${theme.footerLine}</p>
-    <p style="margin:0 0 6px">${ADDRESS}</p>
+    <p style="margin:0 0 6px">${theme.address || ADDRESS}</p>
     <p style="margin:0"><a href="${unsubscribeUrl}" style="color:#708E86;font-weight:600">Unsubscribe</a> &nbsp;·&nbsp; <a href="${theme.siteUrl}" style="color:#708E86;font-weight:600">${theme.siteLabel}</a></p>
   </td></tr>
 </table></td></tr></table></body></html>`;
@@ -294,6 +297,10 @@ async function handleEmailSend(event) {
   if (!recipients.length) throw new HttpError(400, 'No active recipients');
 
   const emailId = randomUUID();
+  // Brand-specific "From" display name (shown above the email address in the inbox).
+  const fromName = brandTheme(brand).fromName || 'FIXIT';
+  const bareFrom = (FROM.match(/<([^>]+)>/) || [null, FROM])[1].trim();
+  const source = `${fromName} <${bareFrom}>`;
   const results = await mapLimit(recipients, 5, async (sub) => {
     try {
       const unsub = `${base}/api/unsubscribe?email=${enc(sub.email)}&token=${enc(sub.unsubscribeToken || '')}`;
@@ -301,7 +308,7 @@ async function handleEmailSend(event) {
       const wrapped = brandedEmail({ subject, preheader, bodyHtml: personalized, unsubscribeUrl: unsub, heroImageUrl, authorName, authorTitle, brand });
       const tracked = injectTracking(wrapped, emailId, sub.email, base);
       await ses.send(new SendEmailCommand({
-        Source: FROM,
+        Source: source,
         Destination: { ToAddresses: [sub.email] },
         ReplyToAddresses: [REPLY_TO],
         Message: { Subject: { Data: subject }, Body: { Html: { Data: tracked } } },
