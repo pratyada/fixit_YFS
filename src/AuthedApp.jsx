@@ -46,6 +46,7 @@ const Health = lazy(() => import('./pages/Health'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const VoiceKiosk = lazy(() => import('./pages/VoiceKiosk'));
 const Anatomy = lazy(() => import('./pages/Anatomy'));
+const ExerciseGuide = lazy(() => import('./pages/ExerciseGuide'));
 const Billing = lazy(() => import('./pages/Billing'));
 const Subscribers = lazy(() => import('./pages/Subscribers'));
 const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns'));
@@ -408,6 +409,8 @@ function AppLayout() {
                 <Route path="*" element={<Navigate to="/" />} />
               </>
             )}
+            <Route path="/guide" element={<ExerciseGuide />} />
+            <Route path="/guide/:exerciseId" element={<ExerciseGuide />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
           </Routes>
           </RouteErrorBoundary>
