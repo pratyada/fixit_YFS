@@ -1,7 +1,7 @@
 import { useRef, useState, useMemo, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, ContactShadows } from '@react-three/drei';
+import { OrbitControls, ContactShadows, MeshReflectorMaterial } from '@react-three/drei';
 import { Play, Pause, RotateCcw, Gauge, User, Move3d, ArrowLeft } from 'lucide-react';
 import { getExerciseAnimation } from '../data/exercise-animations';
 
@@ -15,8 +15,8 @@ const P = {
   foot: 0.20,
   hipW: 0.11, shoulderW: 0.19,
 };
-const SKIN = '#5b8f97';
-const SKIN2 = '#3f6f77';
+const SKIN = '#cfe1e3';   // light clay body — reads clean under studio lights
+const SKIN2 = '#8fb6bc';  // accent segments / joints
 
 // Smooth 0→1→0 over one rep (down then up).
 const repEase = (phase) => (1 - Math.cos(phase * Math.PI * 2)) / 2;
@@ -29,8 +29,8 @@ function Limb({ len, r = 0.05, color = SKIN, children, dir = 'down' }) {
   return (
     <>
       <mesh position={[0, offset, 0]} castShadow>
-        <capsuleGeometry args={[r, len - r * 2, 6, 12]} />
-        <meshStandardMaterial color={color} roughness={0.75} />
+        <capsuleGeometry args={[r, len - r * 2, 8, 20]} />
+        <meshStandardMaterial color={color} roughness={0.5} metalness={0.15} />
       </mesh>
       <group position={[0, childY, 0]}>{children}</group>
     </>
@@ -140,18 +140,35 @@ export default function ExerciseGuide() {
 
       {/* 3D stage */}
       <div style={{ position: 'relative', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--color-border)', background: 'linear-gradient(180deg,#0e2024,#132e33)', height: '460px' }}>
-        <Canvas shadows dpr={[1, 1.5]} camera={{ position: [0, 1.1, 3.2], fov: 42 }} gl={{ antialias: true, powerPreference: 'high-performance' }}>
-          <color attach="background" args={['#10262b']} />
-          <ambientLight intensity={0.7} />
-          <directionalLight position={[3, 6, 4]} intensity={1.15} castShadow shadow-mapSize={[1024, 1024]} />
-          <directionalLight position={[-3, 3, -2]} intensity={0.35} />
+        <Canvas shadows dpr={[1, 1.75]} camera={{ position: [0.6, 1.15, 3.1], fov: 40 }} gl={{ antialias: true, powerPreference: 'high-performance' }}>
+          <fog attach="fog" args={['#0c2126', 5, 11]} />
+          <color attach="background" args={['#0e242a']} />
+          {/* studio 3-point lighting */}
+          <ambientLight intensity={0.35} />
+          <hemisphereLight args={['#bfe9ee', '#0a1a1e', 0.5]} />
+          <directionalLight
+            position={[4, 7, 4]} intensity={1.6} color="#fff6ec" castShadow
+            shadow-mapSize={[2048, 2048]} shadow-bias={-0.0002}
+            shadow-camera-left={-2} shadow-camera-right={2} shadow-camera-top={2} shadow-camera-bottom={-2}
+          />
+          <directionalLight position={[-4, 3, -1]} intensity={0.4} color="#8fd3dc" />
+          <spotLight position={[-2, 4, -4]} angle={0.6} penumbra={1} intensity={1.1} color="#57b6c4" />{/* rim light for edge separation */}
           <Suspense fallback={null}>
             <group position={[0, -0.9, 0]}>
               <Humanoid anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />
-              <ContactShadows position={[0, 0.01, 0]} opacity={0.5} blur={2.4} far={2.2} scale={4} color="#020a0c" />
+              {/* reflective studio floor */}
+              <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+                <circleGeometry args={[6, 64]} />
+                <MeshReflectorMaterial
+                  resolution={1024} mirror={0.55} mixBlur={7} mixStrength={2.2} blur={[300, 80]}
+                  roughness={0.85} depthScale={1.1} minDepthThreshold={0.4} maxDepthThreshold={1.2}
+                  color="#0a1c20" metalness={0.35}
+                />
+              </mesh>
+              <ContactShadows position={[0, 0.012, 0]} opacity={0.55} blur={2.6} far={2.4} scale={4.5} color="#02090b" resolution={1024} />
             </group>
           </Suspense>
-          <OrbitControls enablePan={false} minDistance={2} maxDistance={5} target={[0, 0.15, 0]} minPolarAngle={0.5} maxPolarAngle={1.7} />
+          <OrbitControls enablePan={false} enableDamping dampingFactor={0.08} minDistance={2} maxDistance={5.5} target={[0, 0.2, 0]} minPolarAngle={0.4} maxPolarAngle={1.72} />
         </Canvas>
 
         <div style={{ position: 'absolute', left: 14, bottom: 12, color: '#cfe6e9', fontSize: '0.72rem', background: 'rgba(0,0,0,0.35)', padding: '5px 10px', borderRadius: '8px', backdropFilter: 'blur(4px)' }}>
