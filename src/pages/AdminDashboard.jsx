@@ -293,7 +293,8 @@ export default function AdminDashboard() {
           { key: 'kiosk', label: t('tabs.kioskLog'), icon: Camera },
           { key: 'leaderboard', label: 'Leaderboard', icon: Award },
           { key: 'aiTraining', label: 'AI Training', icon: Brain },
-          ...(isSuperAdmin ? [{ key: 'clinics', label: 'Clinics', icon: Building2 }] : []),
+          // Clinics management is not used in the YFS_FIXIT tenant — clinics are
+          // created/managed on the FIXIT · Musée Initialize instance instead.
         ].map(tb => (
           <button
             key={tb.key}
