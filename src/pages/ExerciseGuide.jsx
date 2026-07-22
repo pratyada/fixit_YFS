@@ -2,7 +2,8 @@ import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, ContactShadows, MeshReflectorMaterial, useGLTF, useAnimations } from '@react-three/drei';
+import { OrbitControls, ContactShadows, MeshReflectorMaterial, useGLTF } from '@react-three/drei';
+import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { Play, Pause, Gauge, User, Move3d, ArrowLeft, Boxes, Sparkles } from 'lucide-react';
 import { getExerciseAnimation } from '../data/exercise-animations';
 
@@ -53,7 +54,8 @@ function Humanoid({ anim, playing, speed, yaw }) {
   useFrame((_, delta) => {
     // advance the rep phase
     if (playing) phase.current = (phase.current + (delta * speed) / anim.tempoSec) % 1;
-    const s = repEase(phase.current);
+    const dbg = (typeof window !== 'undefined' && window.__S != null) ? window.__S : null;
+    const s = dbg != null ? dbg : repEase(phase.current);
     const j = (key) => lerp(anim.rest[key] ?? 0, anim.target[key] ?? 0, s);
 
     if (hips.current) hips.current.position.y = P.hipY + j('hipsY');
@@ -122,24 +124,32 @@ const WZ = new THREE.Vector3(0, 0, 1);
 // squat pose tuning (local-axis rotations on the mixamorig rig) — iterated visually
 const LEG = { hip: 1.0, knee: -1.5, ankle: 0.5 };
 
-function RealisticAvatar({ anim, playing, speed, yaw }) {
+function MannequinAvatar({ anim, playing, speed, yaw, style }) {
   const group = useRef();
-  const { scene } = useGLTF('/models/xbot.glb');
+  const { scene: original } = useGLTF('/models/xbot.glb');
 
   const data = useMemo(() => {
+    // clone so each style has its own skeleton (never mutate the shared cached scene)
+    const scene = cloneSkeleton(original);
     const bones = {};
     scene.traverse((o) => {
       if (o.isBone) bones[o.name.replace(/^mixamorig:?/, '')] = o;
-      if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; }
+      if (o.isMesh) {
+        o.castShadow = true; o.frustumCulled = false;
+        o.material = style === 'stylized'
+          ? new THREE.MeshToonMaterial({ color: '#5ab6c6' })                          // illustrated / cel-shaded
+          : new THREE.MeshStandardMaterial({ color: '#cda88f', roughness: 0.82, metalness: 0.05 }); // realistic clay
+      }
     });
     const rest = {};
     for (const k in bones) rest[k] = bones[k].quaternion.clone();
     const restHipsY = bones.Hips ? bones.Hips.position.y : 0;
+    scene.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(scene);
     const size = new THREE.Vector3(); box.getSize(size);
     const scale = 1.75 / size.y;
-    return { bones, rest, restHipsY, scale, y: -box.min.y * scale };
-  }, [scene]);
+    return { scene, bones, rest, restHipsY, scale, y: -box.min.y * scale };
+  }, [original, style]);
 
   const phase = useRef(0);
 
@@ -173,7 +183,7 @@ function RealisticAvatar({ anim, playing, speed, yaw }) {
     if (group.current) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, yaw, 0.12);
   });
 
-  return <group ref={group}><primitive object={scene} scale={data.scale} position={[0, data.y, 0]} /></group>;
+  return <group ref={group}><primitive object={data.scene} scale={data.scale} position={[0, data.y, 0]} /></group>;
 }
 useGLTF.preload('/models/xbot.glb');
 
@@ -209,12 +219,12 @@ export default function ExerciseGuide() {
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', cursor: 'pointer',
           border: `2px solid ${!realistic ? '#57b6c4' : 'var(--color-border)'}`, background: !realistic ? 'rgba(87,182,196,0.14)' : 'var(--color-surface,#fff)',
           color: !realistic ? '#2f8b96' : 'var(--color-text)', fontWeight: 800, fontSize: '0.9rem',
-        }}><Boxes size={17} /> Version 1 · Stylized<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>free · instant per exercise</span></button>
+        }}><Boxes size={17} /> Version 1 · Stylized<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>illustrated look</span></button>
         <button onClick={() => setRealistic(true)} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', cursor: 'pointer',
           border: `2px solid ${realistic ? '#57b6c4' : 'var(--color-border)'}`, background: realistic ? 'rgba(87,182,196,0.14)' : 'var(--color-surface,#fff)',
           color: realistic ? '#2f8b96' : 'var(--color-text)', fontWeight: 800, fontSize: '0.9rem',
-        }}><Sparkles size={17} /> Version 2 · Realistic<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>3D human mannequin</span></button>
+        }}><Sparkles size={17} /> Version 2 · Realistic<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>realistic look</span></button>
       </div>
 
       {/* 3D stage */}
@@ -234,9 +244,7 @@ export default function ExerciseGuide() {
           <spotLight position={[-2, 4, -4]} angle={0.6} penumbra={1} intensity={1.1} color="#57b6c4" />{/* rim light for edge separation */}
           <Suspense fallback={null}>
             <group position={[0, -0.9, 0]}>
-              {realistic
-                ? <RealisticAvatar anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />
-                : <Humanoid anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />}
+              <MannequinAvatar key={realistic ? 'real' : 'styl'} style={realistic ? 'realistic' : 'stylized'} anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />
               {/* reflective studio floor */}
               <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
                 <circleGeometry args={[6, 64]} />
