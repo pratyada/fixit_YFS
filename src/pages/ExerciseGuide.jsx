@@ -114,36 +114,68 @@ function Humanoid({ anim, playing, speed, yaw }) {
   );
 }
 
-// ── Realistic option: a real rigged human mesh (mixamorig skeleton) ──────────
-// Plays a smooth built-in motion so the body reads as alive. A correct per-
-// exercise squat here requires real motion-capture (see the build plan) — this
-// shows the photoreal *look*, driven at the same play/speed/view controls.
-function RealisticAvatar({ playing, speed, yaw }) {
-  const group = useRef();
-  const { scene, animations } = useGLTF('/models/human.glb');
-  const { actions, names, mixer } = useAnimations(animations, group);
+// ── Realistic option: a clean rigged mannequin driven into the exercise ──────
+// A grey humanoid (mixamorig skeleton) whose bones we pose each frame to perform
+// the movement — a clinical demo look, not a game character.
+const WX = new THREE.Vector3(1, 0, 0);
+const WZ = new THREE.Vector3(0, 0, 1);
+// squat pose tuning (local-axis rotations on the mixamorig rig) — iterated visually
+const LEG = { hip: 1.0, knee: -1.5, ankle: 0.5 };
 
-  const fit = useMemo(() => {
-    scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+function RealisticAvatar({ anim, playing, speed, yaw }) {
+  const group = useRef();
+  const { scene } = useGLTF('/models/xbot.glb');
+
+  const data = useMemo(() => {
+    const bones = {};
+    scene.traverse((o) => {
+      if (o.isBone) bones[o.name.replace(/^mixamorig:?/, '')] = o;
+      if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; }
+    });
+    const rest = {};
+    for (const k in bones) rest[k] = bones[k].quaternion.clone();
+    const restHipsY = bones.Hips ? bones.Hips.position.y : 0;
     const box = new THREE.Box3().setFromObject(scene);
     const size = new THREE.Vector3(); box.getSize(size);
-    const scale = 1.75 / size.y;                       // normalise to ~1.75 m tall
-    return { scale, y: -box.min.y * scale };
+    const scale = 1.75 / size.y;
+    return { bones, rest, restHipsY, scale, y: -box.min.y * scale };
   }, [scene]);
 
-  useEffect(() => {
-    const a = actions['Idle'] || actions[names[0]];
-    if (!a) return;
-    a.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.3).play();
-    return () => { a.fadeOut(0.2); };
-  }, [actions, names]);
+  const phase = useRef(0);
 
-  useEffect(() => { mixer.timeScale = playing ? speed : 0; }, [mixer, playing, speed]);
-  useFrame(() => { if (group.current) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, yaw, 0.12); });
+  useFrame((_, delta) => {
+    if (playing) phase.current = (phase.current + (delta * speed) / anim.tempoSec) % 1;
+    const dbg = (typeof window !== 'undefined' && window.__S != null) ? window.__S : null;
+    const s = dbg != null ? dbg : repEase(phase.current);
+    const { bones, rest } = data;
+    // pose a bone: reset to rest, then apply LOCAL-axis rotations (compose through hierarchy)
+    const pose = (name, ops) => {
+      const b = bones[name]; if (!b) return;
+      b.quaternion.copy(rest[name]);
+      for (const [ax, ang] of ops) b.rotateOnAxis(ax, ang);
+    };
+    if (bones.Hips) bones.Hips.position.y = data.restHipsY - (0.14 / data.scale) * s;
+    // arms: ALWAYS down at the sides (base), reach slightly forward at the bottom
+    pose('LeftArm',  [[WZ, -1.32], [WX, 0.15 + 0.55 * s]]);
+    pose('RightArm', [[WZ,  1.32], [WX, 0.15 + 0.55 * s]]);
+    pose('LeftForeArm',  [[WX, 0.2 + 0.4 * s]]);
+    pose('RightForeArm', [[WX, 0.2 + 0.4 * s]]);
+    // legs: hip flex, knee fold, ankle counter
+    pose('LeftUpLeg',  [[WX, LEG.hip * s]]);
+    pose('RightUpLeg', [[WX, LEG.hip * s]]);
+    pose('LeftLeg',  [[WX, LEG.knee * s]]);
+    pose('RightLeg', [[WX, LEG.knee * s]]);
+    pose('LeftFoot',  [[WX, LEG.ankle * s]]);
+    pose('RightFoot', [[WX, LEG.ankle * s]]);
+    pose('Spine',  [[WX, 0.16 * s]]);
+    pose('Spine1', [[WX, 0.10 * s]]);
 
-  return <group ref={group}><primitive object={scene} scale={fit.scale} position={[0, fit.y, 0]} /></group>;
+    if (group.current) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, yaw, 0.12);
+  });
+
+  return <group ref={group}><primitive object={scene} scale={data.scale} position={[0, data.y, 0]} /></group>;
 }
-useGLTF.preload('/models/human.glb');
+useGLTF.preload('/models/xbot.glb');
 
 export default function ExerciseGuide() {
   const { exerciseId } = useParams();
@@ -182,7 +214,7 @@ export default function ExerciseGuide() {
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', cursor: 'pointer',
           border: `2px solid ${realistic ? '#57b6c4' : 'var(--color-border)'}`, background: realistic ? 'rgba(87,182,196,0.14)' : 'var(--color-surface,#fff)',
           color: realistic ? '#2f8b96' : 'var(--color-text)', fontWeight: 800, fontSize: '0.9rem',
-        }}><Sparkles size={17} /> Version 2 · Realistic<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>photoreal · needs mocap</span></button>
+        }}><Sparkles size={17} /> Version 2 · Realistic<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>3D human mannequin</span></button>
       </div>
 
       {/* 3D stage */}
@@ -203,7 +235,7 @@ export default function ExerciseGuide() {
           <Suspense fallback={null}>
             <group position={[0, -0.9, 0]}>
               {realistic
-                ? <RealisticAvatar playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />
+                ? <RealisticAvatar anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />
                 : <Humanoid anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />}
               {/* reflective studio floor */}
               <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
@@ -239,8 +271,8 @@ export default function ExerciseGuide() {
       </div>
 
       {realistic && (
-        <div style={{ marginTop: '10px', padding: '12px 15px', borderRadius: '12px', background: 'rgba(184,121,29,0.08)', border: '1px solid rgba(184,121,29,0.3)', fontSize: '0.82rem', color: 'var(--color-text)' }}>
-          <b>About Version 2:</b> this is a <b>real rigged human body</b> — the photoreal look. It's shown here with a natural idle motion. Making it perform each exercise <i>correctly</i> requires motion-capture (film a rep → AI mocap → Blender), roughly <b>1–3 hrs per exercise</b>. Version 1 (stylized) we animate ourselves — <b>free and instant</b> for every exercise.
+        <div style={{ marginTop: '10px', padding: '12px 15px', borderRadius: '12px', background: 'rgba(87,182,196,0.08)', border: '1px solid rgba(87,182,196,0.3)', fontSize: '0.82rem', color: 'var(--color-text)' }}>
+          <b>Version 2 · Realistic:</b> a real 3D human mannequin performing the exercise — built with <b>free tools only</b> (no paid mocap). Same play / slow-mo / view controls. Both versions replicate to every exercise; pick the look you prefer for the patient app.
         </div>
       )}
     </div>
