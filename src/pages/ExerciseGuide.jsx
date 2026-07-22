@@ -1,8 +1,9 @@
-import { useRef, useState, useMemo, Suspense } from 'react';
+import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, ContactShadows, MeshReflectorMaterial } from '@react-three/drei';
-import { Play, Pause, RotateCcw, Gauge, User, Move3d, ArrowLeft } from 'lucide-react';
+import { OrbitControls, ContactShadows, MeshReflectorMaterial, useGLTF, useAnimations } from '@react-three/drei';
+import { Play, Pause, Gauge, User, Move3d, ArrowLeft, Boxes, Sparkles } from 'lucide-react';
 import { getExerciseAnimation } from '../data/exercise-animations';
 
 // ── Rig proportions (metres) ────────────────────────────────────────────────
@@ -113,12 +114,44 @@ function Humanoid({ anim, playing, speed, yaw }) {
   );
 }
 
+// ── Realistic option: a real rigged human mesh (mixamorig skeleton) ──────────
+// Plays a smooth built-in motion so the body reads as alive. A correct per-
+// exercise squat here requires real motion-capture (see the build plan) — this
+// shows the photoreal *look*, driven at the same play/speed/view controls.
+function RealisticAvatar({ playing, speed, yaw }) {
+  const group = useRef();
+  const { scene, animations } = useGLTF('/models/human.glb');
+  const { actions, names, mixer } = useAnimations(animations, group);
+
+  const fit = useMemo(() => {
+    scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+    const box = new THREE.Box3().setFromObject(scene);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const scale = 1.75 / size.y;                       // normalise to ~1.75 m tall
+    return { scale, y: -box.min.y * scale };
+  }, [scene]);
+
+  useEffect(() => {
+    const a = actions['Idle'] || actions[names[0]];
+    if (!a) return;
+    a.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.3).play();
+    return () => { a.fadeOut(0.2); };
+  }, [actions, names]);
+
+  useEffect(() => { mixer.timeScale = playing ? speed : 0; }, [mixer, playing, speed]);
+  useFrame(() => { if (group.current) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, yaw, 0.12); });
+
+  return <group ref={group}><primitive object={scene} scale={fit.scale} position={[0, fit.y, 0]} /></group>;
+}
+useGLTF.preload('/models/human.glb');
+
 export default function ExerciseGuide() {
   const { exerciseId } = useParams();
   const anim = useMemo(() => getExerciseAnimation(exerciseId), [exerciseId]);
   const [playing, setPlaying] = useState(true);
   const [slow, setSlow] = useState(false);
   const [side, setSide] = useState(false);   // false = front, true = side
+  const [realistic, setRealistic] = useState(false);  // false = stylized, true = realistic human
 
   const btn = (active) => ({
     display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 15px', borderRadius: '10px',
@@ -138,6 +171,20 @@ export default function ExerciseGuide() {
         </div>
       </div>
 
+      {/* Version switch — the two directions for Ashima to compare */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+        <button onClick={() => setRealistic(false)} style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', cursor: 'pointer',
+          border: `2px solid ${!realistic ? '#57b6c4' : 'var(--color-border)'}`, background: !realistic ? 'rgba(87,182,196,0.14)' : 'var(--color-surface,#fff)',
+          color: !realistic ? '#2f8b96' : 'var(--color-text)', fontWeight: 800, fontSize: '0.9rem',
+        }}><Boxes size={17} /> Version 1 · Stylized<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>free · instant per exercise</span></button>
+        <button onClick={() => setRealistic(true)} style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', cursor: 'pointer',
+          border: `2px solid ${realistic ? '#57b6c4' : 'var(--color-border)'}`, background: realistic ? 'rgba(87,182,196,0.14)' : 'var(--color-surface,#fff)',
+          color: realistic ? '#2f8b96' : 'var(--color-text)', fontWeight: 800, fontSize: '0.9rem',
+        }}><Sparkles size={17} /> Version 2 · Realistic<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>photoreal · needs mocap</span></button>
+      </div>
+
       {/* 3D stage */}
       <div style={{ position: 'relative', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--color-border)', background: 'linear-gradient(180deg,#0e2024,#132e33)', height: '460px' }}>
         <Canvas shadows dpr={[1, 1.75]} camera={{ position: [0.6, 1.15, 3.1], fov: 40 }} gl={{ antialias: true, powerPreference: 'high-performance' }}>
@@ -155,7 +202,9 @@ export default function ExerciseGuide() {
           <spotLight position={[-2, 4, -4]} angle={0.6} penumbra={1} intensity={1.1} color="#57b6c4" />{/* rim light for edge separation */}
           <Suspense fallback={null}>
             <group position={[0, -0.9, 0]}>
-              <Humanoid anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />
+              {realistic
+                ? <RealisticAvatar playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />
+                : <Humanoid anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />}
               {/* reflective studio floor */}
               <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
                 <circleGeometry args={[6, 64]} />
@@ -188,6 +237,12 @@ export default function ExerciseGuide() {
         <div style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--color-accent)', marginBottom: '5px' }}>How to do it</div>
         <div style={{ fontSize: '0.9rem', color: 'var(--color-text)' }}>{anim.cue}</div>
       </div>
+
+      {realistic && (
+        <div style={{ marginTop: '10px', padding: '12px 15px', borderRadius: '12px', background: 'rgba(184,121,29,0.08)', border: '1px solid rgba(184,121,29,0.3)', fontSize: '0.82rem', color: 'var(--color-text)' }}>
+          <b>About Version 2:</b> this is a <b>real rigged human body</b> — the photoreal look. It's shown here with a natural idle motion. Making it perform each exercise <i>correctly</i> requires motion-capture (film a rep → AI mocap → Blender), roughly <b>1–3 hrs per exercise</b>. Version 1 (stylized) we animate ourselves — <b>free and instant</b> for every exercise.
+        </div>
+      )}
     </div>
   );
 }
