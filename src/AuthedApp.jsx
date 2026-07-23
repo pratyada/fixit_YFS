@@ -115,18 +115,18 @@ const PRACTITIONER_TABS = [
 const ADMIN_TABS = [
   { to: '/', icon: Shield, labelKey: 'nav:tabs.admin' },
   { to: '/exercises', icon: BookOpen, labelKey: 'nav:tabs.library' },
-  // Customer-deliverable marketing pipeline (subscriber → email → sent → subscription → creatives → blog).
+  // Customer-deliverable marketing pipeline (subscriber → email → sent → creatives → blog).
   // `ready` marks features that are ready for customer testing (yellow highlight).
   { to: '/subscribers', icon: Users, labelKey: 'Subscribers' },
   { to: '/email', icon: Mail, labelKey: 'Email', ready: true },
   { to: '/sent', icon: Send, labelKey: 'Sent' },
-  { to: '/billing', icon: CreditCard, labelKey: 'Subscription' },
   { to: '/creatives', icon: Palette, labelKey: 'Creatives', ready: true },
   { to: '/blog', icon: PenTool, labelKey: 'Blog', ready: true },
   // In-clinic tools
   { to: '/kiosk', icon: Camera, labelKey: 'nav:tabs.kiosk' },
   { to: '/voice', icon: Mic, labelKey: 'Voice AI' },
   { to: '/anatomy', icon: Bone, labelKey: 'Know Your Injury' },
+  // Subscription is pinned to the bottom of the sidebar (see footer), not listed here.
 ];
 
 // Placeholder for marketing sections not yet built (Email=Phase 2, Blog=Phase 3,
@@ -160,7 +160,7 @@ function useIsDesktop() {
 function AppLayout() {
   const { t } = useTranslation('nav');
   const clinic = useClinic();
-  const { session, logout, role, isAdmin, isPractitioner, hasMultipleRoles, switchRole, allRoles } = useAuth();
+  const { session, logout, role, isAdmin, isPractitioner, isPatient, hasMultipleRoles, switchRole, allRoles } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isDesktop = useIsDesktop();
@@ -243,6 +243,25 @@ function AppLayout() {
               </NavLink>
             ))}
           </nav>
+
+          {/* Subscription — pinned to the bottom, just above Switch Role */}
+          {(isAdmin || isPatient) && (
+            <NavLink to={isAdmin ? '/billing' : '/subscription'} style={{ textDecoration: 'none' }}>
+              {({ isActive }) => (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  margin: '0 10px', padding: '10px 14px', borderRadius: '10px',
+                  background: isActive ? 'var(--color-accent)' : 'transparent',
+                  color: isActive ? 'white' : 'var(--color-text)',
+                  fontSize: '0.85rem', fontWeight: isActive ? 600 : 500,
+                  borderTop: '1px solid var(--color-border)', borderTopLeftRadius: 0, borderTopRightRadius: 0,
+                }}>
+                  <CreditCard size={18} strokeWidth={isActive ? 2.5 : 1.8} />
+                  Subscription
+                </div>
+              )}
+            </NavLink>
+          )}
 
           {/* Sidebar footer */}
           <div style={{
