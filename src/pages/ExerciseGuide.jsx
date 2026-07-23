@@ -122,7 +122,8 @@ function Humanoid({ anim, playing, speed, yaw }) {
 const WX = new THREE.Vector3(1, 0, 0);
 const WZ = new THREE.Vector3(0, 0, 1);
 // squat pose tuning (local-axis rotations on the mixamorig rig) — iterated visually
-const LEG = { hip: 1.0, knee: -1.5, ankle: 0.5 };
+// squat pose: hips drop (m), thigh flex, knee fold, ankle counter — foot stays planted
+const LEG = { drop: 0.38, hip: 0.8, knee: -1.5, ankle: 0.72 };
 
 function MannequinAvatar({ anim, playing, speed, yaw, style }) {
   const group = useRef();
@@ -164,21 +165,26 @@ function MannequinAvatar({ anim, playing, speed, yaw, style }) {
       b.quaternion.copy(rest[name]);
       for (const [ax, ang] of ops) b.rotateOnAxis(ax, ang);
     };
-    if (bones.Hips) bones.Hips.position.y = data.restHipsY - (0.14 / data.scale) * s;
-    // arms: ALWAYS down at the sides (base), reach slightly forward at the bottom
-    pose('LeftArm',  [[WZ, -1.32], [WX, 0.15 + 0.55 * s]]);
-    pose('RightArm', [[WZ,  1.32], [WX, 0.15 + 0.55 * s]]);
-    pose('LeftForeArm',  [[WX, 0.2 + 0.4 * s]]);
-    pose('RightForeArm', [[WX, 0.2 + 0.4 * s]]);
-    // legs: hip flex, knee fold, ankle counter
+    // Hips sink DOWN — this is the squat. Big drop so the folding legs reach
+    // downward (feet planted) instead of the thighs swinging the feet upward.
+    if (bones.Hips) bones.Hips.position.y = data.restHipsY - (LEG.drop / data.scale) * s;
+    // arms: down at the sides (base), reach forward for balance at the bottom
+    pose('LeftArm',  [[WZ, -1.32], [WX, 0.15 + 0.75 * s]]);
+    pose('RightArm', [[WZ,  1.32], [WX, 0.15 + 0.75 * s]]);
+    pose('LeftForeArm',  [[WX, 0.2 + 0.35 * s]]);
+    pose('RightForeArm', [[WX, 0.2 + 0.35 * s]]);
+    // Legs: thigh folds toward horizontal (knee forward), shin folds back under,
+    // ankle dorsiflexes so the foot stays FLAT on the floor. Foot-plant identity:
+    // thigh(+) + knee(-) + ankle keep the sole level as the hips drop.
     pose('LeftUpLeg',  [[WX, LEG.hip * s]]);
     pose('RightUpLeg', [[WX, LEG.hip * s]]);
     pose('LeftLeg',  [[WX, LEG.knee * s]]);
     pose('RightLeg', [[WX, LEG.knee * s]]);
     pose('LeftFoot',  [[WX, LEG.ankle * s]]);
     pose('RightFoot', [[WX, LEG.ankle * s]]);
-    pose('Spine',  [[WX, 0.16 * s]]);
-    pose('Spine1', [[WX, 0.10 * s]]);
+    // trunk leans forward (chest over knees), balancing the sinking hips
+    pose('Spine',  [[WX, 0.34 * s]]);
+    pose('Spine1', [[WX, 0.2 * s]]);
 
     if (group.current) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, yaw, 0.12);
   });
@@ -193,7 +199,7 @@ export default function ExerciseGuide() {
   const [playing, setPlaying] = useState(true);
   const [slow, setSlow] = useState(false);
   const [side, setSide] = useState(false);   // false = front, true = side
-  const [realistic, setRealistic] = useState(false);  // false = stylized, true = realistic human
+  const [realistic, setRealistic] = useState(true);  // default to the realistic human mannequin
 
   const btn = (active) => ({
     display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 15px', borderRadius: '10px',
