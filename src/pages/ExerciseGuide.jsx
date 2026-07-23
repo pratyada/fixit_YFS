@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, ContactShadows, MeshReflectorMaterial, useGLTF } from '@react-three/drei';
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { Play, Pause, Gauge, User, Move3d, ArrowLeft, Boxes, Sparkles } from 'lucide-react';
+import { Play, Pause, Gauge, User, Move3d, ArrowLeft } from 'lucide-react';
 import { getExerciseAnimation } from '../data/exercise-animations';
 
 // ── Rig proportions (metres) ────────────────────────────────────────────────
@@ -199,7 +199,6 @@ export default function ExerciseGuide() {
   const [playing, setPlaying] = useState(true);
   const [slow, setSlow] = useState(false);
   const [side, setSide] = useState(false);   // false = front, true = side
-  const [realistic, setRealistic] = useState(true);  // default to the realistic human mannequin
 
   const btn = (active) => ({
     display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 15px', borderRadius: '10px',
@@ -219,19 +218,6 @@ export default function ExerciseGuide() {
         </div>
       </div>
 
-      {/* Version switch — the two directions for Ashima to compare */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-        <button onClick={() => setRealistic(false)} style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', cursor: 'pointer',
-          border: `2px solid ${!realistic ? '#57b6c4' : 'var(--color-border)'}`, background: !realistic ? 'rgba(87,182,196,0.14)' : 'var(--color-surface,#fff)',
-          color: !realistic ? '#2f8b96' : 'var(--color-text)', fontWeight: 800, fontSize: '0.9rem',
-        }}><Boxes size={17} /> Version 1 · Stylized<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>illustrated look</span></button>
-        <button onClick={() => setRealistic(true)} style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', cursor: 'pointer',
-          border: `2px solid ${realistic ? '#57b6c4' : 'var(--color-border)'}`, background: realistic ? 'rgba(87,182,196,0.14)' : 'var(--color-surface,#fff)',
-          color: realistic ? '#2f8b96' : 'var(--color-text)', fontWeight: 800, fontSize: '0.9rem',
-        }}><Sparkles size={17} /> Version 2 · Realistic<span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.75 }}>realistic look</span></button>
-      </div>
 
       {/* 3D stage */}
       <div style={{ position: 'relative', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--color-border)', background: 'linear-gradient(180deg,#0e2024,#132e33)', height: '460px' }}>
@@ -250,7 +236,7 @@ export default function ExerciseGuide() {
           <spotLight position={[-2, 4, -4]} angle={0.6} penumbra={1} intensity={1.1} color="#57b6c4" />{/* rim light for edge separation */}
           <Suspense fallback={null}>
             <group position={[0, -0.9, 0]}>
-              <MannequinAvatar key={realistic ? 'real' : 'styl'} style={realistic ? 'realistic' : 'stylized'} anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />
+              <MannequinAvatar style="realistic" anim={anim} playing={playing} speed={slow ? 0.4 : 1} yaw={side ? Math.PI / 2 : 0} />
               {/* reflective studio floor */}
               <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
                 <circleGeometry args={[6, 64]} />
@@ -284,11 +270,6 @@ export default function ExerciseGuide() {
         <div style={{ fontSize: '0.9rem', color: 'var(--color-text)' }}>{anim.cue}</div>
       </div>
 
-      {realistic && (
-        <div style={{ marginTop: '10px', padding: '12px 15px', borderRadius: '12px', background: 'rgba(87,182,196,0.08)', border: '1px solid rgba(87,182,196,0.3)', fontSize: '0.82rem', color: 'var(--color-text)' }}>
-          <b>Version 2 · Realistic:</b> a real 3D human mannequin performing the exercise — built with <b>free tools only</b> (no paid mocap). Same play / slow-mo / view controls. Both versions replicate to every exercise; pick the look you prefer for the patient app.
-        </div>
-      )}
     </div>
   );
 }
