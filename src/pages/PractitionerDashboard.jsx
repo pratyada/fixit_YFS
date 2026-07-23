@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star, ChevronDown, ChevronUp, Send, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star, ChevronDown, ChevronUp, Send, MessageSquare, CheckCircle2, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Camera } from 'lucide-react';
+import { marketing } from '../lib/marketingApi';
 import { getPatientsByPractitioner, getPatientSessions, getPainEntries, getAssignments, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner, getKioskSessions } from '../lib/firestore';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
@@ -644,6 +645,9 @@ function AssignExercisePanel({ patient, practitionerId, t }) {
   const [reps, setReps] = useState(10);
   const [assigning, setAssigning] = useState(false);
   const [assigned, setAssigned] = useState([]);
+  const [assignedDetail, setAssignedDetail] = useState([]);   // for the notify email
+  const [notifying, setNotifying] = useState(false);
+  const [notified, setNotified] = useState(false);
 
   const handleAssign = async (exercise) => {
     setAssigning(true);
@@ -658,11 +662,31 @@ function AssignExercisePanel({ patient, practitionerId, t }) {
         frequency: 'Daily',
       });
       setAssigned(prev => [...prev, exercise.id]);
+      setAssignedDetail(prev => [...prev, { name: exercise.name, sets, reps, bodyPart: exercise.bodyPart }]);
+      setNotified(false);
       setNotes('');
     } catch (e) {
       console.error('Failed to assign:', e);
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const handleNotify = async () => {
+    if (!patient.email || !assignedDetail.length) return;
+    setNotifying(true);
+    try {
+      await marketing.notifyAssignment({
+        patientEmail: patient.email,
+        patientName: patient.name || '',
+        exercises: assignedDetail,
+      });
+      setNotified(true);
+    } catch (e) {
+      console.error('Failed to notify patient:', e);
+      alert('Could not send the email: ' + (e?.message || 'unknown error'));
+    } finally {
+      setNotifying(false);
     }
   };
 
@@ -749,6 +773,22 @@ function AssignExercisePanel({ patient, practitionerId, t }) {
           );
         })}
       </div>
+
+      {/* Email the patient their plan (auto-notify) */}
+      {assignedDetail.length > 0 && (
+        <button onClick={handleNotify} disabled={notifying || notified || !patient.email} style={{
+          width: '100%', padding: '12px', borderRadius: '12px', marginTop: '4px',
+          background: notified ? '#E8F5E9' : 'var(--color-secondary)',
+          color: notified ? '#2E7D32' : 'white', border: 'none',
+          fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          cursor: (notifying || notified || !patient.email) ? 'default' : 'pointer', opacity: notifying ? 0.6 : 1,
+        }}>
+          {notified
+            ? <><CheckCircle2 size={15} /> Emailed {patient.email}</>
+            : <><Mail size={15} /> {notifying ? 'Sending…' : !patient.email ? 'No email on file' : `Email plan to patient (${assignedDetail.length})`}</>}
+        </button>
+      )}
     </div>
   );
 }

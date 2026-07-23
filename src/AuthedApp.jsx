@@ -25,6 +25,7 @@ import RouteErrorBoundary from './components/RouteErrorBoundary';
 // three.js (Exercise3D), and chart.js (Progress/Reports/etc.) load ONLY when
 // their page is actually visited — never on the public/guide pages.
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const PatientHome = lazy(() => import('./pages/PatientHome'));
 const Exercises = lazy(() => import('./pages/Exercises'));
 const ExerciseDetail = lazy(() => import('./pages/ExerciseDetail'));
 const PoseChecker = lazy(() => import('./pages/PoseChecker'));
@@ -407,7 +408,8 @@ function AppLayout() {
               </>
             ) : (
               <>
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/" element={<PatientHome />} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/health" element={<Health />} />
                 <Route path="/plan" element={<MyPlan />} />
                 <Route path="/programs" element={<FeatureGate feature="programs"><Programs /></FeatureGate>} />

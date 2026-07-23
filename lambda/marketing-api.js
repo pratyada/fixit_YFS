@@ -86,6 +86,55 @@ async function mapLimit(items, limit, fn) {
 }
 
 // ── Auth ──
+// Any authenticated staff member (admin OR practitioner) — used for patient notifications.
+async function requireStaff(event) {
+  const authz = event.headers?.authorization || event.headers?.Authorization || '';
+  const token = authz.startsWith('Bearer ') ? authz.slice(7) : null;
+  if (!token) throw new HttpError(401, 'Missing bearer token');
+  let decoded;
+  try { decoded = await getAuth().verifyIdToken(token); }
+  catch { throw new HttpError(401, 'Invalid or expired token'); }
+  const email = normEmail(decoded.email);
+  if (SUPER_ADMIN_EMAIL && email === SUPER_ADMIN_EMAIL) return { uid: decoded.uid, email };
+  const snap = await db.collection('users').doc(decoded.uid).get();
+  const prof = snap.exists ? snap.data() : null;
+  const roles = prof?.roles && Array.isArray(prof.roles) ? prof.roles : [prof?.role].filter(Boolean);
+  if (!roles.includes('admin') && !roles.includes('practitioner')) throw new HttpError(403, 'Staff role required');
+  return { uid: decoded.uid, email, name: prof?.name || '' };
+}
+
+// Email a patient that their practitioner has assigned exercises.
+async function handleAssignmentNotify(event) {
+  const staff = await requireStaff(event);
+  const { patientEmail, patientName, exercises = [], practitionerName } = parseBody(event);
+  const to = normEmail(patientEmail);
+  if (!to) throw new HttpError(400, 'patientEmail required');
+  if (!Array.isArray(exercises) || !exercises.length) throw new HttpError(400, 'exercises required');
+  const from = practitionerName || staff.name || 'your practitioner';
+  const list = exercises.map((e) => {
+    const meta = [e.sets && e.reps ? `${e.sets} × ${e.reps}` : '', e.bodyPart || ''].filter(Boolean).join(' · ');
+    return `<tr><td style="padding:10px 14px;border:1px solid #e6ece9;border-radius:10px;background:#f7faf9">
+      <div style="font-weight:700;color:#2c3b37;font-size:15px">${e.name || e.exerciseName || 'Exercise'}</div>
+      ${meta ? `<div style="font-size:12px;color:#7c8a86;margin-top:2px">${meta}</div>` : ''}
+    </td></tr><tr><td style="height:8px"></td></tr>`;
+  }).join('');
+  const bodyHtml = `<p style="margin:0 0 14px">Hi ${patientName || 'there'},</p>
+    <p style="margin:0 0 14px"><b>${from}</b> has assigned you a set of exercises to work on. Log in to see how to do each one, follow the guided demo, and record your reps for review.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 4px">${list}</table>
+    <div style="text-align:center;margin:24px 0 6px"><a href="${APP_URL}" style="display:inline-block;background:#4E4E53;color:#fff;text-decoration:none;padding:13px 30px;border-radius:10px;font-weight:700;font-size:15px">Open my exercises →</a></div>
+    <p style="margin:14px 0 0;font-size:13px;color:#7c8a86">Log in with this email address to see your plan.</p>`;
+  const html = brandedEmail({ subject: 'Your practitioner assigned you exercises', preheader: `${from} assigned you ${exercises.length} exercise${exercises.length > 1 ? 's' : ''}`, bodyHtml, unsubscribeUrl: `${APP_URL}`, brand: 'fixit' });
+  const fromName = brandTheme('fixit').fromName || 'FIXIT';
+  const bareFrom = (FROM.match(/<([^>]+)>/) || [null, FROM])[1].trim();
+  await ses.send(new SendEmailCommand({
+    Source: `${fromName} <${bareFrom}>`,
+    Destination: { ToAddresses: [to] },
+    ReplyToAddresses: [REPLY_TO],
+    Message: { Subject: { Data: 'Your practitioner assigned you exercises' }, Body: { Html: { Data: html } } },
+  }));
+  return json(200, { ok: true, sent: to, count: exercises.length });
+}
+
 async function requireAdmin(event) {
   const authz = event.headers?.authorization || event.headers?.Authorization || '';
   const token = authz.startsWith('Bearer ') ? authz.slice(7) : null;
@@ -761,6 +810,9 @@ export const handler = async (event) => {
     // mapped to the right status instead of escaping as an uncaught 500.
     if (path.endsWith('/track/open')) return await handleTrackOpen(event);
     if (path.endsWith('/track/click')) return await handleTrackClick(event);
+
+    // ── Staff (admin OR practitioner) ──
+    if (path.endsWith('/marketing/notify-assignment') && method === 'POST') return await handleAssignmentNotify(event);
 
     // ── Admin ──
     const caller = await requireAdmin(event);
