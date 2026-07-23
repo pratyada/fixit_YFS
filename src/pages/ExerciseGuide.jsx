@@ -121,9 +121,10 @@ function Humanoid({ anim, playing, speed, yaw }) {
 // the movement — a clinical demo look, not a game character.
 const WX = new THREE.Vector3(1, 0, 0);
 const WZ = new THREE.Vector3(0, 0, 1);
-// squat pose tuning (local-axis rotations on the mixamorig rig) — iterated visually
-// squat pose: hips drop (m), thigh flex, knee fold, ankle counter — foot stays planted
-const LEG = { drop: 0.38, hip: 0.8, knee: -1.5, ankle: 0.72 };
+// squat pose (local-axis rotations on the mixamorig rig) — iterated visually so
+// the knee flexes FORWARD over the toes with the foot planted (not hyperextending).
+// hips drop (m), thigh flex, knee fold, ankle counter.
+const LEG = { drop: 0.48, hip: 1.0, knee: -1.1, ankle: 0.5 };
 
 function MannequinAvatar({ anim, playing, speed, yaw, style }) {
   const group = useRef();
@@ -158,6 +159,7 @@ function MannequinAvatar({ anim, playing, speed, yaw, style }) {
     if (playing) phase.current = (phase.current + (delta * speed) / anim.tempoSec) % 1;
     const dbg = (typeof window !== 'undefined' && window.__S != null) ? window.__S : null;
     const s = dbg != null ? dbg : repEase(phase.current);
+    const L = (typeof window !== 'undefined' && window.__LEG) ? window.__LEG : LEG;
     const { bones, rest } = data;
     // pose a bone: reset to rest, then apply LOCAL-axis rotations (compose through hierarchy)
     const pose = (name, ops) => {
@@ -167,7 +169,7 @@ function MannequinAvatar({ anim, playing, speed, yaw, style }) {
     };
     // Hips sink DOWN — this is the squat. Big drop so the folding legs reach
     // downward (feet planted) instead of the thighs swinging the feet upward.
-    if (bones.Hips) bones.Hips.position.y = data.restHipsY - (LEG.drop / data.scale) * s;
+    if (bones.Hips) bones.Hips.position.y = data.restHipsY - (L.drop / data.scale) * s;
     // arms: down at the sides (base), reach forward for balance at the bottom
     pose('LeftArm',  [[WZ, -1.32], [WX, 0.15 + 0.75 * s]]);
     pose('RightArm', [[WZ,  1.32], [WX, 0.15 + 0.75 * s]]);
@@ -176,12 +178,12 @@ function MannequinAvatar({ anim, playing, speed, yaw, style }) {
     // Legs: thigh folds toward horizontal (knee forward), shin folds back under,
     // ankle dorsiflexes so the foot stays FLAT on the floor. Foot-plant identity:
     // thigh(+) + knee(-) + ankle keep the sole level as the hips drop.
-    pose('LeftUpLeg',  [[WX, LEG.hip * s]]);
-    pose('RightUpLeg', [[WX, LEG.hip * s]]);
-    pose('LeftLeg',  [[WX, LEG.knee * s]]);
-    pose('RightLeg', [[WX, LEG.knee * s]]);
-    pose('LeftFoot',  [[WX, LEG.ankle * s]]);
-    pose('RightFoot', [[WX, LEG.ankle * s]]);
+    pose("LeftUpLeg",  [[WX, L.hip * s]]);
+    pose("RightUpLeg", [[WX, L.hip * s]]);
+    pose("LeftLeg",  [[WX, L.knee * s]]);
+    pose("RightLeg", [[WX, L.knee * s]]);
+    pose("LeftFoot",  [[WX, L.ankle * s]]);
+    pose("RightFoot", [[WX, L.ankle * s]]);
     // trunk leans forward (chest over knees), balancing the sinking hips
     pose('Spine',  [[WX, 0.34 * s]]);
     pose('Spine1', [[WX, 0.2 * s]]);
