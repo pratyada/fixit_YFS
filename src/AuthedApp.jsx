@@ -445,12 +445,15 @@ function AppLayout() {
           background: 'white',
           borderTop: '1px solid var(--color-border)',
           display: 'flex',
+          overflowX: 'auto',                              // scroll horizontally when tabs overflow
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',                          // hide scrollbar (Firefox)
           paddingBottom: 'env(safe-area-inset-bottom, 8px)',
           zIndex: 50,
           boxShadow: '0 -2px 12px rgba(0,0,0,0.04)',
         }}>
           {TABS.map(({ to, icon: Icon, labelKey, ready }) => (
-            <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none', flex: 1 }}>
+            <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none', flex: '0 0 auto', minWidth: '68px' }}>
               {({ isActive }) => (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
