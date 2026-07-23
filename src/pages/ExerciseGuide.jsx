@@ -124,7 +124,7 @@ const WZ = new THREE.Vector3(0, 0, 1);
 // squat pose (local-axis rotations on the mixamorig rig) — iterated visually so
 // the knee flexes FORWARD over the toes with the foot planted (not hyperextending).
 // hips drop (m), thigh flex, knee fold, ankle counter.
-const LEG = { drop: 0.4, hip: 0.6, knee: -1.3, ankle: 0.9 };
+const LEG = { drop: 0.14, hip: 1.0, knee: -1.5, ankle: 0.5 };
 
 function MannequinAvatar({ anim, playing, speed, yaw, style }) {
   const group = useRef();
@@ -171,10 +171,10 @@ function MannequinAvatar({ anim, playing, speed, yaw, style }) {
     // downward (feet planted) instead of the thighs swinging the feet upward.
     if (bones.Hips) bones.Hips.position.y = data.restHipsY - (L.drop / data.scale) * s;
     // arms: down at the sides (base), reach forward for balance at the bottom
-    pose('LeftArm',  [[WZ, -1.32], [WX, 0.15 + 0.75 * s]]);
-    pose('RightArm', [[WZ,  1.32], [WX, 0.15 + 0.75 * s]]);
-    pose('LeftForeArm',  [[WX, 0.2 + 0.35 * s]]);
-    pose('RightForeArm', [[WX, 0.2 + 0.35 * s]]);
+    pose('LeftArm',  [[WZ, -1.32], [WX, 0.15 + 0.55 * s]]);
+    pose('RightArm', [[WZ,  1.32], [WX, 0.15 + 0.55 * s]]);
+    pose('LeftForeArm',  [[WX, 0.2 + 0.4 * s]]);
+    pose('RightForeArm', [[WX, 0.2 + 0.4 * s]]);
     // Legs: thigh folds toward horizontal (knee forward), shin folds back under,
     // ankle dorsiflexes so the foot stays FLAT on the floor. Foot-plant identity:
     // thigh(+) + knee(-) + ankle keep the sole level as the hips drop.
@@ -185,8 +185,8 @@ function MannequinAvatar({ anim, playing, speed, yaw, style }) {
     pose("LeftFoot",  [[WX, L.ankle * s]]);
     pose("RightFoot", [[WX, L.ankle * s]]);
     // trunk leans forward (chest over knees), balancing the sinking hips
-    pose('Spine',  [[WX, 0.34 * s]]);
-    pose('Spine1', [[WX, 0.2 * s]]);
+    pose('Spine',  [[WX, 0.16 * s]]);
+    pose('Spine1', [[WX, 0.10 * s]]);
 
     if (group.current) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, yaw, 0.12);
   });
