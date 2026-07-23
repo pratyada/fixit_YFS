@@ -124,7 +124,7 @@ const WZ = new THREE.Vector3(0, 0, 1);
 // squat pose (local-axis rotations on the mixamorig rig) — iterated visually so
 // the knee flexes FORWARD over the toes with the foot planted (not hyperextending).
 // hips drop (m), thigh flex, knee fold, ankle counter.
-const LEG = { drop: 0.48, hip: 1.0, knee: -1.1, ankle: 0.5 };
+const LEG = { drop: 0.4, hip: 0.6, knee: -1.3, ankle: 0.9 };
 
 function MannequinAvatar({ anim, playing, speed, yaw, style }) {
   const group = useRef();
