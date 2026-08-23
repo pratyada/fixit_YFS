@@ -1,8 +1,95 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Dumbbell, Camera, Heart, BarChart3, Brain, Check, ArrowRight, Sparkles, Shield, Star, ChevronDown, Clock, BookOpen } from 'lucide-react';
+import { Activity, Dumbbell, Camera, Heart, BarChart3, Brain, Check, ArrowRight, Sparkles, Shield, Star, ChevronDown, Clock, BookOpen, X } from 'lucide-react';
 import { useClinic } from '../contexts/ClinicContext';
+import { useAuth } from '../contexts/AuthContext';
 import { GUIDES } from '../data/guides';
 import SubscribeForm from '../components/SubscribeForm';
+
+// Login popup — opens from the top-right "Login" button. Google sign-in; the
+// user's role (admin / practitioner / patient) is resolved automatically after
+// auth, so there's no separate "admin login" vs "practitioner login" gate.
+function LoginModal({ onClose }) {
+  const { loginWithGoogle } = useAuth();
+  const clinic = useClinic();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleGoogle = async () => {
+    setError(''); setLoading(true);
+    try {
+      await loginWithGoogle();
+      onClose();
+    } catch (err) {
+      const ignore = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/popup-blocked'];
+      if (!ignore.includes(err.code)) {
+        setError(err.code === 'auth/network-request-failed'
+          ? 'Network error. Please check your connection and try again.'
+          : (err.message || 'Sign-in failed. Please try again.'));
+      }
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(28,28,30,0.55)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'white', borderRadius: '24px', padding: '36px 28px',
+        maxWidth: '400px', width: '100%', position: 'relative',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+      }}>
+        <button onClick={onClose} aria-label="Close" style={{
+          position: 'absolute', top: '16px', right: '16px',
+          width: '32px', height: '32px', borderRadius: '50%', border: 'none',
+          background: 'var(--color-bg-alt)', color: 'var(--color-text)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}><X size={16} /></button>
+
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <img src={clinic.logo} alt={clinic.name} style={{ width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 12px' }} />
+          <div style={{ fontFamily: "'Tenor Sans', serif", fontSize: '1.4rem', color: 'var(--color-secondary)', letterSpacing: '-0.5px' }}>
+            Welcome to FIXIT
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--color-text)', marginTop: '6px', lineHeight: 1.5 }}>
+            Sign in to continue. Your access — patient, practitioner, or admin — is set up automatically.
+          </p>
+        </div>
+
+        <button onClick={handleGoogle} disabled={loading} style={{
+          width: '100%', padding: '14px', borderRadius: '12px',
+          background: 'white', color: 'var(--color-secondary)', fontWeight: 600, fontSize: '0.88rem',
+          border: '1.5px solid var(--color-border)', cursor: loading ? 'default' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: loading ? 0.6 : 1,
+        }}>
+          {loading ? 'Signing in…' : (
+            <>
+              <svg width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+              Continue with Google
+            </>
+          )}
+        </button>
+
+        {error && (
+          <div style={{ background: '#FFF0F0', border: '1px solid #FFD0D0', borderRadius: '10px', padding: '10px 14px', fontSize: '0.8rem', color: '#C62828', marginTop: '14px', textAlign: 'center' }}>
+            {error}
+          </div>
+        )}
+
+        <p style={{ textAlign: 'center', fontSize: '0.65rem', marginTop: '20px', color: 'var(--color-text)', lineHeight: 1.5 }}>
+          New here? An account is created automatically on first sign-in.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const FEATURES = [
   { icon: Dumbbell, title: 'Exercise Library', desc: '100+ guided exercises for rehab, fitness, and pain management with step-by-step instructions.', color: '#708E86' },
@@ -29,9 +116,11 @@ const FAQ = [
 
 export default function Landing() {
   const clinic = useClinic();
+  const [showLogin, setShowLogin] = useState(false);
 
   return (
     <div style={{ minHeight: '100vh', background: 'white' }}>
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
       {/* ── Nav ── */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -45,13 +134,13 @@ export default function Landing() {
           <a href="#features" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Features</a>
           <a href="#pricing" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Pricing</a>
           <Link to="/guides" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Guides</Link>
-          <Link to="/login" style={{
+          <button onClick={() => setShowLogin(true)} style={{
             padding: '8px 20px', borderRadius: '8px',
             background: 'var(--color-secondary)', color: 'white',
-            textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600,
+            border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600,
           }}>
-            Sign In
-          </Link>
+            Login
+          </button>
         </div>
       </nav>
 
@@ -87,16 +176,16 @@ export default function Landing() {
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <Link to="/login" style={{
+          <button onClick={() => setShowLogin(true)} style={{
             padding: '14px 32px', borderRadius: '12px',
             background: 'linear-gradient(135deg, #708E86, #4E4E53)',
-            color: 'white', textDecoration: 'none',
+            color: 'white', border: 'none', cursor: 'pointer',
             fontSize: '0.95rem', fontWeight: 700,
             display: 'flex', alignItems: 'center', gap: '8px',
             boxShadow: '0 4px 16px rgba(112,142,134,0.3)',
           }}>
             Get Started Free <ArrowRight size={18} />
-          </Link>
+          </button>
           <a href="#features" style={{
             padding: '14px 24px', borderRadius: '12px',
             border: '2px solid var(--color-border)',
@@ -272,15 +361,15 @@ export default function Landing() {
                     </div>
                   ))}
                 </div>
-                <Link to="/login" style={{
-                  display: 'block', padding: '12px', borderRadius: '10px',
+                <button onClick={() => setShowLogin(true)} style={{
+                  display: 'block', width: '100%', padding: '12px', borderRadius: '10px',
                   background: p.popular ? p.color : 'var(--color-bg-alt)',
                   color: p.popular ? 'white' : 'var(--color-secondary)',
-                  textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700,
+                  cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
                   border: p.popular ? 'none' : '1px solid var(--color-border)',
                 }}>
                   {p.cta}
-                </Link>
+                </button>
               </div>
             ))}
           </div>
