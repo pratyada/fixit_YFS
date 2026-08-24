@@ -14,7 +14,7 @@ import { speak } from '../lib/voice';
 import { EXERCISE_LIBRARY, BODY_PARTS } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
-const ALL_POSE_EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES];
+const ALL_POSE_EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES, ...EXERCISE_LIBRARY];
 import { useAuth } from '../contexts/AuthContext';
 import { addSession, updateSession, getCalibration, setCalibration, addCompletedSession } from '../lib/firestore';
 import { uploadVideo } from '../lib/storage-firebase';

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Clock, Repeat, Target, AlertTriangle, CheckCircle2, Camera, Play, Pause, RotateCcw, Upload, Video, X } from 'lucide-react';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
+import { GYM_EXERCISES } from '../data/gym-exercises';
 import { usePatientData } from '../hooks/usePatientData';
 import { addCompletedSession, getExercise, setExercise } from '../lib/firestore';
 import { uploadDemoVideo } from '../lib/storage-firebase';
@@ -31,7 +32,7 @@ export default function ExerciseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAdmin, isPractitioner } = useAuth();
-  const exercise = FIXIT_EXERCISES.find(e => e.id === id) || EXERCISE_LIBRARY.find(e => e.id === id);
+  const exercise = FIXIT_EXERCISES.find(e => e.id === id) || EXERCISE_LIBRARY.find(e => e.id === id) || GYM_EXERCISES.find(e => e.id === id);
   const canManage = isAdmin || isPractitioner;
 
   // Helper to get translated exercise content from exerciseData namespace
