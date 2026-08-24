@@ -6,6 +6,7 @@ import admin from 'firebase-admin';
 import { readFileSync } from 'fs';
 import { EXERCISE_LIBRARY } from '../src/data/exercises.js';
 import { FIXIT_EXERCISES } from '../src/data/fixit-exercises.js';
+import { GYM_EXERCISES } from '../src/data/gym-exercises.js';
 
 const sa = JSON.parse(readFileSync('./key/fixit-6167d-firebase-adminsdk-fbsvc-67b83f4693.json', 'utf8'));
 admin.initializeApp({ credential: admin.credential.cert(sa) });
@@ -14,7 +15,7 @@ const db = admin.firestore();
 // id → {name, bodyPart} so we can backfill these onto the exercise doc.
 // getExercises() orders by `name`, so a doc WITHOUT a name is invisible to the app.
 const META = {};
-for (const e of [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY]) META[e.id] = { name: e.name, bodyPart: e.bodyPart };
+for (const e of [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY, ...GYM_EXERCISES]) META[e.id] = { name: e.name, bodyPart: e.bodyPart };
 
 function normalizeVideoUrl(raw) {
   const u = raw.trim();
@@ -25,7 +26,8 @@ function normalizeVideoUrl(raw) {
   return u;
 }
 
-const rows = readFileSync('./scripts/demo-videos.txt', 'utf8')
+const inputFile = process.argv[2] || './scripts/demo-videos.txt';
+const rows = readFileSync(inputFile, 'utf8')
   .split('\n').map(l => l.trim()).filter(l => l && l.includes('|'));
 
 let written = 0, skipped = 0;
