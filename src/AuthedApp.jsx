@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send, Palette, Mic, Bone, CreditCard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -165,6 +165,14 @@ function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const isDesktop = useIsDesktop();
+
+  // Scroll back to the top whenever the route changes — content scrolls inside
+  // <main>, so reset that element (plus the window as a fallback).
+  const mainRef = useRef(null);
+  useEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTo({ top: 0, left: 0 });
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   const TABS = isAdmin ? ADMIN_TABS : isPractitioner ? PRACTITIONER_TABS : PATIENT_TABS;
 
@@ -368,7 +376,7 @@ function AppLayout() {
         )}
 
         {/* ── Main scrollable content ── */}
-        <main style={{
+        <main ref={mainRef} style={{
           flex: 1,
           overflow: 'auto',
           padding: isDesktop ? '24px 32px 32px' : '16px 16px 100px',
