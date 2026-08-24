@@ -11,6 +11,36 @@
 // Adding a new guide = just add it to src/data/guides.js — it flows here automatically.
 
 import { GUIDES, getGuideBySlug } from '../data/guides.js';
+import { EXERCISE_LIBRARY } from '../data/exercises.js';
+import { FIXIT_EXERCISES } from '../data/fixit-exercises.js';
+import { GYM_EXERCISES } from '../data/gym-exercises.js';
+import { EXERCISE_VIDEOS } from '../data/exercise-videos.js';
+
+const ALL_EXERCISES = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY, ...GYM_EXERCISES];
+export const getExerciseById = (id) => ALL_EXERCISES.find((e) => e.id === id);
+
+// Build the SEO meta for one exercise (shared by the static list + dynamic resolver).
+function exerciseMeta(e, path = `/exercise/${e.id}`) {
+  const region = e.bodyPart && !/body$/i.test(e.bodyPart) ? ` ${e.bodyPart}` : '';
+  const desc = (e.description || `Learn how to do the ${e.name} with proper form.`).replace(/\s+/g, ' ').trim().slice(0, 155);
+  return {
+    path,
+    title: `${e.name} — How to Do It, Proper Form & Video | FIXIT`,
+    description: desc,
+    changefreq: 'monthly',
+    priority: 0.7,
+    type: 'exercise',
+    exercise: {
+      name: e.name,
+      bodyPart: e.bodyPart,
+      difficulty: e.difficulty,
+      video: EXERCISE_VIDEOS[e.id] || null,
+      instructions: e.instructions || [],
+      description: desc,
+      muscles: e.musclesTargeted || [],
+    },
+  };
+}
 
 export const SITE = {
   baseUrl: 'https://fixit.yourformsux.com',
@@ -89,8 +119,23 @@ function guideRoutes() {
   }));
 }
 
+// ── Public exercise pages, derived from data (the SEO acquisition funnel) ──
+function exerciseRoutes() {
+  return ALL_EXERCISES.map((e) => exerciseMeta(e));
+}
+
+// A public hub that lists every exercise (internal-linking + its own ranking).
+const EXERCISE_HUB = {
+  path: '/exercise',
+  title: 'Exercise Library — How-To Videos & Proper Form | FIXIT',
+  description: 'Free exercise library: how-to demo videos and step-by-step form cues for knee, hip, shoulder, back, neck, core and more. Rehab, physio and strength exercises.',
+  changefreq: 'weekly',
+  priority: 0.9,
+  type: 'website',
+};
+
 // Full list of routes we generate HTML + sitemap entries for.
-export const ROUTES = [...STATIC_ROUTES, ...guideRoutes()];
+export const ROUTES = [...STATIC_ROUTES, EXERCISE_HUB, ...guideRoutes(), ...exerciseRoutes()];
 
 // Just the paths that should be prerendered to static HTML.
 export const PRERENDER_PATHS = ROUTES.map((r) => r.path);
@@ -126,6 +171,12 @@ export function getRouteMeta(pathname) {
         },
       };
     }
+  }
+
+  // Dynamic public exercise page.
+  if (path.startsWith('/exercise/')) {
+    const e = getExerciseById(path.slice('/exercise/'.length));
+    if (e) return exerciseMeta(e, path);
   }
 
   // Everything else = private, user-specific app screen → don't index.

@@ -37,6 +37,46 @@ function upsertLink(rel, href) {
 }
 
 const ARTICLE_LD_ID = 'seo-article-ld';
+const EXERCISE_LD_ID = 'seo-exercise-ld';
+
+// YouTube (embed/watch) URL → thumbnail, for VideoObject schema.
+function ytThumb(url) {
+  if (!url) return null;
+  const m = url.match(/(?:embed\/|watch\?v=|youtu\.be\/)([\w-]{11})/);
+  return m ? `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` : null;
+}
+
+// HowTo + (optional) VideoObject structured data for a public exercise page.
+function applyExerciseSchema(meta, canonical) {
+  const existing = document.getElementById(EXERCISE_LD_ID);
+  if (!meta.exercise) { if (existing) existing.remove(); return; }
+  const x = meta.exercise;
+  const graph = [{
+    '@type': 'HowTo',
+    name: `How to do the ${x.name}`,
+    description: x.description,
+    ...(x.instructions?.length ? {
+      step: x.instructions.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, text: s })),
+    } : {}),
+    mainEntityOfPage: { '@type': 'WebPage', '@id': canonical },
+  }];
+  const thumb = ytThumb(x.video);
+  if (x.video && thumb) {
+    graph.push({
+      '@type': 'VideoObject',
+      name: `${x.name} — demonstration`,
+      description: x.description,
+      thumbnailUrl: thumb,
+      contentUrl: x.video,
+      embedUrl: x.video,
+      uploadDate: '2026-01-01',
+    });
+  }
+  const data = { '@context': 'https://schema.org', '@graph': graph };
+  let el = existing;
+  if (!el) { el = document.createElement('script'); el.type = 'application/ld+json'; el.id = EXERCISE_LD_ID; document.head.appendChild(el); }
+  el.textContent = JSON.stringify(data);
+}
 
 function applyArticleSchema(meta, canonical) {
   const existing = document.getElementById(ARTICLE_LD_ID);
@@ -106,6 +146,7 @@ function applySeo(meta) {
   upsertMeta('name', 'twitter:image', image);
 
   applyArticleSchema(meta, canonical);
+  applyExerciseSchema(meta, canonical);
 
   // Signal for the prerender crawler that head is settled for this route.
   if (typeof window !== 'undefined') window.__SEO_READY__ = canonical;

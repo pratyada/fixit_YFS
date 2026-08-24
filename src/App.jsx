@@ -6,6 +6,8 @@ import ConsentBanner from './components/ConsentBanner';
 // crawl renders them synchronously — no Suspense race).
 import Guides from './pages/Guides';
 import GuideDetail from './pages/GuideDetail';
+import PublicExercise from './pages/PublicExercise';
+import PublicExerciseHub from './pages/PublicExerciseHub';
 import Rsvp from './pages/Rsvp';
 
 // The ENTIRE authenticated app — providers (Clinic/Auth/Subscription) and every
@@ -17,8 +19,10 @@ const AuthedApp = lazy(() => import('./AuthedApp'));
 export default function App() {
   const { pathname } = useLocation();
 
-  // Guides are always public and never authenticated → render provider-free.
-  if (pathname === '/guides' || pathname.startsWith('/guides/')) {
+  // Guides + public exercise pages are always public and never authenticated →
+  // render provider-free (no Firebase) so they're fast + fully prerenderable.
+  if (pathname === '/guides' || pathname.startsWith('/guides/')
+    || pathname === '/exercise' || pathname.startsWith('/exercise/')) {
     return <PublicShell pathname={pathname} />;
   }
   // Public RSVP page — no auth, drops the email straight into the subscriber list.
@@ -35,6 +39,8 @@ export default function App() {
 // (defaults live in index.css) and eager-imported page components — no Firebase.
 function PublicShell({ pathname }) {
   const guideSlug = pathname.startsWith('/guides/') ? pathname.replace('/guides/', '') : null;
+  const isExercise = pathname === '/exercise' || pathname.startsWith('/exercise/');
+  const exerciseSlug = pathname.startsWith('/exercise/') ? pathname.replace('/exercise/', '') : null;
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
@@ -46,7 +52,9 @@ function PublicShell({ pathname }) {
           Open App
         </Link>
       </div>
-      {guideSlug ? <GuideDetail /> : <Guides />}
+      {isExercise
+        ? (exerciseSlug ? <PublicExercise /> : <PublicExerciseHub />)
+        : (guideSlug ? <GuideDetail /> : <Guides />)}
       <ConsentBanner />
     </div>
   );
