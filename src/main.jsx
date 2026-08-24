@@ -45,6 +45,15 @@ const recoverFromChunkError = (e) => {
 window.addEventListener('vite:preloadError', recoverFromChunkError);
 window.addEventListener('unhandledrejection', recoverFromChunkError);
 
+// Perf: warm the authenticated-app chunk (and its Firebase deps, which Vite
+// preloads alongside) immediately at boot — in parallel with React mounting —
+// instead of waiting for <App> to render and trigger the lazy import. This
+// removes a ~500ms+ waterfall step on the authenticated home. Skip the public
+// guide pages, which are intentionally Firebase-free and must stay light.
+if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/guides')) {
+  import('./AuthedApp').catch(() => {});
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
