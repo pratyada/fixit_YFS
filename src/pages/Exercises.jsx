@@ -17,6 +17,13 @@ const BODY_PART_ICONS = {
   Ankle: '🦶', Neck: '🫥', Wrist: '✋', Elbow: '💪', Core: '🎯', Foot: '👣',
 };
 
+// YouTube (embed/watch/youtu.be) URL → thumbnail image URL, or null.
+export function ytThumb(url) {
+  if (!url) return null;
+  const m = url.match(/(?:embed\/|watch\?v=|youtu\.be\/)([\w-]{11})/);
+  return m ? `https://img.youtube.com/vi/${m[1]}/mqdefault.jpg` : null;
+}
+
 const DIFF_COLORS = {
   Beginner: { bg: '#E8F5E9', text: '#2E7D32' },
   Intermediate: { bg: '#FFF8E1', text: '#F57F17' },
@@ -32,11 +39,15 @@ export default function Exercises() {
   const [assignedExercises] = usePatientData('assigned_exercises', []);
   const [assignedPrograms] = usePatientData('assigned_programs', []);
 
-  // Which exercises have a demo video (colored icon) vs not (greyed out).
-  const [videoIds, setVideoIds] = useState(() => new Set());
+  // Which exercises have a demo video → build a YouTube thumbnail map (id → img URL).
+  const [videoThumbs, setVideoThumbs] = useState(() => ({}));
   useEffect(() => {
     getExercises()
-      .then(docs => setVideoIds(new Set(docs.filter(d => d.demoVideoUrl).map(d => d.id))))
+      .then(docs => {
+        const map = {};
+        docs.forEach(d => { const t = ytThumb(d.demoVideoUrl); if (t) map[d.id] = t; });
+        setVideoThumbs(map);
+      })
       .catch(() => {});
   }, []);
 
@@ -315,7 +326,7 @@ export default function Exercises() {
               gap: '12px',
             }}>
               {exercises.map(ex => (
-                <ExerciseCard key={ex.id} exercise={ex} hasVideo={videoIds.has(ex.id)} />
+                <ExerciseCard key={ex.id} exercise={ex} thumbUrl={videoThumbs[ex.id]} />
               ))}
             </div>
           </div>
@@ -325,9 +336,10 @@ export default function Exercises() {
   );
 }
 
-function ExerciseCard({ exercise: ex, hasVideo = false }) {
+function ExerciseCard({ exercise: ex, thumbUrl = null }) {
   const { t } = useTranslation('exercises');
   const isComingSoon = ex.comingSoon;
+  const hasVideo = !!thumbUrl;
 
   const card = (
     <div
@@ -358,12 +370,28 @@ function ExerciseCard({ exercise: ex, hasVideo = false }) {
       )}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '10px' }}>
         <div style={{
-          width: '56px', height: '48px', borderRadius: '10px',
+          width: thumbUrl ? '84px' : '56px', height: '48px', borderRadius: '10px',
           background: isComingSoon ? '#EEEEEE' : 'linear-gradient(135deg, #FAFCFB, #EFF6F4)',
-          overflow: 'hidden', flexShrink: 0,
+          overflow: 'hidden', flexShrink: 0, position: 'relative',
           filter: isComingSoon ? 'grayscale(1)' : 'none',
         }}>
-          <ExerciseThumbnail exerciseId={ex.id} bodyPart={ex.bodyPart} />
+          {thumbUrl ? (
+            <>
+              <img
+                src={thumbUrl} alt="" loading="lazy"
+                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+              <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>{BODY_PART_ICONS[ex.bodyPart] || '🏋️'}</div>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 0, height: 0, borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: '7px solid white', marginLeft: '2px' }} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <ExerciseThumbnail exerciseId={ex.id} bodyPart={ex.bodyPart} />
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* Video-available indicator: colored if a demo video exists, grey if not */}

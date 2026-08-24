@@ -11,7 +11,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 import { useAuth } from '../contexts/AuthContext';
 import { Camera } from 'lucide-react';
 import { marketing } from '../lib/marketingApi';
-import { getPatientsByPractitioner, getPatientSessions, getPainEntries, getAssignments, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner, getKioskSessions } from '../lib/firestore';
+import { getPatientsByPractitioner, getPatientSessions, getPainEntries, getAssignments, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner, getKioskSessions, getCompletedSessions } from '../lib/firestore';
 import { EXERCISE_LIBRARY, BODY_PARTS, CONDITIONS } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { addAssignment } from '../lib/firestore';
@@ -26,6 +26,7 @@ export default function PractitionerDashboard() {
   const [patientSessions, setPatientSessions] = useState([]);
   const [patientPain, setPatientPain] = useState([]);
   const [patientAssignments, setPatientAssignments] = useState([]);
+  const [patientCompleted, setPatientCompleted] = useState([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showAddPatient, setShowAddPatient] = useState(false);
   const [allPatients, setAllPatients] = useState([]);
@@ -76,14 +77,16 @@ export default function PractitionerDashboard() {
   const viewPatient = async (patient) => {
     setSelectedPatient(patient);
     setLoadingDetail(true);
-    const [sessions, pain, assignments] = await Promise.all([
+    const [sessions, pain, assignments, completed] = await Promise.all([
       getPatientSessions(patient.id),
       getPainEntries(patient.id),
       getAssignments(patient.id),
+      getCompletedSessions(patient.id),   // rep-tracker completions (not just pose checks)
     ]);
     setPatientSessions(sessions);
     setPatientPain(pain);
     setPatientAssignments(assignments);
+    setPatientCompleted(completed);
     setLoadingDetail(false);
   };
 
@@ -134,7 +137,7 @@ export default function PractitionerDashboard() {
         <AssignExercisePanel patient={selectedPatient} practitionerId={user.uid} t={t} />
 
         {/* Trends: score over time, consistency, allocation markers */}
-        {!loadingDetail && <PatientTrends sessions={patientSessions} assignments={patientAssignments} i18n={i18n} />}
+        {!loadingDetail && <PatientTrends sessions={patientSessions} activity={patientCompleted} assignments={patientAssignments} i18n={i18n} />}
 
         {/* Assigned Exercises Overview */}
         {!loadingDetail && patientAssignments.length > 0 && (
@@ -650,27 +653,34 @@ function KioskPatientGroup({ group, patientSessions, isLoadingPatient, onLoadSes
 // Patient trends: score-over-time, weekly consistency, and markers for when the
 // practitioner allocated exercises. Everything is derived from the patient's
 // pose-check sessions (aiScore + date) and assignments (assignedAt).
-function PatientTrends({ sessions, assignments, i18n }) {
+function PatientTrends({ sessions, activity, assignments, i18n }) {
   const toDate = (v) => (v?.toDate ? v.toDate() : v ? new Date(v) : null);
 
+  // Score line comes from pose-checks (they carry aiScore).
   const scored = useMemo(() => (sessions || [])
     .filter((s) => typeof s.aiScore === 'number')
     .map((s) => ({ score: Math.round(s.aiScore), date: toDate(s.createdAt || s.date), name: s.exerciseName || s.exerciseId }))
     .filter((s) => s.date)
     .sort((a, b) => a.date - b.date), [sessions]);
 
-  // last 14 days activity (session count per day)
+  // Activity/consistency comes from ALL completed sessions — reps pressed "complete"
+  // AND pose-checks — so a patient who just did their reps still counts.
+  const acts = useMemo(() => (activity || [])
+    .map((s) => ({ date: toDate(s.date || s.createdAt) }))
+    .filter((s) => s.date), [activity]);
+
+  // last 14 days activity (completed session count per day)
   const days = useMemo(() => {
     const arr = [];
     const today = new Date(); today.setHours(0, 0, 0, 0);
     for (let i = 13; i >= 0; i--) {
       const d = new Date(today); d.setDate(d.getDate() - i);
       const key = d.toISOString().split('T')[0];
-      const count = (sessions || []).filter((s) => { const sd = toDate(s.createdAt || s.date); return sd && sd.toISOString().split('T')[0] === key; }).length;
+      const count = acts.filter((s) => s.date.toISOString().split('T')[0] === key).length;
       arr.push({ key, label: d.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' }), count });
     }
     return arr;
-  }, [sessions]);
+  }, [acts]);
 
   const allocations = useMemo(() => (assignments || [])
     .map((a) => ({ name: a.exerciseName || a.exerciseId, date: toDate(a.assignedAt) }))
@@ -679,7 +689,8 @@ function PatientTrends({ sessions, assignments, i18n }) {
 
   const activeDays = days.filter((d) => d.count > 0).length;
   const avgScore = scored.length ? Math.round(scored.reduce((a, s) => a + s.score, 0) / scored.length) : null;
-  const noData = scored.length === 0 && days.every((d) => d.count === 0);
+  const totalDone = acts.length;
+  const noData = scored.length === 0 && acts.length === 0;
 
   if (noData) {
     return (
@@ -696,7 +707,7 @@ function PatientTrends({ sessions, assignments, i18n }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
         <MiniStat label="Avg score" value={avgScore != null ? avgScore : '—'} color={avgScore >= 80 ? '#2E7D32' : avgScore >= 60 ? '#F57F17' : avgScore != null ? '#C62828' : '#9E9E9E'} />
         <MiniStat label="Active days / 14" value={activeDays} color="var(--color-secondary)" />
-        <MiniStat label="Total sessions" value={(sessions || []).length} color="var(--color-secondary)" />
+        <MiniStat label="Exercises done" value={totalDone} color="var(--color-secondary)" />
       </div>
 
       {/* score trend */}
