@@ -1,7 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star, ChevronDown, ChevronUp, Send, MessageSquare, CheckCircle2, Mail } from 'lucide-react';
+import { Line, Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler,
+} from 'chart.js';
+import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star, ChevronDown, ChevronUp, Send, MessageSquare, CheckCircle2, Mail, TrendingUp, CalendarCheck } from 'lucide-react';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 import { useAuth } from '../contexts/AuthContext';
 import { Camera } from 'lucide-react';
 import { marketing } from '../lib/marketingApi';
@@ -124,8 +130,11 @@ export default function PractitionerDashboard() {
           </div>
         </div>
 
-        {/* Assign Exercise */}
+        {/* Assign Exercise — prominent action at the top */}
         <AssignExercisePanel patient={selectedPatient} practitionerId={user.uid} t={t} />
+
+        {/* Trends: score over time, consistency, allocation markers */}
+        {!loadingDetail && <PatientTrends sessions={patientSessions} assignments={patientAssignments} i18n={i18n} />}
 
         {/* Assigned Exercises Overview */}
         {!loadingDetail && patientAssignments.length > 0 && (
@@ -638,6 +647,123 @@ function KioskPatientGroup({ group, patientSessions, isLoadingPatient, onLoadSes
   );
 }
 
+// Patient trends: score-over-time, weekly consistency, and markers for when the
+// practitioner allocated exercises. Everything is derived from the patient's
+// pose-check sessions (aiScore + date) and assignments (assignedAt).
+function PatientTrends({ sessions, assignments, i18n }) {
+  const toDate = (v) => (v?.toDate ? v.toDate() : v ? new Date(v) : null);
+
+  const scored = useMemo(() => (sessions || [])
+    .filter((s) => typeof s.aiScore === 'number')
+    .map((s) => ({ score: Math.round(s.aiScore), date: toDate(s.createdAt || s.date), name: s.exerciseName || s.exerciseId }))
+    .filter((s) => s.date)
+    .sort((a, b) => a.date - b.date), [sessions]);
+
+  // last 14 days activity (session count per day)
+  const days = useMemo(() => {
+    const arr = [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      const count = (sessions || []).filter((s) => { const sd = toDate(s.createdAt || s.date); return sd && sd.toISOString().split('T')[0] === key; }).length;
+      arr.push({ key, label: d.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' }), count });
+    }
+    return arr;
+  }, [sessions]);
+
+  const allocations = useMemo(() => (assignments || [])
+    .map((a) => ({ name: a.exerciseName || a.exerciseId, date: toDate(a.assignedAt) }))
+    .filter((a) => a.date)
+    .sort((a, b) => b.date - a.date), [assignments]);
+
+  const activeDays = days.filter((d) => d.count > 0).length;
+  const avgScore = scored.length ? Math.round(scored.reduce((a, s) => a + s.score, 0) / scored.length) : null;
+  const noData = scored.length === 0 && days.every((d) => d.count === 0);
+
+  if (noData) {
+    return (
+      <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px', textAlign: 'center', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+        <Activity size={26} style={{ color: 'var(--color-border)', marginBottom: '6px' }} />
+        <div>No activity yet — trends appear once the patient completes pose-check sessions.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* quick stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+        <MiniStat label="Avg score" value={avgScore != null ? avgScore : '—'} color={avgScore >= 80 ? '#2E7D32' : avgScore >= 60 ? '#F57F17' : avgScore != null ? '#C62828' : '#9E9E9E'} />
+        <MiniStat label="Active days / 14" value={activeDays} color="var(--color-secondary)" />
+        <MiniStat label="Total sessions" value={(sessions || []).length} color="var(--color-secondary)" />
+      </div>
+
+      {/* score trend */}
+      {scored.length > 0 && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '6px' }}><TrendingUp size={13} /> Score trend</div>
+          <div style={{ height: '150px' }}>
+            <Line
+              data={{
+                labels: scored.map((s) => s.date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })),
+                datasets: [{
+                  data: scored.map((s) => s.score), label: 'Score',
+                  borderColor: '#57b6c4', backgroundColor: 'rgba(87,182,196,0.15)', fill: true, tension: 0.35,
+                  pointRadius: 3, pointBackgroundColor: '#2f8b96',
+                }],
+              }}
+              options={{
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: (ctx) => scored[ctx.dataIndex]?.name } } },
+                scales: { y: { min: 0, max: 100, ticks: { stepSize: 25 } }, x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } } },
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* consistency (last 14 days) */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '6px' }}><CalendarCheck size={13} /> Consistency — last 14 days</div>
+        <div style={{ height: '110px' }}>
+          <Bar
+            data={{ labels: days.map((d) => d.label), datasets: [{ data: days.map((d) => d.count), backgroundColor: '#708E86', borderRadius: 4, barPercentage: 0.7 }] }}
+            options={{
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }, x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7 } } },
+            }}
+          />
+        </div>
+      </div>
+
+      {/* allocation markers */}
+      {allocations.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '6px' }}>📌 Exercises you allocated</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {allocations.slice(0, 12).map((a, i) => (
+              <span key={i} style={{ fontSize: '0.68rem', background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)', borderRadius: '999px', padding: '3px 10px', color: 'var(--color-text)' }}>
+                <b style={{ color: 'var(--color-secondary)' }}>{a.name}</b> · {a.date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MiniStat({ label, value, color }) {
+  return (
+    <div style={{ background: 'var(--color-bg-alt)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+      <div style={{ fontSize: '1.3rem', fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text)', marginTop: '3px' }}>{label}</div>
+    </div>
+  );
+}
+
 function AssignExercisePanel({ patient, practitionerId, t }) {
   const [showPanel, setShowPanel] = useState(false);
   const [notes, setNotes] = useState('');
@@ -650,13 +776,16 @@ function AssignExercisePanel({ patient, practitionerId, t }) {
   const [notified, setNotified] = useState(false);
   const [bodyFilter, setBodyFilter] = useState('All');        // filter the library
   const [conditionFilter, setConditionFilter] = useState('All');
+  const [exSearch, setExSearch] = useState('');               // free-text search
 
   // Full library (5 active FIXIT exercises + 60-exercise clinical library), filtered
   // by body part and/or condition — the "suggest exercises" logic.
   const ALL_LIB = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY];
+  const q = exSearch.trim().toLowerCase();
   const pool = ALL_LIB.filter((ex) => {
     if (bodyFilter !== 'All' && ex.bodyPart !== bodyFilter) return false;
     if (conditionFilter !== 'All' && !(ex.conditions || []).includes(conditionFilter)) return false;
+    if (q && !(`${ex.name} ${ex.bodyPart} ${(ex.conditions || []).join(' ')} ${(ex.goals || []).join(' ')}`.toLowerCase().includes(q))) return false;
     return true;
   });
 
@@ -746,6 +875,17 @@ function AssignExercisePanel({ patient, practitionerId, t }) {
       <div>
         <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>{t('assignExercise.notesOptional')}</label>
         <input value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('assignExercise.notesPlaceholder')} style={{ fontSize: '0.82rem' }} />
+      </div>
+
+      {/* Search exercises or a rehab region (shoulder, knee, back, neck…) */}
+      <div style={{ position: 'relative' }}>
+        <Search size={14} style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text)' }} />
+        <input
+          value={exSearch}
+          onChange={e => setExSearch(e.target.value)}
+          placeholder="Search an exercise or region — e.g. shoulder, knee, squat…"
+          style={{ fontSize: '0.82rem', width: '100%', paddingLeft: '32px' }}
+        />
       </div>
 
       {/* Suggest / filter — by body part and condition (uses the full clinical library) */}
