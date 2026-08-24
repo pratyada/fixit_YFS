@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Camera } from 'lucide-react';
 import { marketing } from '../lib/marketingApi';
 import { getPatientsByPractitioner, getPatientSessions, getPainEntries, getAssignments, addFeedback, updateSession, getFeedbackForSession, getUsersByRole, assignPatientToPractitioner, getKioskSessions } from '../lib/firestore';
-import { EXERCISE_LIBRARY } from '../data/exercises';
+import { EXERCISE_LIBRARY, BODY_PARTS, CONDITIONS } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { addAssignment } from '../lib/firestore';
 
@@ -648,6 +648,17 @@ function AssignExercisePanel({ patient, practitionerId, t }) {
   const [assignedDetail, setAssignedDetail] = useState([]);   // for the notify email
   const [notifying, setNotifying] = useState(false);
   const [notified, setNotified] = useState(false);
+  const [bodyFilter, setBodyFilter] = useState('All');        // filter the library
+  const [conditionFilter, setConditionFilter] = useState('All');
+
+  // Full library (5 active FIXIT exercises + 60-exercise clinical library), filtered
+  // by body part and/or condition — the "suggest exercises" logic.
+  const ALL_LIB = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY];
+  const pool = ALL_LIB.filter((ex) => {
+    if (bodyFilter !== 'All' && ex.bodyPart !== bodyFilter) return false;
+    if (conditionFilter !== 'All' && !(ex.conditions || []).includes(conditionFilter)) return false;
+    return true;
+  });
 
   const handleAssign = async (exercise) => {
     setAssigning(true);
@@ -737,9 +748,29 @@ function AssignExercisePanel({ patient, practitionerId, t }) {
         <input value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('assignExercise.notesPlaceholder')} style={{ fontSize: '0.82rem' }} />
       </div>
 
+      {/* Suggest / filter — by body part and condition (uses the full clinical library) */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '130px' }}>
+          <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>Body part</label>
+          <select value={bodyFilter} onChange={e => setBodyFilter(e.target.value)} style={{ fontSize: '0.82rem', width: '100%' }}>
+            <option value="All">All</option>
+            {BODY_PARTS.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: 1, minWidth: '130px' }}>
+          <label style={{ fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-accent)', display: 'block', marginBottom: '4px' }}>Condition</label>
+          <select value={conditionFilter} onChange={e => setConditionFilter(e.target.value)} style={{ fontSize: '0.82rem', width: '100%' }}>
+            <option value="All">All</option>
+            {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{ fontSize: '0.66rem', color: 'var(--color-text)' }}>{pool.length} exercise{pool.length !== 1 ? 's' : ''} suggested</div>
+
       {/* Exercise list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {FIXIT_EXERCISES.map(ex => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '340px', overflowY: 'auto' }}>
+        {pool.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--color-text)', textAlign: 'center', padding: '16px' }}>No exercises match — try a different filter.</div>}
+        {pool.map(ex => {
           const isAssigned = assigned.includes(ex.id);
           return (
             <div key={ex.id} style={{

@@ -10,6 +10,22 @@ import { uploadDemoVideo } from '../lib/storage-firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/storage';
 
+// Convert a pasted share link into an embeddable form, and classify how to play it.
+// YouTube/Vimeo → iframe embed; direct .mp4/.webm (S3, etc.) → <video>.
+function normalizeVideoUrl(raw) {
+  const u = raw.trim();
+  const yt = u.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+  const vim = u.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vim) return `https://player.vimeo.com/video/${vim[1]}`;
+  return u; // assume direct file or already-embed URL
+}
+function videoKind(url) {
+  if (!url) return null;
+  if (/youtube\.com\/embed\/|player\.vimeo\.com\//.test(url)) return 'iframe';
+  return 'file';
+}
+
 export default function ExerciseDetail() {
   const { t } = useTranslation('exercises');
   const { id } = useParams();
@@ -38,6 +54,8 @@ export default function ExerciseDetail() {
   const [demoVideoUrl, setDemoVideoUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [videoLink, setVideoLink] = useState('');   // paste-a-URL input
+  const [savingLink, setSavingLink] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -61,6 +79,24 @@ export default function ExerciseDetail() {
     } finally {
       setUploading(false);
       setUploadProgress(0);
+    }
+  };
+
+  // Save a pasted video URL (S3/Vimeo/direct-mp4). We store it as demoVideoUrl
+  // just like an upload, and normalise common share links to embeddable ones.
+  const saveVideoLink = async () => {
+    const raw = videoLink.trim();
+    if (!raw || !id) return;
+    setSavingLink(true);
+    try {
+      const url = normalizeVideoUrl(raw);
+      await setExercise(id, { demoVideoUrl: url, demoVideoPath: null });
+      setDemoVideoUrl(url);
+      setVideoLink('');
+    } catch (err) {
+      console.error('Failed to save video link:', err);
+    } finally {
+      setSavingLink(false);
     }
   };
 
@@ -207,16 +243,26 @@ export default function ExerciseDetail() {
             )}
           </div>
           <div style={{ padding: '12px 16px 16px' }}>
-            <video
-              src={demoVideoUrl}
-              controls
-              playsInline
-              preload="metadata"
-              style={{
-                width: '100%', borderRadius: '12px', background: '#000',
-                maxHeight: '300px',
-              }}
-            />
+            {videoKind(demoVideoUrl) === 'iframe' ? (
+              <div style={{ position: 'relative', paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
+                <iframe
+                  src={demoVideoUrl} title="Exercise demo"
+                  allow="autoplay; fullscreen; picture-in-picture" allowFullScreen
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+                />
+              </div>
+            ) : (
+              <video
+                src={demoVideoUrl}
+                controls
+                playsInline
+                preload="metadata"
+                style={{
+                  width: '100%', borderRadius: '12px', background: '#000',
+                  maxHeight: '300px',
+                }}
+              />
+            )}
           </div>
         </div>
       ) : canManage ? (
@@ -269,6 +315,25 @@ export default function ExerciseDetail() {
               >
                 <Upload size={14} /> Upload Video
               </button>
+
+              {/* OR paste a link (YouTube, Vimeo, or a direct .mp4 URL) */}
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text)', marginBottom: '8px' }}>…or paste a video link (YouTube, Vimeo, or a direct .mp4 URL)</div>
+                <div style={{ display: 'flex', gap: '8px', maxWidth: '460px', margin: '0 auto' }}>
+                  <input
+                    value={videoLink}
+                    onChange={(e) => setVideoLink(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveVideoLink(); }}
+                    placeholder="https://youtube.com/watch?v=…"
+                    style={{ flex: 1, fontSize: '0.82rem', padding: '9px 12px', borderRadius: '9px', border: '1px solid var(--color-border)' }}
+                  />
+                  <button onClick={saveVideoLink} disabled={savingLink || !videoLink.trim()} style={{
+                    background: 'var(--color-secondary)', color: 'white', border: 'none',
+                    padding: '9px 16px', borderRadius: '9px', fontSize: '0.72rem', fontWeight: 700,
+                    cursor: (savingLink || !videoLink.trim()) ? 'default' : 'pointer', opacity: (savingLink || !videoLink.trim()) ? 0.6 : 1, whiteSpace: 'nowrap',
+                  }}>{savingLink ? 'Saving…' : 'Use link'}</button>
+                </div>
+              </div>
             </>
           )}
         </div>
