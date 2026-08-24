@@ -225,11 +225,11 @@ export function getAllExercisesWithStatus(libraryExercises, extraExercises = [])
   // Extra exercises (e.g. gym exercises) as active
   const extra = extraExercises.map(e => ({ ...e, isActive: true }));
 
-  // All other library exercises as coming soon
+  // Remaining library exercises — now ACTIVE too (all exercises are usable).
   const activeIds = new Set([...PHASE_1_IDS, ...extraExercises.map(e => e.id)]);
-  const comingSoon = libraryExercises
+  const rest = libraryExercises
     .filter(e => !activeIds.has(e.id))
-    .map(e => ({ ...e, isActive: false, comingSoon: true }));
+    .map(e => ({ ...e, isActive: true }));
 
-  return [...active, ...extra, ...comingSoon];
+  return [...active, ...extra, ...rest];
 }

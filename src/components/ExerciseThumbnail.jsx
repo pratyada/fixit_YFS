@@ -336,16 +336,23 @@ const THUMBS = {
   ),
 };
 
-export default function ExerciseThumbnail({ exerciseId }) {
+// Body-part-relevant emoji fallback when there's no hand-drawn SVG thumbnail.
+const BODY_EMOJI = {
+  Knee: '🦵', Shoulder: '💪', Back: '🔙', Hip: '🦴', Ankle: '🦶',
+  Neck: '🧣', Wrist: '✋', Elbow: '💪', Core: '🎯', Foot: '👣',
+  'Lower Body': '🦵', 'Upper Body': '💪',
+};
+
+export default function ExerciseThumbnail({ exerciseId, bodyPart }) {
   const thumb = THUMBS[exerciseId];
   if (!thumb) {
     return (
       <div style={{
         width: '100%', height: '100%',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '1.4rem',
+        fontSize: '1.5rem',
       }}>
-        🏋️
+        {BODY_EMOJI[bodyPart] || '🏋️'}
       </div>
     );
   }

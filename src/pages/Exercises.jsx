@@ -363,7 +363,7 @@ function ExerciseCard({ exercise: ex, hasVideo = false }) {
           overflow: 'hidden', flexShrink: 0,
           filter: isComingSoon ? 'grayscale(1)' : 'none',
         }}>
-          <ExerciseThumbnail exerciseId={ex.id} />
+          <ExerciseThumbnail exerciseId={ex.id} bodyPart={ex.bodyPart} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* Video-available indicator: colored if a demo video exists, grey if not */}
