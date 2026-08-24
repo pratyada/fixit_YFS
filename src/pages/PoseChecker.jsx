@@ -16,7 +16,7 @@ import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
 const ALL_POSE_EXERCISES = [...FIXIT_EXERCISES, ...GYM_EXERCISES];
 import { useAuth } from '../contexts/AuthContext';
-import { addSession, updateSession, getCalibration, setCalibration } from '../lib/firestore';
+import { addSession, updateSession, getCalibration, setCalibration, addCompletedSession } from '../lib/firestore';
 import { uploadVideo } from '../lib/storage-firebase';
 import FeatureGate from '../components/FeatureGate';
 
@@ -280,6 +280,20 @@ export default function PoseChecker() {
         } else {
           console.warn('[FIXIT] No video chunks captured — MediaRecorder may not be supported');
         }
+        // ALSO log a completedSession so the AI score shows in the patient's
+        // Progress + streak + marks the assignment done for today (Dashboard/PatientHome
+        // read completedSessions, not the sessions/pose collection).
+        try {
+          await addCompletedSession(user.uid, {
+            exerciseId: selectedExercise.id,
+            exerciseName: selectedExercise.name,
+            date: new Date().toISOString().split('T')[0],
+            timestamp: new Date().toISOString(),
+            duration: analysis.duration || 0,
+            aiScore: analysis.overall,
+            type: 'pose_check',
+          });
+        } catch (e) { console.error('[FIXIT] Failed to log completedSession:', e); }
       } catch (e) {
         console.error('[FIXIT] Failed to save pose check:', e);
       }

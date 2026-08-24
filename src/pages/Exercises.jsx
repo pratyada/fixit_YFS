@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, Filter, Clock, Repeat, ChevronRight, X, Lock, Dumbbell as DumbbellIcon, Stethoscope } from 'lucide-react';
+import { Search, Filter, Clock, Repeat, ChevronRight, X, Lock, Dumbbell as DumbbellIcon, Stethoscope, Video } from 'lucide-react';
+import { getExercises } from '../lib/firestore';
 import { EXERCISE_LIBRARY, BODY_PARTS, DIFFICULTY, EQUIPMENT, POSITIONS, GOALS, CONDITIONS } from '../data/exercises';
 import { FIXIT_EXERCISES, PHASE_1_IDS, getAllExercisesWithStatus } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
@@ -30,6 +31,14 @@ export default function Exercises() {
 
   const [assignedExercises] = usePatientData('assigned_exercises', []);
   const [assignedPrograms] = usePatientData('assigned_programs', []);
+
+  // Which exercises have a demo video (colored icon) vs not (greyed out).
+  const [videoIds, setVideoIds] = useState(() => new Set());
+  useEffect(() => {
+    getExercises()
+      .then(docs => setVideoIds(new Set(docs.filter(d => d.demoVideoUrl).map(d => d.id))))
+      .catch(() => {});
+  }, []);
 
   const { canUseFeature } = useSubscription();
   const hasFullLibrary = canUseFeature('fullLibrary');
@@ -306,7 +315,7 @@ export default function Exercises() {
               gap: '12px',
             }}>
               {exercises.map(ex => (
-                <ExerciseCard key={ex.id} exercise={ex} />
+                <ExerciseCard key={ex.id} exercise={ex} hasVideo={videoIds.has(ex.id)} />
               ))}
             </div>
           </div>
@@ -316,7 +325,7 @@ export default function Exercises() {
   );
 }
 
-function ExerciseCard({ exercise: ex }) {
+function ExerciseCard({ exercise: ex, hasVideo = false }) {
   const { t } = useTranslation('exercises');
   const isComingSoon = ex.comingSoon;
 
@@ -356,14 +365,29 @@ function ExerciseCard({ exercise: ex }) {
         }}>
           <ExerciseThumbnail exerciseId={ex.id} />
         </div>
-        <span style={{
-          fontSize: '0.58rem', fontWeight: 600, textTransform: 'uppercase',
-          letterSpacing: '0.8px', padding: '3px 8px', borderRadius: '50px',
-          background: isComingSoon ? '#E0E0E0' : (DIFF_COLORS[ex.difficulty]?.bg || '#E8F5E9'),
-          color: isComingSoon ? '#9E9E9E' : (DIFF_COLORS[ex.difficulty]?.text || '#2E7D32'),
-        }}>
-          {ex.difficulty}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Video-available indicator: colored if a demo video exists, grey if not */}
+          <span
+            title={hasVideo ? 'Demo video available' : 'No demo video yet'}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '24px', height: '24px', borderRadius: '7px',
+              background: hasVideo ? '#E7F3EA' : '#F0F0F0',
+              color: hasVideo ? '#2E7D32' : '#BDBDBD',
+              flexShrink: 0,
+            }}
+          >
+            <Video size={13} strokeWidth={2.2} />
+          </span>
+          <span style={{
+            fontSize: '0.58rem', fontWeight: 600, textTransform: 'uppercase',
+            letterSpacing: '0.8px', padding: '3px 8px', borderRadius: '50px',
+            background: isComingSoon ? '#E0E0E0' : (DIFF_COLORS[ex.difficulty]?.bg || '#E8F5E9'),
+            color: isComingSoon ? '#9E9E9E' : (DIFF_COLORS[ex.difficulty]?.text || '#2E7D32'),
+          }}>
+            {ex.difficulty}
+          </span>
+        </div>
       </div>
       <h4 style={{ marginBottom: '4px', color: isComingSoon ? '#9E9E9E' : undefined }}>{ex.name}</h4>
       <p style={{
