@@ -5,6 +5,7 @@ import { ArrowLeft, Clock, Repeat, Target, AlertTriangle, CheckCircle2, Camera, 
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
+import { EXERCISE_VIDEOS } from '../data/exercise-videos';
 import { usePatientData } from '../hooks/usePatientData';
 import { addCompletedSession, getExercise, setExercise } from '../lib/firestore';
 import { uploadDemoVideo } from '../lib/storage-firebase';
@@ -51,8 +52,9 @@ export default function ExerciseDetail() {
   const [notes, setNotes] = useState('');
   const [painDuring, setPainDuring] = useState(0);
 
-  // Demo video
-  const [demoVideoUrl, setDemoVideoUrl] = useState(null);
+  // Demo video — seed instantly from the static snapshot so it shows without
+  // waiting for the Firestore round-trip; Firestore then overrides if different.
+  const [demoVideoUrl, setDemoVideoUrl] = useState(() => EXERCISE_VIDEOS[id] || null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [videoLink, setVideoLink] = useState('');   // paste-a-URL input

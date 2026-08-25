@@ -30,6 +30,7 @@ export function usePatientData(key, initialValue) {
 
   useEffect(() => {
     if (!activePatientId) return;
+    const scopedKey = `patient_${activePatientId}_${key}`;
 
     // If we have a Firestore mapping and user is authenticated, use realtime listener
     if (user && firestoreKey) {
@@ -44,16 +45,21 @@ export function usePatientData(key, initialValue) {
       };
       const listener = listenerMap[firestoreKey];
       if (listener) {
+        // Hydrate instantly from the cached snapshot so navigating back doesn't
+        // flash an empty state (e.g. "no exercises allocated") while Firestore
+        // reconnects. The listener then overwrites with fresh data.
+        const cached = load(scopedKey, null);
+        if (cached != null) setState(cached);
         const unsub = listener(activePatientId, (docs) => {
           setState(docs);
           setLoaded(true);
+          save(scopedKey, docs); // keep the cache warm for the next mount
         });
         return unsub;
       }
     }
 
     // Fallback to localStorage for keys without Firestore mapping
-    const scopedKey = `patient_${activePatientId}_${key}`;
     const stored = load(scopedKey, initialValue);
     setState(stored);
     setLoaded(true);
@@ -71,5 +77,5 @@ export function usePatientData(key, initialValue) {
     });
   }, [activePatientId, key]);
 
-  return [state, update];
+  return [state, update, loaded];
 }

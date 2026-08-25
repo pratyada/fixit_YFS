@@ -38,7 +38,7 @@ const regionFor = (bodyPart) => REGION[bodyPart] || REGION.Other;
 export default function PatientHome() {
   const { session } = useAuth();
   const navigate = useNavigate();
-  const [assigned] = usePatientData('assigned_exercises', []);
+  const [assigned, , assignedLoaded] = usePatientData('assigned_exercises', []);
   const [completed] = usePatientData('completed_sessions', []);
   const [thumbs, setThumbs] = useState({});
   useEffect(() => {
@@ -85,12 +85,19 @@ export default function PatientHome() {
       <div style={{ marginBottom: '18px' }}>
         <h1 style={{ margin: '0 0 4px' }}>Hi {firstName} 👋</h1>
         <div style={{ fontSize: '0.9rem', color: 'var(--color-text)' }}>
-          {total === 0 ? 'No exercises assigned yet.' : `${done} of ${total} done today · keep it up!`}
+          {!assignedLoaded ? 'Loading your plan…' : total === 0 ? 'No exercises assigned yet.' : `${done} of ${total} done today · keep it up!`}
         </div>
       </div>
 
-      {/* Empty state */}
-      {total === 0 && (
+      {/* Loading state — don't show "no exercises" until data has actually loaded */}
+      {!assignedLoaded && total === 0 && (
+        <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--color-text)' }}>
+          <div style={{ fontSize: '0.85rem' }}>Loading your exercises…</div>
+        </div>
+      )}
+
+      {/* Empty state — only once we're sure there are none */}
+      {assignedLoaded && total === 0 && (
         <div style={{ textAlign: 'center', padding: '48px 24px', background: 'var(--color-bg-alt)', borderRadius: '18px', border: '1px solid var(--color-border)' }}>
           <ClipboardList size={40} style={{ color: 'var(--color-border)', margin: '0 auto 12px', display: 'block' }} />
           <div style={{ fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '4px' }}>No exercises yet</div>
