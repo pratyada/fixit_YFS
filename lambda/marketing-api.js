@@ -123,8 +123,9 @@ async function handleAssignmentNotify(event) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 4px">${list}</table>
     <div style="text-align:center;margin:24px 0 6px"><a href="${APP_URL}" style="display:inline-block;background:#4E4E53;color:#fff;text-decoration:none;padding:13px 30px;border-radius:10px;font-weight:700;font-size:15px">Open my exercises →</a></div>
     <p style="margin:14px 0 0;font-size:13px;color:#7c8a86">Log in with this email address to see your plan.</p>`;
-  const html = brandedEmail({ subject: 'Your practitioner assigned you exercises', preheader: `${from} assigned you ${exercises.length} exercise${exercises.length > 1 ? 's' : ''}`, bodyHtml, unsubscribeUrl: `${APP_URL}`, brand: 'fixit' });
-  const fromName = brandTheme('fixit').fromName || 'FIXIT';
+  // Patient-facing clinical emails use the client (YourFormSux) brand, not FIXIT.
+  const html = brandedEmail({ subject: 'Your practitioner assigned you exercises', preheader: `${from} assigned you ${exercises.length} exercise${exercises.length > 1 ? 's' : ''}`, bodyHtml, unsubscribeUrl: `${APP_URL}`, brand: 'yfs' });
+  const fromName = brandTheme('yfs').fromName || 'YourFormSux';
   const bareFrom = (FROM.match(/<([^>]+)>/) || [null, FROM])[1].trim();
   await ses.send(new SendEmailCommand({
     Source: `${fromName} <${bareFrom}>`,
