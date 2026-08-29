@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Line, Bar } from 'react-chartjs-2';
+import { Chart } from 'react-chartjs-2';
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler,
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, BarController, LineController, Title, Tooltip, Legend, Filler,
 } from 'chart.js';
 import { Users, Search, ChevronRight, Activity, Heart, Dumbbell, Video, Clock, Star, ChevronDown, ChevronUp, Send, MessageSquare, CheckCircle2, Mail, TrendingUp, CalendarCheck } from 'lucide-react';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, BarController, LineController, Title, Tooltip, Legend, Filler);
 import { useAuth } from '../contexts/AuthContext';
 import { Camera } from 'lucide-react';
 import { marketing } from '../lib/marketingApi';
@@ -692,70 +692,146 @@ function PatientTrends({ sessions, activity, assignments, i18n }) {
   const totalDone = acts.length;
   const noData = scored.length === 0 && acts.length === 0;
 
+  // ── Intelligence: derive an at-a-glance verdict + action flags ──
+  const lastActive = acts.length ? acts.map((a) => a.date).sort((x, y) => y - x)[0] : (scored.length ? scored[scored.length - 1].date : null);
+  const daysSince = lastActive ? Math.floor((Date.now() - lastActive.getTime()) / 86400000) : null;
+  // trend = last 3 scores vs the 3 before
+  const trend = (() => {
+    if (scored.length < 4) return 0;
+    const s = scored.map((x) => x.score);
+    const recent = s.slice(-3).reduce((a, b) => a + b, 0) / 3;
+    const prev = s.slice(-6, -3);
+    if (!prev.length) return 0;
+    return Math.round(recent - prev.reduce((a, b) => a + b, 0) / prev.length);
+  })();
+  // per-exercise worst average (for a "review form" flag)
+  const worst = (() => {
+    const byEx = {};
+    scored.forEach((s) => { (byEx[s.name] = byEx[s.name] || []).push(s.score); });
+    let w = null;
+    Object.entries(byEx).forEach(([name, arr]) => {
+      const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+      if (arr.length >= 2 && (w === null || avg < w.avg)) w = { name, avg: Math.round(avg) };
+    });
+    return w && w.avg < 65 ? w : null;
+  })();
+
+  const verdict = (() => {
+    if (noData) return { label: 'No activity yet', tone: 'grey', note: 'Trends appear once the patient does their exercises.' };
+    if (daysSince != null && daysSince >= 7) return { label: `Inactive — ${daysSince} days`, tone: 'red', note: 'Adherence has stalled. A reminder may help.' };
+    if (avgScore != null && avgScore < 60) return { label: 'Form needs work', tone: 'amber', note: 'Scores are low — worth reviewing technique.' };
+    if (trend >= 5) return { label: 'Improving', tone: 'green', note: 'Scores are trending up. Keep the plan going.' };
+    if (activeDays >= 4) return { label: 'On track', tone: 'green', note: 'Consistent and engaged.' };
+    return { label: 'Getting started', tone: 'blue', note: 'Some activity logged — encourage consistency.' };
+  })();
+  const TONES = {
+    green: { bg: '#E8F5E9', fg: '#2E7D32', dot: '#4CAF50' },
+    amber: { bg: '#FFF8E1', fg: '#F57F17', dot: '#FFA000' },
+    red: { bg: '#FFEBEE', fg: '#C62828', dot: '#E53935' },
+    blue: { bg: '#E3F2FD', fg: '#1565C0', dot: '#1E88E5' },
+    grey: { bg: 'var(--color-bg-alt)', fg: 'var(--color-text)', dot: '#BDBDBD' },
+  };
+  const vt = TONES[verdict.tone];
+
+  // Action flags — concrete prompts the practitioner can act on.
+  const flags = [];
+  if (daysSince != null && daysSince >= 3) flags.push({ icon: '⏰', text: `No exercise in ${daysSince} days — send a nudge.`, tone: daysSince >= 7 ? 'red' : 'amber' });
+  if (worst) flags.push({ icon: '🎯', text: `${worst.name} averaging ${worst.avg}/100 — review form or regress it.`, tone: 'amber' });
+  if (trend <= -5) flags.push({ icon: '📉', text: `Scores dropping (${trend} vs last sessions).`, tone: 'amber' });
+  if (trend >= 8) flags.push({ icon: '📈', text: `Scores improving (+${trend}) — consider progressing.`, tone: 'green' });
+  if (activeDays === 0 && !noData) flags.push({ icon: '💤', text: 'No sessions in the last 14 days.', tone: 'red' });
+
+  const scoreColor = (v) => v == null ? '#9E9E9E' : v >= 80 ? '#2E7D32' : v >= 60 ? '#F57F17' : '#C62828';
+
   if (noData) {
     return (
-      <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '20px', textAlign: 'center', color: 'var(--color-text)', fontSize: '0.85rem' }}>
+      <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '22px', textAlign: 'center', color: 'var(--color-text)', fontSize: '0.85rem' }}>
         <Activity size={26} style={{ color: 'var(--color-border)', marginBottom: '6px' }} />
-        <div>No activity yet — trends appear once the patient completes pose-check sessions.</div>
+        <div style={{ fontWeight: 600 }}>No activity yet</div>
+        <div style={{ fontSize: '0.78rem', marginTop: '2px' }}>Charts appear once {'the patient'} completes their exercises or a pose check.</div>
       </div>
     );
   }
 
+  // Combined "how the patient is doing" chart: bars = exercises done, line = score.
+  const scoreByDay = days.map((d) => {
+    const dayScores = scored.filter((s) => s.date.toISOString().split('T')[0] === d.key);
+    return dayScores.length ? Math.round(dayScores.reduce((a, s) => a + s.score, 0) / dayScores.length) : null;
+  });
+
   return (
     <div style={{ background: 'white', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      {/* quick stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-        <MiniStat label="Avg score" value={avgScore != null ? avgScore : '—'} color={avgScore >= 80 ? '#2E7D32' : avgScore >= 60 ? '#F57F17' : avgScore != null ? '#C62828' : '#9E9E9E'} />
-        <MiniStat label="Active days / 14" value={activeDays} color="var(--color-secondary)" />
-        <MiniStat label="Exercises done" value={totalDone} color="var(--color-secondary)" />
+      {/* Verdict banner — instant read on whether action is needed */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: vt.bg, borderRadius: '12px', padding: '12px 14px' }}>
+        <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: vt.dot, flexShrink: 0, boxShadow: `0 0 0 4px ${vt.dot}22` }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: '0.95rem', color: vt.fg }}>{verdict.label}</div>
+          <div style={{ fontSize: '0.74rem', color: vt.fg, opacity: 0.85 }}>{verdict.note}</div>
+        </div>
+        {lastActive && <div style={{ fontSize: '0.66rem', color: vt.fg, textAlign: 'right', flexShrink: 0 }}>Last active<br /><b>{daysSince === 0 ? 'today' : daysSince === 1 ? 'yesterday' : `${daysSince}d ago`}</b></div>}
       </div>
 
-      {/* score trend */}
-      {scored.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '6px' }}><TrendingUp size={13} /> Score trend</div>
-          <div style={{ height: '150px' }}>
-            <Line
-              data={{
-                labels: scored.map((s) => s.date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })),
-                datasets: [{
-                  data: scored.map((s) => s.score), label: 'Score',
-                  borderColor: '#57b6c4', backgroundColor: 'rgba(87,182,196,0.15)', fill: true, tension: 0.35,
-                  pointRadius: 3, pointBackgroundColor: '#2f8b96',
-                }],
-              }}
-              options={{
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: (ctx) => scored[ctx.dataIndex]?.name } } },
-                scales: { y: { min: 0, max: 100, ticks: { stepSize: 25 } }, x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } } },
-              }}
-            />
-          </div>
-        </div>
-      )}
+      {/* Key stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+        <MiniStat label="Avg score" value={avgScore != null ? avgScore : '—'} color={scoreColor(avgScore)} />
+        <MiniStat label="Trend" value={trend > 0 ? `↑${trend}` : trend < 0 ? `↓${Math.abs(trend)}` : '–'} color={trend > 0 ? '#2E7D32' : trend < 0 ? '#C62828' : '#9E9E9E'} />
+        <MiniStat label="Active days /14" value={activeDays} color="var(--color-secondary)" />
+        <MiniStat label="Done" value={totalDone} color="var(--color-secondary)" />
+      </div>
 
-      {/* consistency (last 14 days) */}
+      {/* One combined chart: exercises done (bars) + score (line) */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '6px' }}><CalendarCheck size={13} /> Consistency — last 14 days</div>
-        <div style={{ height: '110px' }}>
-          <Bar
-            data={{ labels: days.map((d) => d.label), datasets: [{ data: days.map((d) => d.count), backgroundColor: '#708E86', borderRadius: 4, barPercentage: 0.7 }] }}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '6px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><TrendingUp size={13} /> Performance — last 14 days</span>
+          <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--color-text)' }}>
+            <span style={{ color: '#708E86' }}>▮ done</span> &nbsp; <span style={{ color: '#2f8b96' }}>— score</span>
+          </span>
+        </div>
+        <div style={{ height: '170px' }}>
+          <Chart
+            type="bar"
+            data={{
+              labels: days.map((d) => d.label),
+              datasets: [
+                { type: 'bar', label: 'Exercises done', data: days.map((d) => d.count), backgroundColor: '#B7CBC4', borderRadius: 4, barPercentage: 0.6, yAxisID: 'y' },
+                { type: 'line', label: 'Score', data: scoreByDay, borderColor: '#2f8b96', backgroundColor: 'rgba(87,182,196,0.15)', tension: 0.35, spanGaps: true, pointRadius: 3, pointBackgroundColor: '#2f8b96', fill: false, yAxisID: 'y1' },
+              ],
+            }}
             options={{
               responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }, x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7 } } },
+              interaction: { mode: 'index', intersect: false },
+              plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => c.dataset.type === 'line' ? (c.parsed.y == null ? 'No score' : `Score: ${c.parsed.y}`) : `Done: ${c.parsed.y}` } } },
+              scales: {
+                y: { position: 'left', beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, title: { display: false }, grid: { drawOnChartArea: false } },
+                y1: { position: 'right', min: 0, max: 100, ticks: { stepSize: 25 } },
+                x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7 } },
+              },
             }}
           />
         </div>
       </div>
 
-      {/* allocation markers */}
+      {/* Action flags — what to do next */}
+      {flags.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {flags.slice(0, 4).map((f, i) => {
+            const c = TONES[f.tone] || TONES.grey;
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: c.bg, borderRadius: '9px', padding: '8px 11px', fontSize: '0.78rem', color: c.fg, fontWeight: 600 }}>
+                <span>{f.icon}</span> {f.text}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Allocation markers */}
       {allocations.length > 0 && (
         <div>
-          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '6px' }}>📌 Exercises you allocated</div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📌 Allocated</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {allocations.slice(0, 12).map((a, i) => (
-              <span key={i} style={{ fontSize: '0.68rem', background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)', borderRadius: '999px', padding: '3px 10px', color: 'var(--color-text)' }}>
+            {allocations.slice(0, 10).map((a, i) => (
+              <span key={i} style={{ fontSize: '0.66rem', background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)', borderRadius: '999px', padding: '3px 10px', color: 'var(--color-text)' }}>
                 <b style={{ color: 'var(--color-secondary)' }}>{a.name}</b> · {a.date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
               </span>
             ))}
@@ -768,9 +844,9 @@ function PatientTrends({ sessions, activity, assignments, i18n }) {
 
 function MiniStat({ label, value, color }) {
   return (
-    <div style={{ background: 'var(--color-bg-alt)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-      <div style={{ fontSize: '1.3rem', fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text)', marginTop: '3px' }}>{label}</div>
+    <div style={{ background: 'var(--color-bg-alt)', borderRadius: '10px', padding: '10px 8px', textAlign: 'center' }}>
+      <div style={{ fontSize: '1.25rem', fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: '0.56rem', textTransform: 'uppercase', letterSpacing: '0.4px', color: 'var(--color-text)', marginTop: '4px' }}>{label}</div>
     </div>
   );
 }
