@@ -15,6 +15,8 @@ import Rsvp from './pages/Rsvp';
 // (~150 KB gzip) out of the entry chunk, so public/guide pages never download
 // it. Only routes that actually need auth pull the chunk.
 const AuthedApp = lazy(() => import('./AuthedApp'));
+// Public, full-screen clinic-TV kiosk — no auth, heavy (TensorFlow) so lazy.
+const PoseChallenge = lazy(() => import('./pages/PoseChallenge'));
 
 export default function App() {
   const { pathname } = useLocation();
@@ -27,6 +29,11 @@ export default function App() {
   }
   // Public RSVP page — no auth, drops the email straight into the subscriber list.
   if (pathname === '/rsvp') return <Rsvp />;
+
+  // Public Pose Challenge kiosk — no auth, full-screen (clinic TV).
+  if (pathname === '/challenge') {
+    return <Suspense fallback={<BootSplash />}><PoseChallenge /></Suspense>;
+  }
 
   return (
     <Suspense fallback={<BootSplash />}>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send, Palette, Mic, Bone, CreditCard } from 'lucide-react';
+import { Home, Dumbbell, Heart, Camera, LogOut, BarChart3, Users, Shield, Stethoscope, BookOpen, ArrowRightLeft, Settings as SettingsIcon, Compass, HeartPulse, Mail, PenTool, Send, Palette, Mic, Bone, CreditCard, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClinicProvider, useClinic } from './contexts/ClinicContext';
@@ -126,6 +126,7 @@ const ADMIN_TABS = [
   // In-clinic tools
   { to: '/kiosk', icon: Camera, labelKey: 'nav:tabs.kiosk' },
   { to: '/voice', icon: Mic, labelKey: 'Voice AI' },
+  { to: '/challenge', icon: Trophy, labelKey: 'Pose Challenge' },
   { to: '/anatomy', icon: Bone, labelKey: 'Know Your Injury' },
   // Subscription is pinned to the bottom of the sidebar (see footer), not listed here.
 ];
