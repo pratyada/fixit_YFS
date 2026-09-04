@@ -189,6 +189,14 @@ export default function PoseChallenge() {
         <span style={{ fontSize: '0.9rem', opacity: 0.7, fontFamily: 'var(--sans)' }}>Pose Challenge</span>
       </div>
 
+      {/* back / exit */}
+      <button
+        onClick={() => { if (window.history.length > 1) window.history.back(); else window.location.href = '/'; }}
+        style={{ position: 'absolute', top: 24, right: 28, zIndex: 4, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: 999, padding: '8px 16px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(6px)' }}
+      >
+        ← Back
+      </button>
+
       <div style={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24 }}>
         {phase === 'loading' && <Big sub="Warming up the camera…">⏳</Big>}
         {phase === 'error' && <Big sub="Camera unavailable — check permissions / connect a camera.">📷</Big>}
