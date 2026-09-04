@@ -133,6 +133,7 @@ export default function Landing() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <a href="#features" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Features</a>
           <a href="#pricing" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Pricing</a>
+          <Link to="/exercise" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Exercises</Link>
           <Link to="/guides" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}>Guides</Link>
           <button onClick={() => setShowLogin(true)} style={{
             padding: '8px 20px', borderRadius: '8px',
@@ -432,6 +433,7 @@ export default function Landing() {
             . Built in Toronto, Canada.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', fontSize: '0.72rem' }}>
+            <Link to="/exercise" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Exercise Library</Link>
             <Link to="/guides" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Guides</Link>
             <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Privacy Policy</Link>
             <a href="https://yourformsux.com" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>YourFormSux.com</a>
