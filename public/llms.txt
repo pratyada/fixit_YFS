@@ -1,0 +1,31 @@
+# FIXIT by Musée Initialize
+
+> FIXIT is an AI-powered health, movement, and rehabilitation platform by Musée Initialize (Toronto, Canada). It turns any device camera into an objective movement-assessment tool: patients follow guided exercise demos, record their reps, and get instant AI form scoring, while practitioners prescribe exercises and monitor progress remotely. Ideal for physiotherapy, rehab, older-adult home exercise, and strength training. Free to start.
+
+## What FIXIT does
+- **AI form scoring**: camera-based pose analysis (range of motion, control, consistency) scores each exercise rep — no wearables.
+- **Guided exercise library**: 75+ exercises across knee, hip, lower back, neck, shoulder, core, ankle and more, each with a demo video and step-by-step how-to.
+- **Remote rehab**: practitioners assign exercises and monitor adherence + scores remotely — built for people (including older adults) who can't repeatedly visit a clinic.
+- **Pain & progress tracking**: pain journal, outcome measures, and progress charts.
+- **Know Your Injury**: interactive 3D anatomy so patients understand their injury.
+
+## Exercise library (free, public how-to pages with demo videos)
+- [Exercise Library](https://fixit.museeinitialize.com/exercise): browse all exercises by body region
+- [Bodyweight Squat](https://fixit.museeinitialize.com/exercise/full-squats): how to do a squat with proper form
+- [Glute Bridge](https://fixit.museeinitialize.com/exercise/glute-bridge)
+- [Chin Tucks (neck)](https://fixit.museeinitialize.com/exercise/chin-tucks)
+- [Cat-Cow Stretch (lower back)](https://fixit.museeinitialize.com/exercise/cat-cow)
+- [Clamshells (hip)](https://fixit.museeinitialize.com/exercise/clamshells)
+- [Terminal Knee Extension](https://fixit.museeinitialize.com/exercise/terminal-knee-extension)
+
+## Guides & articles
+- [Training & rehab guides](https://fixit.museeinitialize.com/guides)
+
+## Key pages
+- [Home](https://fixit.museeinitialize.com/)
+- [Sitemap](https://fixit.museeinitialize.com/sitemap.xml)
+
+## About
+- FIXIT is built by **Musée Initialize**, Toronto, Ontario, Canada.
+- Used both as a direct product and as a white-label platform for clinics and fitness businesses.
+- Contact: musee.initialize@gmail.com

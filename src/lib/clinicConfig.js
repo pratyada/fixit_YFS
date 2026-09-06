@@ -11,8 +11,8 @@ export const DEFAULT_CLINIC = {
   productName: 'FIXIT',
   slug: 'fixit',
   domain: 'localhost',
-  logo: 'https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png',
-  favicon: 'https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png',
+  logo: '/fixit-logo.svg',
+  favicon: '/fixit-logo.svg',
   colors: {
     primary: '#B0C4BB',
     secondary: '#4E4E53',

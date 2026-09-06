@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://fixit.yourformsux.com/sitemap.xml
+
+Sitemap: https://fixit.museeinitialize.com/sitemap.xml

@@ -73,6 +73,9 @@ jobs:
             --cache-control "public, max-age=3600" || true
           aws s3 cp dist/robots.txt s3://${{ env.S3_BUCKET }}/robots.txt \
             --cache-control "public, max-age=3600" || true
+          # llms.txt — AEO manifest for AI answer engines (served as text/plain).
+          aws s3 cp dist/llms.txt s3://${{ env.S3_BUCKET }}/llms.txt \
+            --content-type "text/plain; charset=utf-8" --cache-control "public, max-age=3600" || true
           if [ -f dist/manifest.json ]; then
             aws s3 cp dist/manifest.json s3://${{ env.S3_BUCKET }}/manifest.json \
               --cache-control "no-cache"
