@@ -10,20 +10,20 @@
 - **Know Your Injury**: interactive 3D anatomy so patients understand their injury.
 
 ## Exercise library (free, public how-to pages with demo videos)
-- [Exercise Library](https://fixit.museeinitialize.com/exercise): browse all exercises by body region
-- [Bodyweight Squat](https://fixit.museeinitialize.com/exercise/full-squats): how to do a squat with proper form
-- [Glute Bridge](https://fixit.museeinitialize.com/exercise/glute-bridge)
-- [Chin Tucks (neck)](https://fixit.museeinitialize.com/exercise/chin-tucks)
-- [Cat-Cow Stretch (lower back)](https://fixit.museeinitialize.com/exercise/cat-cow)
-- [Clamshells (hip)](https://fixit.museeinitialize.com/exercise/clamshells)
-- [Terminal Knee Extension](https://fixit.museeinitialize.com/exercise/terminal-knee-extension)
+- [Exercise Library](https://fixit.yourformsux.com/exercise): browse all exercises by body region
+- [Bodyweight Squat](https://fixit.yourformsux.com/exercise/full-squats): how to do a squat with proper form
+- [Glute Bridge](https://fixit.yourformsux.com/exercise/glute-bridge)
+- [Chin Tucks (neck)](https://fixit.yourformsux.com/exercise/chin-tucks)
+- [Cat-Cow Stretch (lower back)](https://fixit.yourformsux.com/exercise/cat-cow)
+- [Clamshells (hip)](https://fixit.yourformsux.com/exercise/clamshells)
+- [Terminal Knee Extension](https://fixit.yourformsux.com/exercise/terminal-knee-extension)
 
 ## Guides & articles
-- [Training & rehab guides](https://fixit.museeinitialize.com/guides)
+- [Training & rehab guides](https://fixit.yourformsux.com/guides)
 
 ## Key pages
-- [Home](https://fixit.museeinitialize.com/)
-- [Sitemap](https://fixit.museeinitialize.com/sitemap.xml)
+- [Home](https://fixit.yourformsux.com/)
+- [Sitemap](https://fixit.yourformsux.com/sitemap.xml)
 
 ## About
 - FIXIT is built by **Musée Initialize**, Toronto, Ontario, Canada.

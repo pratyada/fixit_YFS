@@ -42,19 +42,16 @@ function exerciseMeta(e, path = `/exercise/${e.id}`) {
   };
 }
 
-// Primary/canonical domain is the flagship Musée Initialize brand. The same app
-// also serves client tenants (e.g. fixit.yourformsux.com), but SEO canonicals,
-// sitemap and OG URLs consolidate to this primary domain.
 export const SITE = {
-  baseUrl: 'https://fixit.museeinitialize.com',
+  baseUrl: 'https://fixit.yourformsux.com',
   name: 'FIXIT',
-  defaultTitle: 'FIXIT by Musée Initialize — AI Movement & Rehab Tracker',
+  defaultTitle: 'FIXIT — AI Health Tracker | Exercise Form Analysis & Progress Tracking',
   defaultDescription:
-    'FIXIT by Musée Initialize — AI health & movement platform. Camera-based form scoring, guided rehab & strength exercises with demo videos, pain tracking, and remote practitioner monitoring. Free to start.',
-  defaultImage: 'https://fixit.museeinitialize.com/og-image.png',
+    'FIXIT — Your AI health tracker. Track exercises, analyze form with AI pose detection, monitor pain, and visualize progress. 100+ guided exercises for rehab, fitness, and wellness. Free to start.',
+  defaultImage: 'https://fixit.yourformsux.com/og-image.png',
   twitterCard: 'summary_large_image',
   locale: 'en_US',
-  siteName: 'FIXIT by Musée Initialize',
+  siteName: 'FIXIT by YourFormSux',
 };
 
 // Absolute URL for a canonical/OG tag from a path.

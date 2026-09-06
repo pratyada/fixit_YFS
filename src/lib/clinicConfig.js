@@ -11,8 +11,8 @@ export const DEFAULT_CLINIC = {
   productName: 'FIXIT',
   slug: 'fixit',
   domain: 'localhost',
-  logo: '/fixit-logo.svg',
-  favicon: '/fixit-logo.svg',
+  logo: 'https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png',
+  favicon: 'https://yourformsux.com/wp-content/uploads/2024/08/cropped-Untitled-design-14-150x150.png',
   colors: {
     primary: '#B0C4BB',
     secondary: '#4E4E53',
@@ -75,8 +75,28 @@ export async function getClinicByDomain(domain) {
 }
 
 // Resolve clinic from current hostname
+// The Musée Initialize demo/showcase instance — served ONLY on the
+// fixit.museeinitialize.com hostname. Same app + data as the client tenants, but
+// shown under the Musée Initialize (FIXIT) brand. Leaves fixit.yourformsux.com
+// (which uses DEFAULT_CLINIC) completely untouched.
+export const MUSEE_CLINIC = {
+  ...DEFAULT_CLINIC,
+  id: 'musee',
+  name: 'FIXIT',
+  productName: 'FIXIT',
+  slug: 'musee',
+  domain: 'fixit.museeinitialize.com',
+  logo: '/fixit-logo.svg',
+  favicon: '/fixit-logo.svg',
+  tagline: 'AI Movement & Rehab',
+  byLine: 'by Musée Initialize',
+};
+
 export async function resolveClinic() {
   const hostname = window.location.hostname;
+
+  // Musée Initialize showcase domain → Musée brand (yourformsux stays default).
+  if (hostname === 'fixit.museeinitialize.com') return MUSEE_CLINIC;
 
   // Try slug from hostname
   const slug = getClinicSlugFromHostname(hostname);
