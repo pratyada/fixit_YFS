@@ -8,15 +8,18 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 const EXERCISES = [
   {
     id: 'squat', name: 'Squats', emoji: '🦵', cue: 'Sit back and down, then stand tall',
-    joint: 'knee', down: 110, up: 150, ideal: 90, mirrorOk: true,
+    joint: 'knee', down: 110, up: 150, ideal: 90, view: 'side',
+    viewHint: '↩️ Turn to your SIDE so the camera can see your knees bend',
   },
   {
     id: 'curl', name: 'Bicep Curls', emoji: '💪', cue: 'Curl all the way up, then lower',
-    joint: 'elbow', down: 70, up: 150, ideal: 45, mirrorOk: true,
+    joint: 'elbow', down: 70, up: 150, ideal: 45, view: 'front',
+    viewHint: '📷 Face the camera',
   },
   {
     id: 'situp', name: 'Sit-ups', emoji: '🎯', cue: 'Rise up, then lower back down',
-    joint: 'hip', down: 120, up: 150, ideal: 95, mirrorOk: true,
+    joint: 'hip', down: 120, up: 150, ideal: 95, view: 'side',
+    viewHint: '↩️ Lie with your SIDE to the camera',
   },
 ];
 const ROUND_SECONDS = 30;
@@ -191,7 +194,7 @@ export default function PoseChallenge() {
 
       {/* back / exit */}
       <button
-        onClick={() => { if (window.history.length > 1) window.history.back(); else window.location.href = '/'; }}
+        onClick={() => { window.location.href = '/'; }}
         style={{ position: 'absolute', top: 24, right: 28, zIndex: 4, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: 999, padding: '8px 16px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(6px)' }}
       >
         ← Back
@@ -212,15 +215,17 @@ export default function PoseChallenge() {
         {phase === 'ready' && (
           <div>
             <div style={{ fontSize: '2.4rem', fontWeight: 800, opacity: 0.9 }}>Get ready for</div>
-            <div style={{ fontSize: 'clamp(2.6rem, 8vw, 5rem)', fontWeight: 900, margin: '4px 0 14px' }}>{ex.emoji} {ex.name}</div>
-            <div style={{ fontSize: '10rem', fontWeight: 900, lineHeight: 1, color: '#57b6c4', textShadow: '0 0 40px rgba(87,182,196,0.6)' }}>{count}</div>
+            <div style={{ fontSize: 'clamp(2.6rem, 8vw, 5rem)', fontWeight: 900, margin: '4px 0 10px' }}>{ex.emoji} {ex.name}</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#ffd166', marginBottom: 12 }}>{ex.viewHint}</div>
+            <div style={{ fontSize: '9rem', fontWeight: 900, lineHeight: 1, color: '#57b6c4', textShadow: '0 0 40px rgba(87,182,196,0.6)' }}>{count}</div>
           </div>
         )}
 
         {phase === 'active' && (
           <div style={{ width: '100%' }}>
             <div style={{ fontSize: '1.6rem', fontWeight: 700, opacity: 0.9 }}>{ex.emoji} {ex.name}</div>
-            <div style={{ fontSize: '1.1rem', opacity: 0.7, marginBottom: 8 }}>{ex.cue}</div>
+            <div style={{ fontSize: '1.1rem', opacity: 0.7 }}>{ex.cue}</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#ffd166', marginBottom: 8 }}>{ex.viewHint}</div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 60, marginTop: 10 }}>
               <div>
                 <div style={{ fontSize: 'clamp(5rem, 18vw, 12rem)', fontWeight: 900, lineHeight: 1, color: '#7CFC9E', textShadow: '0 0 30px rgba(124,252,158,0.4)' }}>{reps}</div>
