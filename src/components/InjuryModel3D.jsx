@@ -1,6 +1,6 @@
 import { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
+import { OrbitControls, ContactShadows } from '@react-three/drei';
 import { STRUCTURES, STRUCT_BY_ID, STATUS } from '../data/knee-anatomy';
 
 // Read-only, patient-facing 3D knee. Shows the bones as faint context and
@@ -62,30 +62,38 @@ export default function InjuryModel3D({ injuries = [], height = 340 }) {
   const marked = Object.keys(injuryMap).filter((id) => STRUCT_BY_ID[id]);
 
   return (
-    <div style={{ position: 'relative', height, borderRadius: '18px', overflow: 'hidden', background: 'radial-gradient(120% 120% at 50% 0%, #16202a 0%, #0c0f12 70%)' }}>
-      <Canvas camera={{ position: [3.4, 0.6, 4.8], fov: 42 }} dpr={[1, 2]} gl={{ antialias: true }}>
-        <ambientLight intensity={0.55} />
-        <hemisphereLight args={['#bcd6de', '#241d1a', 0.45]} />
-        <directionalLight position={[4, 6, 5]} intensity={1.1} />
-        <directionalLight position={[-5, 2, -4]} intensity={0.4} color="#9fd0da" />
-        <Suspense fallback={null}>
-          {STRUCTURES.map((s) => <Part key={s.id} s={s} status={injuryMap[s.id] || null} />)}
+    <div>
+      <div style={{ position: 'relative', height, borderRadius: '18px', overflow: 'hidden', background: 'radial-gradient(120% 120% at 50% 0%, #16202a 0%, #0c0f12 70%)' }}>
+        <Canvas camera={{ position: [3.4, 0.6, 4.8], fov: 42 }} dpr={[1, 2]} gl={{ antialias: true }}>
+          <ambientLight intensity={0.55} />
+          <hemisphereLight args={['#bcd6de', '#241d1a', 0.45]} />
+          <directionalLight position={[4, 6, 5]} intensity={1.1} />
+          <directionalLight position={[-5, 2, -4]} intensity={0.4} color="#9fd0da" />
+          <Suspense fallback={null}>
+            {STRUCTURES.map((s) => <Part key={s.id} s={s} status={injuryMap[s.id] || null} />)}
+            <ContactShadows position={[0, -2.75, 0]} opacity={0.4} scale={12} blur={2.6} far={4.5} color="#000000" />
+          </Suspense>
+          <OrbitControls enablePan={false} minDistance={3} maxDistance={11} autoRotate autoRotateSpeed={0.7} enableDamping />
+        </Canvas>
+        <div style={{ position: 'absolute', left: 12, bottom: 10, fontSize: '0.66rem', fontWeight: 600, color: 'rgba(255,255,255,0.55)', fontFamily: 'system-ui', pointerEvents: 'none' }}>
+          Drag to rotate
+        </div>
+      </div>
+      {/* Legend under the model (not floating over it) — names each highlighted part. */}
+      {marked.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text)', opacity: 0.7 }}>Highlighted:</span>
           {marked.map((id) => {
-            const s = STRUCT_BY_ID[id];
             const c = STATUS[injuryMap[id]]?.c || STATUS.acute.c;
             return (
-              <Html key={id} position={s.label} center distanceFactor={9} pointerEvents="none" zIndexRange={[10, 0]}>
-                <div style={{ background: c, color: '#1a1a1a', fontFamily: 'system-ui', fontSize: '11px', fontWeight: 800, padding: '3px 9px', borderRadius: '999px', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>{s.name}</div>
-              </Html>
+              <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', fontWeight: 700, color: 'var(--color-secondary)', background: 'var(--color-bg-alt)', border: '1px solid var(--color-border)', padding: '4px 10px', borderRadius: '999px' }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: c, boxShadow: `0 0 6px ${c}` }} />
+                {STRUCT_BY_ID[id].name}
+              </span>
             );
           })}
-          <ContactShadows position={[0, -2.75, 0]} opacity={0.4} scale={12} blur={2.6} far={4.5} color="#000000" />
-        </Suspense>
-        <OrbitControls enablePan={false} minDistance={3} maxDistance={11} autoRotate autoRotateSpeed={0.7} enableDamping />
-      </Canvas>
-      <div style={{ position: 'absolute', left: 12, bottom: 10, fontSize: '0.66rem', fontWeight: 600, color: 'rgba(255,255,255,0.55)', fontFamily: 'system-ui', pointerEvents: 'none' }}>
-        Drag to rotate · highlighted = what's impacted
-      </div>
+        </div>
+      )}
     </div>
   );
 }
