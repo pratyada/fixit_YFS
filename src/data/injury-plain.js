@@ -63,7 +63,9 @@ export function plainInjury(inj) {
 
   const grade = inj.grade ? (GRADE_PLAIN[String(inj.grade)] || `grade ${inj.grade}`) : '';
   const typePlain = INJURY_TYPE_PLAIN[inj.injuryType] || (inj.injuryType ? `${inj.injuryType.toLowerCase()}` : 'an injury');
-  const meaning = `You have ${grade ? grade + ' ' : ''}${(inj.injuryType || 'damage').toLowerCase()}${inj.side ? ` in your ${inj.side.toLowerCase()} side` : ''} — ${typePlain}.`;
+  const countable = ['Tear', 'Sprain', 'Strain', 'Fracture', 'Rupture'];
+  const art = countable.includes(inj.injuryType) ? 'a ' : '';
+  const meaning = `You have ${art}${grade ? grade + ' ' : ''}${(inj.injuryType || 'damage').toLowerCase()}${inj.side ? ` on your ${inj.side.toLowerCase()} side` : ''} — ${typePlain}.`;
 
   const status = STATUS_PLAIN[inj.status] || STATUS_PLAIN.acute;
   const title = `${inj.structureName || 'Injury'}${inj.injuryType ? ` — ${inj.injuryType}` : ''}${grade ? ` (${grade})` : ''}`;
