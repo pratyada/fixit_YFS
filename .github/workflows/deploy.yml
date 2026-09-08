@@ -53,8 +53,13 @@ jobs:
           # 1. Hashed assets & images → immutable long cache.
           #    Exclude all HTML (incl. prerendered guides/*/index.html) and the
           #    content files that must stay fresh.
+          #    NO --delete: content-hashed chunks are immutable, so keeping the
+          #    previous build's chunks around is safe and CHEAP. Deleting them
+          #    caused white screens — an already-open (or mid-deploy) session
+          #    still references the old index.html, whose chunks would 404 the
+          #    instant they were deleted. Old chunks are a few MB/deploy (pennies);
+          #    prune manually if the bucket ever grows large.
           aws s3 sync dist/ s3://${{ env.S3_BUCKET }} \
-            --delete \
             --cache-control "public, max-age=31536000, immutable" \
             --exclude "*.html" \
             --exclude "sitemap.xml" \
