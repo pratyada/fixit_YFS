@@ -16,6 +16,7 @@ import { FIXIT_EXERCISES } from '../data/fixit-exercises.js';
 import { GYM_EXERCISES } from '../data/gym-exercises.js';
 import { EXERCISE_VIDEOS } from '../data/exercise-videos.js';
 import { enrichExercise } from '../data/exercise-content.js';
+import { enrichGuideFaqs } from '../data/guide-content.js';
 
 const ALL_EXERCISES = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY, ...GYM_EXERCISES];
 export const getExerciseById = (id) => ALL_EXERCISES.find((e) => e.id === id);
@@ -117,6 +118,7 @@ function guideRoutes() {
       author: g.author || 'FIXIT Team',
       section: g.category,
       tags: g.tags,
+      faqs: enrichGuideFaqs(g),
     },
   }));
 }

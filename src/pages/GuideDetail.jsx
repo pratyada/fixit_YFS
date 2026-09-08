@@ -1,6 +1,7 @@
 import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, Tag, Share2 } from 'lucide-react';
 import { getGuideBySlug, GUIDES } from '../data/guides';
+import { enrichGuideFaqs } from '../data/guide-content';
 import SubscribeForm from '../components/SubscribeForm';
 
 export default function GuideDetail() {
@@ -108,6 +109,25 @@ export default function GuideDetail() {
           </section>
         ))}
       </article>
+
+      {/* FAQ — generated from the guide's own question-style sections */}
+      {(() => {
+        const faqs = enrichGuideFaqs(guide);
+        if (!faqs.length) return null;
+        return (
+          <section style={{ marginTop: '32px' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '14px' }}>Frequently asked questions</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {faqs.map((f, i) => (
+                <div key={i}>
+                  <div style={{ fontWeight: 600, color: 'var(--color-secondary)', marginBottom: '3px' }}>{f.q}</div>
+                  <div style={{ fontSize: '0.86rem', color: 'var(--color-text)', lineHeight: 1.7 }}>{f.a}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Tags */}
       <div style={{

@@ -94,8 +94,7 @@ function applyArticleSchema(meta, canonical) {
     return;
   }
   const a = meta.article;
-  const data = {
-    '@context': 'https://schema.org',
+  const article = {
     '@type': 'Article',
     headline: a.title,
     description: a.description,
@@ -112,6 +111,14 @@ function applyArticleSchema(meta, canonical) {
     keywords: Array.isArray(a.tags) ? a.tags.join(', ') : undefined,
     image: SITE.defaultImage,
   };
+  const graph = [article];
+  if (a.faqs?.length) {
+    graph.push({
+      '@type': 'FAQPage',
+      mainEntity: a.faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+    });
+  }
+  const data = { '@context': 'https://schema.org', '@graph': graph };
   let el = existing;
   if (!el) {
     el = document.createElement('script');
