@@ -15,6 +15,7 @@ import { EXERCISE_LIBRARY } from '../data/exercises.js';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises.js';
 import { GYM_EXERCISES } from '../data/gym-exercises.js';
 import { EXERCISE_VIDEOS } from '../data/exercise-videos.js';
+import { enrichExercise } from '../data/exercise-content.js';
 
 const ALL_EXERCISES = [...FIXIT_EXERCISES, ...EXERCISE_LIBRARY, ...GYM_EXERCISES];
 export const getExerciseById = (id) => ALL_EXERCISES.find((e) => e.id === id);
@@ -38,6 +39,7 @@ function exerciseMeta(e, path = `/exercise/${e.id}`) {
       instructions: e.instructions || [],
       description: desc,
       muscles: e.musclesTargeted || [],
+      faqs: enrichExercise(e).faqs,
     },
   };
 }

@@ -3,6 +3,7 @@ import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
 import { EXERCISE_VIDEOS } from '../data/exercise-videos';
+import { enrichExercise } from '../data/exercise-content';
 
 // PUBLIC, Firebase-free exercise page — the SEO acquisition funnel. Renders the
 // demo video + how-to + target muscles for search engines and logged-out
@@ -37,6 +38,7 @@ export default function PublicExercise() {
   const video = EXERCISE_VIDEOS[ex.id];
   const emoji = REGION_EMOJI[ex.bodyPart] || '🏋️';
   const related = relatedFor(ex);
+  const rich = enrichExercise(ex);
 
   return (
     <article style={{ maxWidth: '760px', margin: '0 auto' }}>
@@ -48,7 +50,7 @@ export default function PublicExercise() {
       <h1 style={{ fontSize: '1.9rem', lineHeight: 1.15, margin: '0 0 6px' }}>
         {emoji} {ex.name}
       </h1>
-      <p style={{ color: '#47574f', fontSize: '1.02rem', margin: '0 0 6px' }}>{ex.description}</p>
+      <p style={{ color: '#47574f', fontSize: '1.02rem', margin: '0 0 6px', lineHeight: 1.6 }}>{rich.intro}</p>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '0.72rem', margin: '10px 0 22px' }}>
         {ex.bodyPart && <span style={tag}>{ex.bodyPart}</span>}
         {ex.difficulty && <span style={tag}>{ex.difficulty}</span>}
@@ -67,6 +69,16 @@ export default function PublicExercise() {
         </div>
       )}
 
+      {/* Benefits */}
+      {rich.benefits.length > 0 && (
+        <section style={{ marginBottom: '24px' }}>
+          <h2 style={h2}>Benefits of the {ex.name}</h2>
+          <ul style={{ paddingLeft: '20px', lineHeight: 1.7, color: '#47574f' }}>
+            {rich.benefits.map((b, i) => <li key={i} style={{ marginBottom: '4px' }}>{b}</li>)}
+          </ul>
+        </section>
+      )}
+
       {/* How to */}
       {ex.instructions?.length > 0 && (
         <section style={{ marginBottom: '24px' }}>
@@ -76,6 +88,12 @@ export default function PublicExercise() {
           </ol>
         </section>
       )}
+
+      {/* Sets & reps */}
+      <section style={{ marginBottom: '24px' }}>
+        <h2 style={h2}>How many reps &amp; sets</h2>
+        <p style={{ color: '#47574f', lineHeight: 1.6 }}>{rich.dosage}</p>
+      </section>
 
       {ex.tips?.length > 0 && (
         <section style={{ marginBottom: '24px' }}>
@@ -99,6 +117,25 @@ export default function PublicExercise() {
           <ul style={{ paddingLeft: '20px', lineHeight: 1.7, color: '#47574f' }}>
             {ex.contraindications.map((s, i) => <li key={i} style={{ marginBottom: '4px' }}>{s}</li>)}
           </ul>
+        </section>
+      )}
+
+      {/* Who it's for */}
+      <section style={{ marginBottom: '24px' }}>
+        <h2 style={h2}>Who should do the {ex.name}?</h2>
+        <p style={{ color: '#47574f', lineHeight: 1.6 }}>{rich.whoFor}</p>
+      </section>
+
+      {/* FAQ */}
+      {rich.faqs.length > 0 && (
+        <section style={{ marginBottom: '24px' }}>
+          <h2 style={h2}>{ex.name} — FAQ</h2>
+          {rich.faqs.map((f, i) => (
+            <div key={i} style={{ marginBottom: '14px' }}>
+              <div style={{ fontWeight: 700, color: '#12211f', marginBottom: '3px' }}>{f.q}</div>
+              <div style={{ color: '#47574f', lineHeight: 1.6 }}>{f.a}</div>
+            </div>
+          ))}
         </section>
       )}
 

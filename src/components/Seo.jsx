@@ -72,6 +72,15 @@ function applyExerciseSchema(meta, canonical) {
       uploadDate: '2026-01-01',
     });
   }
+  if (x.faqs?.length) {
+    graph.push({
+      '@type': 'FAQPage',
+      mainEntity: x.faqs.map((f) => ({
+        '@type': 'Question', name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    });
+  }
   const data = { '@context': 'https://schema.org', '@graph': graph };
   let el = existing;
   if (!el) { el = document.createElement('script'); el.type = 'application/ld+json'; el.id = EXERCISE_LD_ID; document.head.appendChild(el); }
