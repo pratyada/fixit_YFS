@@ -87,29 +87,24 @@ jobs:
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/*"
 
-      - name: Submit to IndexNow for search indexing
+      # Ensure the IndexNow key file is served as plain text (not the SPA shell),
+      # otherwise IndexNow verification fails and all submissions are rejected.
+      - name: Publish IndexNow key file
         run: |
+          printf 'fixit2026indexnow' > /tmp/fixit2026indexnow.txt
+          aws s3 cp /tmp/fixit2026indexnow.txt s3://${{ env.S3_BUCKET }}/fixit2026indexnow.txt \
+            --content-type "text/plain; charset=utf-8" --cache-control "public, max-age=86400" || true
+
+      - name: Submit ALL sitemap URLs to IndexNow (Bing/Yandex)
+        run: |
+          # Build urlList from the generated sitemap so every page (incl. all
+          # /exercise/ pages) is submitted and stays in sync automatically.
+          URLS=$(grep -oE '<loc>[^<]+</loc>' dist/sitemap.xml | sed -E 's#</?loc>##g' \
+            | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))")
           curl -s -X POST "https://api.indexnow.org/IndexNow" \
             -H "Content-Type: application/json" \
-            -d '{
-              "host": "fixit.yourformsux.com",
-              "key": "fixit2026indexnow",
-              "urlList": [
-                "https://fixit.yourformsux.com/",
-                "https://fixit.yourformsux.com/guides",
-                "https://fixit.yourformsux.com/guides/hyrox-training-guide-toronto",
-                "https://fixit.yourformsux.com/guides/marathon-training-guide-gta-toronto",
-                "https://fixit.yourformsux.com/guides/ironman-triathlon-training-ontario",
-                "https://fixit.yourformsux.com/guides/learn-handstand-complete-guide",
-                "https://fixit.yourformsux.com/guides/learn-backflip-progressive-guide",
-                "https://fixit.yourformsux.com/guides/crossfit-beginners-guide-toronto",
-                "https://fixit.yourformsux.com/guides/muscle-up-progression-guide",
-                "https://fixit.yourformsux.com/guides/exercise-pain-management-guide-toronto",
-                "https://fixit.yourformsux.com/guides/home-gym-setup-guide-toronto",
-                "https://fixit.yourformsux.com/guides/ai-fitness-tracker-vs-personal-trainer"
-              ]
-            }'
-          echo "IndexNow submitted"
+            -d "{\"host\":\"fixit.yourformsux.com\",\"key\":\"fixit2026indexnow\",\"keyLocation\":\"https://fixit.yourformsux.com/fixit2026indexnow.txt\",\"urlList\":$URLS}"
+          echo "IndexNow submitted $(echo "$URLS" | python3 -c 'import sys,json;print(len(json.load(sys.stdin)))') URLs"
 
   deploy-lambda:
     name: Deploy Lambda Functions
