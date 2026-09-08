@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HeartPulse, PlayCircle, Camera, ChevronRight, Sparkles } from 'lucide-react';
+import { HeartPulse, PlayCircle, Camera, ChevronRight, Sparkles, RotateCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAnatomyInjuries } from '../lib/firestore';
 import { plainInjury } from '../data/injury-plain';
+import { STRUCT_BY_ID } from '../data/knee-anatomy';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { FIXIT_EXERCISES } from '../data/fixit-exercises';
 import { GYM_EXERCISES } from '../data/gym-exercises';
@@ -24,6 +25,9 @@ const TONES = {
   amber: { bg: '#FFF8E1', fg: '#F57F17', dot: '#FFA000' },
   green: { bg: '#E8F5E9', fg: '#2E7D32', dot: '#4CAF50' },
 };
+
+// three.js is heavy — only pulled in when this page renders (a real injury exists).
+const InjuryModel3D = lazy(() => import('../components/InjuryModel3D'));
 
 export default function MyInjury() {
   const { user } = useAuth();
@@ -59,6 +63,22 @@ export default function MyInjury() {
           <HeartPulse size={40} style={{ color: 'var(--color-border)', margin: '0 auto 12px', display: 'block' }} />
           <div style={{ fontWeight: 700, color: 'var(--color-secondary)', marginBottom: '4px' }}>Nothing marked yet</div>
           <div style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}>When your practitioner reviews you, your injury and recovery plan will appear here in plain language.</div>
+        </div>
+      )}
+
+      {/* 3D overview — the same model the practitioner marks, lit up on the
+          exact parts that are impacted, so the patient SEES it before exercises. */}
+      {injuries !== null && injuries.some((i) => STRUCT_BY_ID[i.structureId]) && (
+        <div style={{ marginBottom: '18px', background: 'var(--color-surface,#fff)', border: '1px solid var(--color-border)', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <RotateCw size={16} style={{ color: 'var(--color-accent)' }} />
+            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--color-secondary)' }}>What's impacted in your body</span>
+          </div>
+          <div style={{ padding: '0 14px 14px' }}>
+            <Suspense fallback={<div style={{ height: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 18, background: '#0c0f12', color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem' }}>Loading your 3D model…</div>}>
+              <InjuryModel3D injuries={injuries.filter((i) => STRUCT_BY_ID[i.structureId])} />
+            </Suspense>
+          </div>
         </div>
       )}
 

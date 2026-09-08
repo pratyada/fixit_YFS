@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIXIT for Clinics — the platform I built to grow my Toronto clinic (and can build for yours)</title>
+<meta name="description" content="FIXIT is a live, real AI health &amp; rehab platform built and running at a Toronto clinic. Every feature is engineered to grow clinic revenue — new recurring subscriptions, a built-in patient-acquisition engine, and adherence tools that keep patients longer. Built end-to-end by an operator who runs a clinic too. Book a 20-minute walkthrough.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://fixit.yourformsux.com/for-clinics">
+<link rel="icon" href="/favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://fixit.yourformsux.com/for-clinics">
+<meta property="og:title" content="FIXIT for Clinics — a real, revenue-growing platform. Built in Toronto.">
+<meta property="og:description" content="The AI rehab &amp; growth platform I built for my own clinic — and can build for yours. New recurring revenue, a patient-acquisition engine, and adherence tools, in one system.">
+<meta property="og:image" content="https://fixit.yourformsux.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tenor+Sans&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6KH8RQHYRW"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-6KH8RQHYRW');</script>
+<style>
+:root{
+  --sage:#708E86; --sage-d:#5c776f; --sage-lt:#B0C4BB; --charcoal:#4E4E53; --ink:#3a3d40;
+  --text:#687276; --muted:#8f979b; --line:#e5e3e1; --line-2:#dcdad7;
+  --bg:#ffffff; --bg-alt:#f4f7f6; --bg-3:#eef2f1; --gold:#D4A853; --success:#6BA368; --danger:#C06060;
+  --radius:18px; --radius-lg:26px; --maxw:1120px; --ease:cubic-bezier(.25,.8,.25,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+h1,h2,h3,h4{color:var(--charcoal);line-height:1.12;letter-spacing:-.02em;font-weight:600}
+.serif{font-family:'Tenor Sans',Georgia,serif;font-weight:400;letter-spacing:0}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
+.narrow{max-width:780px;margin:0 auto}
+.eyebrow{display:inline-block;font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--sage);margin-bottom:16px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:16px;padding:15px 30px;border-radius:14px;border:1px solid transparent;cursor:pointer;transition:all .2s var(--ease);font-family:inherit}
+.btn-primary{background:var(--sage);color:#fff;box-shadow:0 10px 26px rgba(112,142,134,.3)}
+.btn-primary:hover{background:var(--sage-d);transform:translateY(-2px)}
+.btn-ghost{background:#fff;color:var(--charcoal);border-color:var(--line-2)}
+.btn-ghost:hover{border-color:var(--sage);color:var(--sage)}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+
+/* NAV */
+nav.top{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.82);backdrop-filter:saturate(160%) blur(16px);border-bottom:1px solid var(--line)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;max-width:var(--maxw);margin:0 auto;padding:0 32px}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand .fx{font-family:'Tenor Sans',serif;font-size:20px;color:var(--charcoal);letter-spacing:.06em}
+.brand .by{font-size:12px;color:var(--muted)}
+.nav-cta .btn{padding:9px 20px;font-size:14px}
+
+/* HERO */
+.hero{background:linear-gradient(180deg,var(--bg-alt),#fff 70%);padding:96px 0 72px;border-bottom:1px solid var(--line)}
+.tagpill{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line-2);border-radius:980px;padding:7px 16px;font-size:13px;color:var(--charcoal);font-weight:500;margin-bottom:26px}
+.tagpill .dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 0 0 rgba(107,163,104,.5);animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(107,163,104,.5)}70%{box-shadow:0 0 0 8px rgba(107,163,104,0)}100%{box-shadow:0 0 0 0 rgba(107,163,104,0)}}
+.hero h1{font-size:clamp(36px,5.6vw,60px);color:var(--charcoal);letter-spacing:-.03em;max-width:18ch}
+.hero h1 .g{color:var(--sage)}
+.hero p.sub{font-size:clamp(18px,2.2vw,22px);color:var(--text);max-width:60ch;margin:24px 0 0;line-height:1.5}
+.hero-cta{display:flex;gap:16px;flex-wrap:wrap;margin-top:36px;align-items:center}
+.hero-trust{margin-top:28px;font-size:14px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
+.hero-trust b{color:var(--charcoal);font-weight:600}
+
+/* STORY note */
+.story{padding:80px 0;background:#fff}
+.note{background:var(--bg-alt);border:1px solid var(--line);border-left:4px solid var(--sage);border-radius:var(--radius);padding:34px 38px;font-size:18px;line-height:1.7;color:var(--ink)}
+.note p{margin-bottom:16px}.note p:last-child{margin-bottom:0}
+.note b{color:var(--charcoal)}
+.sign{margin-top:22px;font-family:'Tenor Sans',serif;font-size:16px;color:var(--sage)}
+
+/* SECTION */
+section{padding:96px 0}
+.sec-head{max-width:720px;margin:0 auto 56px;text-align:center}
+.sec-head h2{font-size:clamp(28px,4vw,44px);letter-spacing:-.03em}
+.sec-head p{margin-top:16px;color:var(--text);font-size:19px;line-height:1.5}
+.alt{background:var(--bg-alt)}
+
+/* OUTCOME blocks */
+.outcome{display:grid;grid-template-columns:1fr 1fr;gap:30px}
+.ob{background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);padding:34px 34px 30px;transition:transform .3s var(--ease),box-shadow .3s}
+.ob:hover{transform:translateY(-4px);box-shadow:0 24px 60px rgba(78,78,83,.1)}
+.ob .tagn{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ob .ic{width:46px;height:46px;border-radius:13px;background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-size:22px}
+.ob .rev{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sage)}
+.ob h3{font-size:22px;letter-spacing:-.02em}
+.ob>p{font-size:15.5px;margin-top:8px;color:var(--text)}
+.ob ul{list-style:none;margin-top:18px;display:flex;flex-direction:column;gap:11px}
+.ob li{display:flex;gap:10px;font-size:15px;color:var(--ink);line-height:1.45}
+.ob li .ck{color:var(--success);flex-shrink:0;font-weight:700}
+.ob li b{color:var(--charcoal);font-weight:600}
+
+/* CHECKLIST */
+.checklist{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+.cl{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:28px}
+.cl h4{font-size:17px;color:var(--charcoal);display:flex;align-items:center;gap:9px;margin-bottom:16px}
+.cl h4 .ic{font-size:19px}
+.cl ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.cl li{display:flex;gap:9px;font-size:14.5px;color:var(--ink);line-height:1.4}
+.cl li .ck{color:var(--sage);flex-shrink:0}
+
+/* STATEMENT */
+.statement{background:var(--charcoal);color:#fff;padding:120px 0;text-align:center}
+.statement h2{color:#fff;font-size:clamp(30px,4.6vw,52px);max-width:20ch;margin:0 auto;letter-spacing:-.03em;line-height:1.12}
+.statement h2 .g{color:var(--sage-lt)}
+.statement p{color:#c7cdca;font-size:19px;max-width:56ch;margin:24px auto 0}
+.statement .btn{margin-top:36px;background:#fff;color:var(--charcoal)}
+.statement .btn:hover{background:var(--sage-lt)}
+
+/* BUILD-FOR-YOU */
+.byu{display:grid;grid-template-columns:1.1fr 1fr;gap:56px;align-items:center}
+.byu-list{display:flex;flex-direction:column;gap:18px;margin-top:26px}
+.byu-item{display:flex;gap:14px}
+.byu-item .ic{width:30px;height:30px;border-radius:9px;background:rgba(112,142,134,.12);color:var(--sage);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700}
+.byu-item h4{font-size:16.5px}.byu-item p{font-size:14.5px;margin-top:2px;color:var(--text)}
+.byu-card{background:linear-gradient(160deg,var(--sage),var(--sage-d));color:#fff;border-radius:var(--radius-lg);padding:40px 36px}
+.byu-card h3{color:#fff;font-size:24px}
+.byu-card .big{font-family:'Tenor Sans',serif;font-size:40px;color:#fff;margin:14px 0 4px}
+.byu-card p{color:rgba(255,255,255,.9);font-size:15px;margin-top:14px;line-height:1.6}
+.byu-card .mini{margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,.2);font-size:13.5px;color:rgba(255,255,255,.85)}
+
+/* SEE IT LIVE */
+.live-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.live{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:border-color .2s,transform .2s}
+.live:hover{border-color:var(--sage);transform:translateY(-3px)}
+.live .k{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--sage)}
+.live h4{font-size:17px;margin-top:8px}
+.live p{font-size:14px;margin-top:6px;color:var(--text)}
+.live .go{margin-top:14px;font-size:14px;color:var(--sage);font-weight:600}
+
+/* CONTACT */
+.contact{background:var(--charcoal);color:#fff}
+.contact .sec-head h2{color:#fff}.contact .sec-head p{color:#c7cdca}.contact .eyebrow{color:var(--sage-lt)}
+.contact-card{max-width:640px;margin:0 auto;background:#fff;border-radius:var(--radius-lg);padding:40px;color:var(--text)}
+.contact-card h3{font-size:24px;text-align:center}
+.contact-card>p{text-align:center;margin-top:10px;font-size:16px}
+.form .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{margin-top:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--charcoal);margin-bottom:6px}
+.field input,.field textarea{width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:11px;font-family:inherit;font-size:15px;color:var(--charcoal);outline:none;transition:border-color .15s,box-shadow .15s}
+.field input:focus,.field textarea:focus{border-color:var(--sage);box-shadow:0 0 0 4px rgba(112,142,134,.12)}
+.field textarea{resize:vertical;min-height:96px}
+.form .btn-primary{width:100%;justify-content:center;margin-top:20px}
+.form .note-s{font-size:12.5px;color:var(--muted);text-align:center;margin-top:12px}
+
+/* FOOTER */
+footer.site{background:#fff;border-top:1px solid var(--line);padding:44px 0;text-align:center;color:var(--muted);font-size:14px}
+footer.site a{color:var(--sage);font-weight:500}
+footer.site .fx{font-family:'Tenor Sans',serif;color:var(--charcoal);font-size:18px;letter-spacing:.06em}
+
+/* ===== A LOOK INSIDE — product mockups (sample data) ===== */
+.inside{background:var(--bg-alt)}
+.shots{display:grid;grid-template-columns:1.35fr 1fr;gap:30px;align-items:center}
+.phones{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.cap-note{text-align:center;font-size:13px;color:var(--muted);margin-top:26px}
+/* browser frame */
+.browser{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 30px 70px rgba(78,78,83,.14)}
+.browser .bar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg-3);border-bottom:1px solid var(--line)}
+.browser .bar .d{width:11px;height:11px;border-radius:50%;background:#d8d5d1}
+.browser .bar .url{margin-left:10px;flex:1;background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 12px;font-size:12px;color:var(--muted);font-family:'Inter',monospace}
+.screen{padding:22px}
+.screen .stitle{font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.02em;margin-bottom:14px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--bg-alt);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi .n{font-size:24px;font-weight:700;color:var(--charcoal);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:11px;color:var(--muted);margin-top:2px}
+.kpi .up{font-size:11px;color:var(--success);font-weight:600}
+.panelrow{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:16px}
+.chart{border:1px solid var(--line);border-radius:12px;padding:16px}
+.chart .ct{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:12px}
+.bars{display:flex;align-items:flex-end;gap:9px;height:96px}
+.bars div{flex:1;background:linear-gradient(180deg,var(--sage),var(--sage-lt));border-radius:5px 5px 0 0;opacity:.9}
+.subs{border:1px solid var(--line);border-radius:12px;padding:14px}
+.subs .ct{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px}
+.hero p.sub{display:block}
+.subr{display:flex;align-items:center;gap:9px;padding:6px 0}
+.subr .av{width:26px;height:26px;border-radius:50%;background:var(--sage-lt);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.subr .nm{font-size:13px;color:var(--charcoal);font-weight:500;flex:1}
+.subr .pl{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(112,142,134,.12);color:var(--sage-d)}
+/* PRICING */
+.pricing-card{max-width:760px;margin:0 auto;background:linear-gradient(155deg,var(--charcoal),#3a3d40);color:#fff;border-radius:var(--radius-lg);padding:52px 44px;text-align:center}
+.pricing-card .eyebrow{color:var(--sage-lt)}
+.pricing-card h2{color:#fff;font-size:clamp(28px,3.8vw,42px);letter-spacing:-.03em}
+.pricing-card>p{color:#c7cdca;font-size:18px;max-width:52ch;margin:16px auto 0;line-height:1.55}
+.pricing-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:36px 0 8px}
+.pcell{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:24px 18px}
+.pcell .big{font-family:'Tenor Sans',serif;font-size:34px;color:#fff;line-height:1}
+.pcell .lab{font-size:13px;color:#c7cdca;margin-top:10px;line-height:1.4}
+.pricing-card .btn{margin-top:34px;background:#fff;color:var(--charcoal)}
+.pricing-card .btn:hover{background:var(--sage-lt)}
+.pricing-note{font-size:13px;color:#9aa2a0;margin-top:16px}
+/* phone frame */
+.phone{background:#fff;border:8px solid #2c2c30;border-radius:34px;overflow:hidden;box-shadow:0 24px 60px rgba(78,78,83,.2);max-width:270px;margin:0 auto;width:100%}
+.phone .pscreen{padding:18px 16px 22px}
+.phone .ph{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:14px}
+.phone .fx{font-family:'Tenor Sans',serif;color:var(--charcoal);letter-spacing:.06em}
+.ring{width:128px;height:128px;border-radius:50%;margin:6px auto 12px;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--sage) 0 92%,var(--bg-3) 92% 100%)}
+.ring .in{width:100px;height:100px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .in .s{font-size:34px;font-weight:700;color:var(--charcoal);line-height:1}
+.ring .in .t{font-size:10px;color:var(--muted);margin-top:2px}
+.exname{text-align:center;font-size:15px;font-weight:600;color:var(--charcoal)}
+.exsub{text-align:center;font-size:11px;color:var(--muted);margin-top:2px}
+.cues{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+.cue{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--charcoal);background:var(--bg-alt);border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+.cue .ok{color:var(--success);font-weight:700}.cue .wn{color:var(--gold);font-weight:700}
+.streak{background:var(--sage);color:#fff;border-radius:12px;padding:14px;text-align:center;margin-bottom:14px}
+.streak .big{font-size:26px;font-weight:700}.streak .l{font-size:11px;opacity:.9}
+.pl-line{display:flex;align-items:flex-end;gap:5px;height:64px;margin:10px 0}
+.pl-line div{flex:1;background:var(--sage-lt);border-radius:3px}
+.koos{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--charcoal);background:var(--bg-alt);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:4px}
+.koos b{color:var(--success)}
+@media(max-width:900px){.shots{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+
+@media(max-width:900px){
+  .outcome,.byu,.contact-card .form .row{grid-template-columns:1fr}
+  .checklist{grid-template-columns:1fr 1fr}
+  .live-grid{grid-template-columns:1fr}
+  .byu{gap:36px}
+}
+@media(max-width:560px){
+  .wrap,.nav-inner{padding-left:20px;padding-right:20px}
+  section,.story{padding:64px 0}.hero{padding:64px 0 52px}.statement{padding:80px 0}
+  .checklist{grid-template-columns:1fr}
+  .form .row{grid-template-columns:1fr}
+  .nav-cta .btn{padding:8px 14px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a class="brand" href="/"><span class="fx">FIXIT</span><span class="by">by YourFormSux · Toronto</span></a>
+    <div class="nav-cta"><a href="#book" class="btn btn-primary">Book a walkthrough</a></div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <span class="tagpill"><span class="dot"></span> Live &amp; running at a real Toronto clinic</span>
+    <h1>A real clinic platform, built to grow <span class="g">real revenue.</span></h1>
+    <p class="sub">This is <b>FIXIT</b> — the AI health &amp; rehab platform I built and run at my own Toronto clinic. It's not a mock-up or a pitch deck. It's live software, and <b>every feature exists for one reason: to grow a clinic's revenue</b> — new recurring income, more new patients, and patients who stay longer. I built it end-to-end. I can build it for you.</p>
+    <div class="hero-cta">
+      <a href="#book" class="btn btn-primary">Book a 20-minute walkthrough</a>
+      <a href="https://fixit.yourformsux.com" target="_blank" rel="noopener" class="btn btn-ghost">See it live →</a>
+    </div>
+    <div class="hero-trust">
+      <span><b>Built &amp; operated</b> in Toronto</span>
+      <span><b>PIPEDA-compliant</b> · encrypted</span>
+      <span><b>Runs for pennies</b> on AWS serverless</span>
+    </div>
+  </div>
+</header>
+
+<!-- STORY -->
+<section class="story">
+  <div class="wrap narrow">
+    <span class="eyebrow">Why I'm showing you this</span>
+    <div class="note reveal">
+      <p>Let me be straight with you. I run a clinic in Toronto, same as you. I got tired of paying for rehab apps that were expensive, generic, and did nothing for the <b>business</b> side — no new patients, no recurring revenue, no marketing.</p>
+      <p>So I built my own: <b>FIXIT</b>. It handles the clinical side <em>and</em> the growth side — subscriptions, patient acquisition, adherence, in-clinic AI tools, the works. It's live at my clinic today.</p>
+      <p>This page walks you through <b>every feature</b> and, more importantly, <b>how each one puts money on the table</b>. If any of it is interesting, I'd love 20 minutes to show you the real thing — and talk about building a version for your clinic, in your brand.</p>
+      <div class="sign">— Prateek · builder &amp; clinic operator, Toronto</div>
+    </div>
+  </div>
+</section>
+
+<!-- OUTCOMES -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">The whole point</span>
+      <h2>Every feature maps to revenue.</h2>
+      <p>Grouped by what it does for your business — not a feature dump.</p>
+    </div>
+    <div class="outcome">
+
+      <div class="ob reveal">
+        <div class="tagn"><span class="ic">💳</span><span class="rev">New recurring revenue</span></div>
+        <h3>Turn one-time visits into monthly income.</h3>
+        <p>A built-in subscription layer (Stripe) — patients pay to keep their program, progress and AI tools between visits.</p>
+        <ul>
+          <li><span class="ck">✓</span><div><b>Tiered plans</b> — Free, Basic ($7/mo), Pro ($15/mo), fully configurable to your pricing.</div></li>
+          <li><span class="ck">✓</span><div><b>Stripe billing &amp; self-serve portal</b> — cancel/upgrade anytime, no admin overhead.</div></li>
+          <li><span class="ck">✓</span><div><b>Feature-gating</b> — pose scoring, video, programs and reports unlock by plan.</div></li>
+          <li><span class="ck">✓</span><div><b>A recurring line of revenue</b> that keeps earning between appointments.</div></li>
+        </ul>
+      </div>
+
+      <div class="ob reveal">
+        <div class="tagn"><span class="ic">📣</span><span class="rev">Win more patients</span></div>
+        <h3>A patient-acquisition engine, built in.</h3>
+        <p>Most clinic software stops at the clinic door. FIXIT includes the entire marketing machine to fill your schedule.</p>
+        <ul>
+          <li><span class="ck">✓</span><div><b>SEO training guides</b> — 20+ prerendered articles ranking for Toronto/GTA fitness &amp; rehab searches.</div></li>
+          <li><span class="ck">✓</span><div><b>AI email campaigns</b> — compose &amp; send branded emails to your subscriber list in a click.</div></li>
+          <li><span class="ck">✓</span><div><b>AI creatives studio</b> — generate Instagram posts, stories, banners &amp; short videos, on brand.</div></li>
+          <li><span class="ck">✓</span><div><b>Lead capture &amp; RSVP</b> — subscriber list + event pages that turn visitors into contacts.</div></li>
+        </ul>
+      </div>
+
+      <div class="ob reveal">
+        <div class="tagn"><span class="ic">📈</span><span class="rev">Keep patients longer</span></div>
+        <h3>Better adherence = better outcomes = retention.</h3>
+        <p>Engaged patients finish their care plans, get better results, and refer their friends. FIXIT is built to keep them engaged.</p>
+        <ul>
+          <li><span class="ck">✓</span><div><b>AI pose scoring</b> — the phone camera checks their form in real time, like a coach watching.</div></li>
+          <li><span class="ck">✓</span><div><b>Personalized programs</b> + a 100+ exercise library with video &amp; instructions.</div></li>
+          <li><span class="ck">✓</span><div><b>Progress, streaks &amp; pain journal</b> — visible wins that keep people coming back.</div></li>
+          <li><span class="ck">✓</span><div><b>Validated outcome measures</b> (KOOS, LEFS, DASH) — prove progress, support insurer/RTW claims.</div></li>
+        </ul>
+      </div>
+
+      <div class="ob reveal">
+        <div class="tagn"><span class="ic">⚡</span><span class="rev">Do more with your team</span></div>
+        <h3>Stand out — and see more patients.</h3>
+        <p>Premium, differentiated tools that let you charge more and run a tighter operation.</p>
+        <ul>
+          <li><span class="ck">✓</span><div><b>In-clinic AI kiosk</b> — a camera station that scores patient form hands-free.</div></li>
+          <li><span class="ck">✓</span><div><b>Voice AI coach</b> — a hands-free assistant that talks patients through their reps.</div></li>
+          <li><span class="ck">✓</span><div><b>3D "Know Your Injury"</b> — an interactive anatomy model that explains the diagnosis.</div></li>
+          <li><span class="ck">✓</span><div><b>Practitioner dashboard</b> with AI clinical summaries &amp; a program builder — less admin, more care.</div></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- STATEMENT -->
+<section class="statement">
+  <div class="wrap reveal">
+    <h2>This isn't a demo. It's <span class="g">running today.</span></h2>
+    <p>Real patients, real subscriptions, real marketing going out the door — at a working Toronto clinic. That's the difference between a pitch and a proof.</p>
+    <a href="https://fixit.yourformsux.com" target="_blank" rel="noopener" class="btn">See the live app →</a>
+  </div>
+</section>
+
+<!-- A LOOK INSIDE -->
+<section class="inside">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">A look inside</span>
+      <h2>The real screens your patients &amp; team use.</h2>
+      <p>The business dashboard, the AI form check, the progress your patients see every day.</p>
+    </div>
+
+    <div class="shots">
+      <!-- Business dashboard -->
+      <div class="browser reveal">
+        <div class="bar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="url">fixit.yourclinic.com/admin</span></div>
+        <div class="screen">
+          <div class="stitle">Clinic overview</div>
+          <div class="kpis">
+            <div class="kpi"><div class="n">240</div><div class="l">Active patients</div><div class="up">▲ 12%</div></div>
+            <div class="kpi"><div class="n">$3,240</div><div class="l">Monthly recurring</div><div class="up">▲ 8%</div></div>
+            <div class="kpi"><div class="n">186</div><div class="l">Subscriptions</div><div class="up">▲ 21</div></div>
+            <div class="kpi"><div class="n">87%</div><div class="l">Adherence</div><div class="up">▲ 5%</div></div>
+          </div>
+          <div class="panelrow">
+            <div class="chart">
+              <div class="ct">New patients / month</div>
+              <div class="bars"><div style="height:38%"></div><div style="height:52%"></div><div style="height:46%"></div><div style="height:64%"></div><div style="height:72%"></div><div style="height:88%"></div><div style="height:100%"></div></div>
+            </div>
+            <div class="subs">
+              <div class="ct">Recent subscribers</div>
+              <div class="subr"><span class="av">JM</span><span class="nm">Jordan M.</span><span class="pl">PRO</span></div>
+              <div class="subr"><span class="av">PS</span><span class="nm">Priya S.</span><span class="pl">BASIC</span></div>
+              <div class="subr"><span class="av">AT</span><span class="nm">Alex T.</span><span class="pl">PRO</span></div>
+              <div class="subr"><span class="av">RK</span><span class="nm">Riya K.</span><span class="pl">BASIC</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- phones -->
+      <div class="phones">
+        <div class="phone reveal">
+          <div class="pscreen">
+            <div class="ph"><span class="fx">FIXIT</span><span>AI Form Check</span></div>
+            <div class="ring"><div class="in"><div class="s">92</div><div class="t">FORM SCORE</div></div></div>
+            <div class="exname">Single-Leg Squat</div>
+            <div class="exsub">Set 2 of 3 · 10 reps</div>
+            <div class="cues">
+              <div class="cue"><span class="ok">✓</span> Knee tracking on target</div>
+              <div class="cue"><span class="ok">✓</span> Depth reached</div>
+              <div class="cue"><span class="wn">!</span> Watch your balance</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone reveal">
+          <div class="pscreen">
+            <div class="ph"><span class="fx">FIXIT</span><span>My Progress</span></div>
+            <div class="streak"><div class="big">12-day</div><div class="l">streak · keep it up!</div></div>
+            <div class="chart" style="border:none;padding:0">
+              <div class="ct">Weekly adherence</div>
+              <div class="pl-line"><div style="height:50%"></div><div style="height:70%"></div><div style="height:60%"></div><div style="height:85%"></div><div style="height:75%"></div><div style="height:95%"></div><div style="height:100%"></div></div>
+            </div>
+            <div class="koos"><span>KOOS score</span><b>▲ 18 pts</b></div>
+            <div class="koos" style="margin-top:8px"><span>Pain (last 7 days)</span><b>▼ 3.2</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap-note">Interface shown with sample data. The live platform is at fixit.yourformsux.com.</p>
+  </div>
+</section>
+
+<!-- FULL CHECKLIST -->
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">All the details</span>
+      <h2>Everything that's inside.</h2>
+      <p>The full feature set — the small details competitors don't have.</p>
+    </div>
+    <div class="checklist">
+      <div class="cl reveal">
+        <h4><span class="ic">🩺</span> For your patients</h4>
+        <ul>
+          <li><span class="ck">✓</span>Personalized exercise programs (MyPlan)</li>
+          <li><span class="ck">✓</span>100+ guided exercises, video &amp; steps</li>
+          <li><span class="ck">✓</span>AI pose scoring from the phone camera</li>
+          <li><span class="ck">✓</span>Record &amp; review session videos</li>
+          <li><span class="ck">✓</span>Progress charts, streaks &amp; milestones</li>
+          <li><span class="ck">✓</span>Pain journal — pain, swelling &amp; ROM</li>
+          <li><span class="ck">✓</span>Outcome measures: KOOS, LEFS, DASH</li>
+          <li><span class="ck">✓</span>3D "Know Your Injury" anatomy</li>
+          <li><span class="ck">✓</span>Health &amp; activity tracking</li>
+          <li><span class="ck">✓</span>Shareable progress reports</li>
+          <li><span class="ck">✓</span>Multi-language support</li>
+        </ul>
+      </div>
+      <div class="cl reveal">
+        <h4><span class="ic">👩‍⚕️</span> For your practitioners</h4>
+        <ul>
+          <li><span class="ck">✓</span>Practitioner dashboard &amp; patient list</li>
+          <li><span class="ck">✓</span>AI-generated clinical summaries</li>
+          <li><span class="ck">✓</span>Drag-and-drop program builder</li>
+          <li><span class="ck">✓</span>Assign protocols &amp; track adherence</li>
+          <li><span class="ck">✓</span>Patient detail &amp; history view</li>
+          <li><span class="ck">✓</span>In-clinic camera pose kiosk</li>
+          <li><span class="ck">✓</span>Hands-free Voice AI form coach</li>
+          <li><span class="ck">✓</span>3D injury mapping from clinical notes</li>
+          <li><span class="ck">✓</span>Role-based access (admin / practitioner / patient)</li>
+        </ul>
+      </div>
+      <div class="cl reveal">
+        <h4><span class="ic">📊</span> For your business</h4>
+        <ul>
+          <li><span class="ck">✓</span>Stripe subscriptions &amp; billing portal</li>
+          <li><span class="ck">✓</span>Configurable plans &amp; feature-gating</li>
+          <li><span class="ck">✓</span>Subscriber / lead list</li>
+          <li><span class="ck">✓</span>AI email campaign composer &amp; sender</li>
+          <li><span class="ck">✓</span>Sent-history &amp; tracking</li>
+          <li><span class="ck">✓</span>AI creatives studio (posts / stories / video)</li>
+          <li><span class="ck">✓</span>SEO blog engine (Toronto/GTA guides)</li>
+          <li><span class="ck">✓</span>RSVP / event capture pages</li>
+          <li><span class="ck">✓</span>Analytics (Google Analytics)</li>
+          <li><span class="ck">✓</span>PIPEDA-compliant, encrypted, low-cost hosting</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BUILD FOR YOU -->
+<section class="alt">
+  <div class="wrap">
+    <div class="byu">
+      <div class="reveal">
+        <span class="eyebrow">What I can build for you</span>
+        <h2 style="font-size:clamp(28px,3.6vw,40px)">Your clinic. Your brand. Your platform.</h2>
+        <p style="margin-top:14px;font-size:18px">I'm not selling you a seat in someone else's app. I build you your <b>own</b> version — your name, your colours, your exercises, your pricing, on your domain. Because I run a clinic too, I know what actually moves the needle.</p>
+        <div class="byu-list">
+          <div class="byu-item"><span class="ic">✓</span><div><h4>White-labelled to your brand</h4><p>Your logo, palette, tone and domain — it looks like yours, because it is.</p></div></div>
+          <div class="byu-item"><span class="ic">✓</span><div><h4>Your content &amp; pricing</h4><p>Your exercise protocols, your subscription tiers, your local SEO.</p></div></div>
+          <div class="byu-item"><span class="ic">✓</span><div><h4>Fast, and cheap to run</h4><p>Built on serverless — a few dollars a month to host, not thousands.</p></div></div>
+          <div class="byu-item"><span class="ic">✓</span><div><h4>Built by an operator, not a vendor</h4><p>Someone who understands the clinic P&amp;L, not just the code.</p></div></div>
+        </div>
+      </div>
+      <div class="byu-card reveal">
+        <h3>Let's start with a conversation.</h3>
+        <div class="big serif">20 minutes</div>
+        <p>I'll screen-share the live platform, walk you through the revenue features, and we'll talk about whether a version makes sense for your clinic. No slides, no hard sell — just the real thing.</p>
+        <div class="mini">Book below, or email <a href="mailto:hello@yourformsux.com" style="color:#fff;text-decoration:underline">hello@yourformsux.com</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="pricing-card reveal">
+      <span class="eyebrow">Pricing</span>
+      <h2>Zero upfront. I only earn when you do.</h2>
+      <p>Here's the deal: I build your platform and deploy it — <b style="color:#fff">free</b>. No setup fee, no monthly SaaS bill. Once it's actually making you money, I take a simple revenue share, agreed case-by-case. Our incentives are aligned — I win only when you win.</p>
+      <div class="pricing-row">
+        <div class="pcell"><div class="big">$0</div><div class="lab">To build &amp; launch. No upfront cost, no monthly fee.</div></div>
+        <div class="pcell"><div class="big">5–10%</div><div class="lab">Revenue share once it's earning — case-by-case.</div></div>
+        <div class="pcell"><div class="big">No risk</div><div class="lab">You pay nothing until it makes you revenue.</div></div>
+      </div>
+      <a href="#book" class="btn">Book a walkthrough</a>
+      <p class="pricing-note">Terms agreed together, in writing, before we start.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SEE IT LIVE -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Proof it's real</span>
+      <h2>Go see for yourself.</h2>
+    </div>
+    <div class="live-grid">
+      <a class="live reveal" href="https://fixit.yourformsux.com" target="_blank" rel="noopener"><div class="k">The app</div><h4>fixit.yourformsux.com</h4><p>The live platform — sign in and try it.</p><div class="go">Open the app →</div></a>
+      <a class="live reveal" href="https://fixit.yourformsux.com/guides" target="_blank" rel="noopener"><div class="k">The SEO engine</div><h4>Training guides</h4><p>The content that pulls Toronto search traffic.</p><div class="go">Read the guides →</div></a>
+      <a class="live reveal" href="https://yourformsux.com" target="_blank" rel="noopener"><div class="k">The clinic</div><h4>YourFormSux</h4><p>The real Toronto clinic it runs at.</p><div class="go">Visit the clinic →</div></a>
+    </div>
+  </div>
+</section>
+
+<!-- BOOK -->
+<section class="contact" id="book">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Foot in the door</span>
+      <h2>Let's grab 20 minutes.</h2>
+      <p>Tell me a little about your clinic and I'll set up a live walkthrough.</p>
+    </div>
+    <div class="contact-card reveal">
+      <h3>Book your walkthrough</h3>
+      <p style="color:var(--text)">I'll reply personally — usually same day.</p>
+      <form class="form" id="bk" onsubmit="return book(event)">
+        <div class="row">
+          <div class="field"><label>Your name *</label><input id="b-name" type="text" placeholder="Your name" required></div>
+          <div class="field"><label>Clinic</label><input id="b-clinic" type="text" placeholder="Clinic name"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Email *</label><input id="b-email" type="email" placeholder="you@clinic.com" required></div>
+          <div class="field"><label>Phone</label><input id="b-phone" type="tel" placeholder="(optional)"></div>
+        </div>
+        <div class="field"><label>What would you love to fix or grow?</label><textarea id="b-msg" placeholder="e.g. we want recurring revenue and more new patients from Google…"></textarea></div>
+        <button type="submit" class="btn btn-primary">Request my walkthrough →</button>
+        <p class="note-s" id="b-note">Opens your email to hello@yourformsux.com with the details prefilled.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="fx">FIXIT</div>
+    <p style="margin-top:8px">Built &amp; operated in Toronto by <a href="https://yourformsux.com" target="_blank" rel="noopener">YourFormSux</a> · <a href="https://fixit.yourformsux.com">fixit.yourformsux.com</a></p>
+    <p style="margin-top:6px;font-size:12.5px;color:var(--muted)">A real clinic platform — and one I can build for yours. &copy; <span id="yr"></span></p>
+  </div>
+</footer>
+
+<script>
+document.getElementById('yr').textContent=new Date().getFullYear();
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.14});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+function book(e){e.preventDefault();const v=id=>document.getElementById(id).value.trim();
+  const body=`Name: ${v('b-name')}\nClinic: ${v('b-clinic')}\nEmail: ${v('b-email')}\nPhone: ${v('b-phone')}\n\nWhat they want to fix/grow:\n${v('b-msg')}`;
+  location.href='mailto:hello@yourformsux.com?subject='+encodeURIComponent('FIXIT walkthrough — '+(v('b-clinic')||v('b-name')))+'&body='+encodeURIComponent(body);
+  document.getElementById('b-note').textContent='Opening your email… if nothing happens, write to hello@yourformsux.com';return false;}
+</script>
+</body>
+</html>
