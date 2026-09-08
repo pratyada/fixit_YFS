@@ -48,6 +48,7 @@ const Onboarding = lazy(() => import('./pages/Onboarding'));
 const VoiceKiosk = lazy(() => import('./pages/VoiceKiosk'));
 const Anatomy = lazy(() => import('./pages/Anatomy'));
 const ExerciseGuide = lazy(() => import('./pages/ExerciseGuide'));
+const MyInjury = lazy(() => import('./pages/MyInjury'));
 const Billing = lazy(() => import('./pages/Billing'));
 const Subscribers = lazy(() => import('./pages/Subscribers'));
 const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns'));
@@ -101,7 +102,7 @@ function AppShell() {
 // ─── Tab configs per role ───
 const PATIENT_TABS = [
   { to: '/', icon: Home, labelKey: 'nav:tabs.home' },
-  { to: '/health', icon: HeartPulse, labelKey: 'nav:tabs.health' },
+  { to: '/my-injury', icon: Bone, labelKey: 'Know Your Injury' },
   { to: '/exercises', icon: Dumbbell, labelKey: 'nav:tabs.exercises' },
   { to: '/progress', icon: BarChart3, labelKey: 'nav:tabs.progress' },
   { to: '/guides', icon: Compass, labelKey: 'nav:tabs.guides' },
@@ -418,6 +419,7 @@ function AppLayout() {
             ) : (
               <>
                 <Route path="/" element={<PatientHome />} />
+                <Route path="/my-injury" element={<MyInjury />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/health" element={<Health />} />
                 <Route path="/plan" element={<MyPlan />} />
