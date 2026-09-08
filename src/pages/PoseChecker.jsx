@@ -105,6 +105,7 @@ export default function PoseChecker() {
   // Video recording for practitioner review
   const mediaRecorderRef = useRef(null);
   const videoChunksRef = useRef({ front: [], side: [] });
+  const videoMimeRef = useRef('video/mp4'); // actual recorder container (mp4 on iOS, webm on desktop)
   const maxRecordRef = useRef(null); // auto-stop timer
   const MAX_RECORD_SECONDS = 30;
 
@@ -167,12 +168,15 @@ export default function PoseChecker() {
     if (streamRef.current) {
       try {
         const captureAngle = angleName;
-        const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm'
-          : MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
+        // iOS Safari does NOT support webm — prefer mp4 there so the recording
+        // (the practitioner's review video) is valid on iPad/iPhone too.
+        const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4'
+          : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '';
         console.log('[FIXIT] MediaRecorder mimeType:', mimeType || 'default');
         const opts = { videoBitsPerSecond: 500000 }; // 500kbps — compact but clear
         if (mimeType) opts.mimeType = mimeType;
         const mr = new MediaRecorder(streamRef.current, opts);
+        videoMimeRef.current = mr.mimeType || mimeType || 'video/mp4'; // actual container for the Blob
         mr.ondataavailable = (e) => {
           if (e.data && e.data.size > 0) {
             videoChunksRef.current[captureAngle].push(e.data);
@@ -261,14 +265,14 @@ export default function PoseChecker() {
         const sideChunks = videoChunksRef.current.side || [];
         console.log(`[FIXIT] Video chunks — front: ${frontChunks.length}, side: ${sideChunks.length}`);
         if (frontChunks.length > 0) {
-          const frontBlob = new Blob(frontChunks, { type: 'video/webm' });
+          const frontBlob = new Blob(frontChunks, { type: videoMimeRef.current });
           console.log(`[FIXIT] Uploading front video: ${(frontBlob.size / 1024).toFixed(0)}KB`);
           const frontResult = await uploadVideo(user.uid, sid, 'front', frontBlob);
           videoUpdates.frontVideoKey = frontResult.path;
           videoUpdates.frontVideoUrl = frontResult.url;
         }
         if (sideChunks.length > 0) {
-          const sideBlob = new Blob(sideChunks, { type: 'video/webm' });
+          const sideBlob = new Blob(sideChunks, { type: videoMimeRef.current });
           console.log(`[FIXIT] Uploading side video: ${(sideBlob.size / 1024).toFixed(0)}KB`);
           const sideResult = await uploadVideo(user.uid, sid, 'side', sideBlob);
           videoUpdates.sideVideoKey = sideResult.path;
